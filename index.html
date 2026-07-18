@@ -194,6 +194,13 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .icongrid button.on{border-color:var(--ink);background:var(--bg2);}
 .icongrid svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;}
 .gmark{display:inline-block;width:9px;height:9px;flex:0 0 9px;}
+/* テンキー対応タイムピッカー */
+.tp{display:flex;align-items:center;gap:2px;}
+.tp-col{display:flex;flex-direction:column;align-items:center;}
+.tp-col button{font-size:9px;color:var(--sub);padding:3px 12px;border:1px solid var(--line2);line-height:1;}
+.tp-num{width:46px;text-align:center;font-size:16px;font-weight:600;padding:4px 2px;border:1px solid var(--line);margin:2px 0;}
+.tp-sep{font-weight:700;padding:0 2px;color:var(--sub);}
+.tp-clear{color:var(--sub);font-size:13px;padding:0 7px;align-self:center;}
 .pinbadge{font-size:9.5px;border:1px solid var(--line);color:var(--sub);padding:1px 5px;letter-spacing:.05em;margin-left:4px;white-space:nowrap;}
 .arrows{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:0 8px 0 0;}
 .arrows button{border:1px solid var(--line2);font-size:9px;line-height:1;padding:5px 7px;color:var(--sub);}
@@ -420,14 +427,16 @@ function defaultState(){
     dayColors:{},dayLog:{},notes:'',lastNotify:{}
   };
 }
-function load(){try{const r=localStorage.getItem(LSKEY);S=r?JSON.parse(r):defaultState();}catch(e){S=defaultState();}
-  const st=S.settings;
+function migrate(){const st=S.settings;
   st.wakeDef=st.wakeDef||'06:30';st.sleepDef=st.sleepDef||'23:00';
   st.notifyEmail=st.notifyEmail||'baritone0111@gmail.com';
+  st.feedbackUrl=st.feedbackUrl||'';
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   (S.marks||[]).forEach(k=>{if(!ICONS[k.icon])k.icon='gift';});}
-function save(){localStorage.setItem(LSKEY,JSON.stringify(S));}
+function load(){try{const r=localStorage.getItem(LSKEY);S=r?JSON.parse(r):defaultState();}catch(e){S=defaultState();}
+  migrate();}
+function save(){S.updatedAt=Date.now();localStorage.setItem(LSKEY,JSON.stringify(S));scheduleSync();}
 function group(id){return S.groups.find(g=>g.id===id)||{name:'—',color:'#B5BAC4'};}
 function groupPath(id){const g=S.groups.find(x=>x.id===id);if(!g)return'—';return g.parentId?groupPath(g.parentId)+' ▸ '+g.name:g.name;}
 function dayLog(d){if(!S.dayLog[d])S.dayLog[d]={routines:{}};return S.dayLog[d];}
@@ -447,6 +456,81 @@ function availOf(d){let m=hm2min(daySleep(d))-hm2min(dayWake(d));if(m<=0)m+=1440
 /* 今日に表示するタスク: 今日指定 ＋ 毎日表示(pin)。「今日は隠す」(snooze)は除外 */
 function todayTasks(t){return S.tasks.filter(x=>((x.today===t)||(x.pin&&(x.status!=='done'||x.doneAt===t)))&&x.snooze!==t);}
 const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.quad||9)-(b.quad||9)||a.qOrder-b.qOrder||a.priority-b.priority;
+/* ===== テンキー対応タイムピッカー（数字タップ→テンキー、▲▼で微調整・分は15分刻み） ===== */
+function timeInput(id,val,opts={}){
+  const p=(val||'').split(':');
+  return `<div class="tp">
+    <input type="hidden" id="${id}" value="${val||''}" ${opts.onchange?`onchange="${opts.onchange}"`:''}>
+    <div class="tp-col">
+      <button onclick="tpAdj('${id}','h',1)">▲</button>
+      <input class="tp-num" id="${id}_h" type="text" inputmode="numeric" maxlength="2" value="${p[0]||''}" placeholder="--" onfocus="this.select()" oninput="tpType('${id}')">
+      <button onclick="tpAdj('${id}','h',-1)">▼</button>
+    </div><span class="tp-sep">:</span>
+    <div class="tp-col">
+      <button onclick="tpAdj('${id}','m',1)">▲</button>
+      <input class="tp-num" id="${id}_m" type="text" inputmode="numeric" maxlength="2" value="${p[1]||''}" placeholder="--" onfocus="this.select()" oninput="tpType('${id}')">
+      <button onclick="tpAdj('${id}','m',-1)">▼</button>
+    </div>
+    ${opts.clear?`<button class="tp-clear" onclick="tpClear('${id}')" title="クリア（終日）">✕</button>`:''}
+  </div>`;}
+function tpCommit(id,h,m){const v=pad(h)+':'+pad(m);const el=$('#'+id);el.value=v;
+  $('#'+id+'_h').value=pad(h);$('#'+id+'_m').value=pad(m);
+  if(el.onchange)el.onchange();}
+function tpAdj(id,part,dir){const cur=$('#'+id).value||'00:00';
+  let[h,m]=cur.split(':').map(Number);
+  if(part==='h'){h=(h+dir+24)%24;}
+  else{m=Math.round(m/15)*15+dir*15;if(m>=60){m=0;}if(m<0){m=45;}}
+  tpCommit(id,h,m);}
+function tpType(id){
+  const hv=$('#'+id+'_h').value.replace(/\D/g,''),mv=$('#'+id+'_m').value.replace(/\D/g,'');
+  $('#'+id+'_h').value=hv;$('#'+id+'_m').value=mv;
+  if(hv===''&&mv==='')return;
+  const h=Math.min(23,+hv||0),m=Math.min(59,+mv||0);
+  const el=$('#'+id);el.value=pad(h)+':'+pad(m);
+  if(el.onchange)el.onchange();}
+function tpClear(id){const el=$('#'+id);el.value='';
+  $('#'+id+'_h').value='';$('#'+id+'_m').value='';
+  if(el.onchange)el.onchange();}
+
+/* ========================= Supabase同期（オフラインファースト） ========================= */
+/* ローカル(localStorage)が本体。設定があれば自動でクラウドへ押し上げ、新しい方を採用する */
+const SYNCKEY='homehub_sync_cfg';
+let SYNC={};try{SYNC=JSON.parse(localStorage.getItem(SYNCKEY)||'{}');}catch(e){}
+let syncTimer=null,syncState={msg:'未設定',t:0,err:''};
+function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
+function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
+function syncBase(){return SYNC.url.replace(/\/+$/,'')+'/rest/v1/kurashi_state';}
+function scheduleSync(){if(!syncReady())return;clearTimeout(syncTimer);syncTimer=setTimeout(pushState,2500);}
+async function pushState(){if(!syncReady())return;
+  try{
+    const res=await fetch(syncBase(),{method:'POST',
+      headers:{...syncHeaders(),'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify([{room:SYNC.room,data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()}])});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    syncState={msg:'同期済み',t:Date.now(),err:''};
+  }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
+  if(view==='set')render();}
+async function pullState(manual){if(!syncReady())return;
+  try{
+    const res=await fetch(syncBase()+`?room=eq.${encodeURIComponent(SYNC.room)}&select=data,updated_at`,{headers:syncHeaders()});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const rows=await res.json();
+    if(rows.length){
+      const rT=new Date(rows[0].updated_at).getTime()||0;
+      if(rT>(S.updatedAt||0)){S=rows[0].data||S;S.updatedAt=rT;migrate();
+        localStorage.setItem(LSKEY,JSON.stringify(S));render();}
+      else if((S.updatedAt||0)>rT){await pushState();return;}
+    }else{await pushState();return;}
+    syncState={msg:'同期済み',t:Date.now(),err:''};
+  }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
+  if(view==='set')render();}
+function saveSyncCfg(){
+  SYNC={url:$('#syUrl').value.trim(),key:$('#syKey').value.trim(),room:$('#syRoom').value.trim()};
+  localStorage.setItem(SYNCKEY,JSON.stringify(SYNC));
+  if(syncReady()){syncState={msg:'接続確認中…',t:0,err:''};pullState(true);}
+  render();}
+setInterval(()=>pullState(),5*60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullState();});
 
 /* ========================= 暦（祝日・六曜・一粒万倍日） ========================= */
 const RAD=Math.PI/180;
@@ -607,8 +691,8 @@ function linkChips(links){if(!links||!links.length)return'';
 function editDayTimes(){const t=todayStr();
   openModal(`<div class="mh"><b>今日の起床・就寝</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
-    <div class="frow f2"><div><label>起床</label><input id="dtWake" type="time" value="${dayWake(t)}"></div>
-      <div><label>就寝</label><input id="dtSleep" type="time" value="${daySleep(t)}"></div></div>
+    <div class="frow f2"><div><label>起床</label>${timeInput('dtWake',dayWake(t))}</div>
+      <div><label>就寝</label>${timeInput('dtSleep',daySleep(t))}</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="dtDef" style="width:auto;">
       <span style="font-size:13px;">この時刻を既定値としても保存する</span></div>
     <div class="mini" style="padding:0;">使える時間 ＝ 起床から就寝までの時間。明日の予定に合わせて今日だけ変えることもできます。</div>
@@ -765,7 +849,7 @@ function taskModal(id){
   <div class="mbody">
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
     <div class="frow f2"><div><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
-      <div><label>所要時間（分）</label><input id="tmEst" type="number" min="0" value="${x?.estMin??15}"></div></div>
+      <div><label>所要時間（分）</label><input id="tmEst" type="number" inputmode="numeric" min="0" value="${x?.estMin??15}"></div></div>
     <div class="frow f2"><div><label>優先度</label><select id="tmPr">
       <option value="1" ${x?.priority===1?'selected':''}>高</option><option value="2" ${!x||x.priority===2?'selected':''}>中</option><option value="3" ${x?.priority===3?'selected':''}>低</option></select></div>
       <div><label>期限</label><input id="tmDue" type="date" value="${x?.due||''}"></div></div>
@@ -926,8 +1010,8 @@ function eventModal(id,presetDate){
     <div class="frow"><label>予定名</label><input id="emTitle" value="${esc(e?.title||'')}"></div>
     <div class="frow f2"><div><label>日付</label><input id="emDate" type="date" value="${e?.date||presetDate||todayStr()}"></div>
       <div><label>グループ</label><select id="emGroup">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div></div>
-    <div class="frow f2"><div><label>開始（空欄=終日）</label><input id="emStart" type="time" value="${e?.start||''}"></div>
-      <div><label>終了</label><input id="emEnd" type="time" value="${e?.end||''}"></div></div>
+    <div class="frow f2"><div><label>開始（✕=終日）</label>${timeInput('emStart',e?.start||'',{clear:true})}</div>
+      <div><label>終了</label>${timeInput('emEnd',e?.end||'',{clear:true})}</div></div>
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emTmpl" style="width:auto;">
@@ -988,7 +1072,7 @@ function routineModal(id){
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
     <div class="frow f2"><div><label>時間帯</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${r?.slot===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div><label>目安時間（分）</label><input id="rmEst" type="number" min="0" value="${r?.estMin??15}"></div></div>
+      <div><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div></div>
     <div class="frow"><label>実行する曜日</label><div class="daysel" id="rmDays">
       ${WD.map((w,i)=>`<button class="${days.includes(i)?'on':''}" onclick="tglRDay(${i},this)">${w}</button>`).join('')}</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmActive" style="width:auto;" ${!r||r.active?'checked':''}>
@@ -1072,30 +1156,49 @@ function renderSettings(){
   <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリ（ブラウザ）を開いている間に通知します</div></div>
     <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
   <div class="setrow"><div><div class="sl">朝の通知</div><div class="sd">今日の計画を立てる合図</div></div>
-    <input type="time" value="${s.notifyMorning}" onchange="S.settings.notifyMorning=this.value;save();"></div>
+    ${timeInput('setNm',s.notifyMorning,{onchange:"S.settings.notifyMorning=this.value;save();"})}</div>
   <div class="setrow"><div><div class="sl">夜の通知</div><div class="sd">明日の準備・ふりかえり</div></div>
-    <input type="time" value="${s.notifyNight}" onchange="S.settings.notifyNight=this.value;save();"></div>
+    ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
   <div class="setrow"><div><div class="sl">起床時刻（既定）</div><div class="sd">「使える時間」を起床〜就寝から自動計算します</div></div>
-    <input type="time" value="${s.wakeDef}" onchange="S.settings.wakeDef=this.value;save();"></div>
+    ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
   <div class="setrow"><div><div class="sl">就寝時刻（既定）</div><div class="sd">その日だけの変更は「今日」画面の「変更」から</div></div>
-    <input type="time" value="${s.sleepDef}" onchange="S.settings.sleepDef=this.value;save();"></div>
+    ${timeInput('setSl',s.sleepDef,{onchange:"S.settings.sleepDef=this.value;save();"})}</div>
   <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>
+
+  <div class="sec-h">クラウド同期（Supabase）</div>
+  <div style="padding:0 16px 4px;">
+    <div class="frow"><label>プロジェクトURL</label><input id="syUrl" placeholder="https://xxxx.supabase.co" value="${esc(SYNC.url||'')}"></div>
+    <div class="frow"><label>anonキー</label><input id="syKey" placeholder="eyJ…" value="${esc(SYNC.key||'')}"></div>
+    <div class="frow"><label>同期キー（合言葉。同じキーを入れた端末同士でデータが揃います）</label><input id="syRoom" placeholder="例）kurashi-haruka-0111" value="${esc(SYNC.room||'')}"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="saveSyncCfg()">保存して接続</button>
+      ${syncReady()?`<button style="border:1px solid var(--line);padding:8px 16px;font-size:13px;" onclick="pullState(true)">今すぐ同期</button>`:''}
+      <span style="font-size:12px;color:${syncState.err?'var(--danger)':'var(--sub)'};">${esc(syncState.msg)}${syncState.t?'・'+new Date(syncState.t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):''}</span>
+    </div>
+    ${syncState.err?`<div class="mini" style="padding:6px 0 0;color:var(--danger);">${esc(syncState.err)}</div>`:''}
+  </div>
+  <div class="mini">未設定でもローカルだけで完全に動きます。設定すると保存のたびに自動でクラウドへ送られ、他の端末を開いたとき新しい方が採用されます。設定手順は README_セットアップ.md を参照。</div>
 
   <div class="sec-h">データ</div>
   <div class="setrow"><div><div class="sl">バックアップを書き出す</div><div class="sd">JSON形式で保存</div></div><button style="border:1px solid var(--ink);padding:7px 16px;font-size:13px;" onclick="exportData()">書き出し</button></div>
   <div class="setrow"><div><div class="sl">バックアップを読み込む</div></div>
     <label style="border:1px solid var(--line);padding:7px 16px;font-size:13px;margin:0;color:var(--ink);cursor:pointer;">読み込み<input type="file" accept=".json" style="display:none;" onchange="importData(this)"></label></div>
-  <div class="mini">現在データはこの端末内に保存されています。PC・スマホ間の同期／家族との共有は次の段階（Firebase連携）で追加予定です。それまでは書き出し→読み込みで移行できます。</div>
+  <div class="mini">データは端末内に保存され、上の「クラウド同期」を設定すると自動でSupabaseにも保存されます。書き出し→読み込みは手動での移行・保険用です。家族・チームでの共有機能は次の段階で追加予定です。</div>
 
   <div class="sec-h">改善メモ・リリース情報</div>
   <div style="padding:0 16px 8px;"><label>次にやりたいこと・気づきメモ</label>
     <textarea rows="3" placeholder="使っていて気づいた改善点をここにメモ" onchange="S.notes=this.value;save();">${esc(S.notes)}</textarea>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-      <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">📧 メモをGmailへ送る</button>
+      <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">${s.feedbackUrl?'📮 改善DBへ送信（Gmail通知つき）':'📧 メモをGmailへ送る'}</button>
     </div>
-    <div class="mini" style="padding:8px 0 0;">送信先：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
-    ※ボタンを押すとメールの下書きが開きます（内容＝メモ）。完全自動の通知はフェーズ2（GAS/Firebase連携）で対応予定です。</div></div>
-  <div class="mini"><b>v1.1（2026-07-19）</b><br>
+    <div class="mini" style="padding:8px 0 0;">通知先メール：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
+    改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
+    <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>
+  <div class="mini"><b>v1.2（2026-07-19）</b><br>
+  ・時刻入力をテンキー対応に（数字タップでテンキー、▲▼で微調整・分は15分刻み）<br>
+  ・Supabaseクラウド同期（ローカル優先・自動アップロード・新しい方を採用）<br>
+  ・改善メモをGAS経由でNotion改善DB＋Gmailへ自動送信（未設定時はメール下書き）<br>
+  <b>v1.1（2026-07-19）</b><br>
   ・設定を整理：誕生日・マーク・グループは「開いた先」で一覧管理<br>
   ・線画マークを5カテゴリ（日常/家事/イベント/仕事/遊び）×10種＝50種に拡充<br>
   ・「4つの箱」★：重要×緊急の箱にタスクを投げ入れ→今日の並びに反映、▲▼で並び替え<br>
@@ -1112,11 +1215,22 @@ function toggleNotify(el){
       if(p==='granted'){S.settings.notifyOn=true;save();render();new Notification('くらしタスク',{body:'通知をオンにしました'});}
       else uiAlert('ブラウザの通知が許可されませんでした');});
   }else{S.settings.notifyOn=false;save();render();}}
-function sendNotes(){if(!(S.notes||'').trim()){uiAlert('メモが空です。先に改善メモを書いてください。');return;}
+async function sendNotes(){const memo=(S.notes||'').trim();
+  if(!memo){uiAlert('メモが空です。先に改善メモを書いてください。');return;}
   const d=new Date();
-  location.href='mailto:'+encodeURIComponent(S.settings.notifyEmail)
-    +'?subject='+encodeURIComponent(`【くらしタスク】改善メモ ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`)
-    +'&body='+encodeURIComponent(S.notes);}
+  if(S.settings.feedbackUrl){
+    try{
+      await fetch(S.settings.feedbackUrl,{method:'POST',mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'feedback',type:'改善要望',content:memo,
+          contact:S.settings.notifyEmail,sentAt:d.toISOString()})});
+      S.notes='';save();render();
+      uiAlert('送信しました📮 Notionの改善DBに記録され、Gmailにも通知が届きます。');
+    }catch(e){uiAlert('送信に失敗しました。ネット接続を確認するか、後でもう一度お試しください。');}
+  }else{
+    location.href='mailto:'+encodeURIComponent(S.settings.notifyEmail)
+      +'?subject='+encodeURIComponent(`【くらしタスク】改善メモ ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`)
+      +'&body='+encodeURIComponent(memo);}}
 /* 一覧モーダル（設定画面には一覧を並べない） */
 function bdayList(){openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
@@ -1146,8 +1260,8 @@ function bdayModal(id){
   openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
-    <div class="frow f2"><div><label>月</label><input id="bmM" type="number" min="1" max="12" value="${b?.month||''}"></div>
-      <div><label>日</label><input id="bmD" type="number" min="1" max="31" value="${b?.day||''}"></div></div>
+    <div class="frow f2"><div><label>月</label><input id="bmM" type="number" inputmode="numeric" min="1" max="12" value="${b?.month||''}"></div>
+      <div><label>日</label><input id="bmD" type="number" inputmode="numeric" min="1" max="31" value="${b?.day||''}"></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="bmGift" style="width:auto;" ${b?.gift?'checked':''}>
       <span style="font-size:13px;">プレゼントの準備が必要（色を強調）</span></div>
     <div class="frow"><label>強調色</label><div class="colorsel c6" id="bmColor">
@@ -1171,8 +1285,8 @@ function markModal(id){
   openModal(`<div class="mh"><b>マーク付きの日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="kmName" value="${esc(k?.name||'')}" placeholder="例）結婚記念日"></div>
-    <div class="frow f2"><div><label>月</label><input id="kmM" type="number" min="1" max="12" value="${k?.month||''}"></div>
-      <div><label>日</label><input id="kmD" type="number" min="1" max="31" value="${k?.day||''}"></div></div>
+    <div class="frow f2"><div><label>月</label><input id="kmM" type="number" inputmode="numeric" min="1" max="12" value="${k?.month||''}"></div>
+      <div><label>日</label><input id="kmD" type="number" inputmode="numeric" min="1" max="31" value="${k?.day||''}"></div></div>
     <div class="frow"><label>マーク（5カテゴリ×10種）</label>
       <div class="icontabs" id="kmTabs"></div>
       <div class="icongrid" id="kmGrid"></div></div>
@@ -1273,6 +1387,7 @@ setInterval(()=>{
 /* ========================= 起動 ========================= */
 load();save();
 switchView('today');
+if(syncReady())pullState();
 </script>
 </body>
 </html>
