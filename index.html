@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#15171A">
+<title>くらしタスク｜タスク&カレンダー</title>
+<style>
+:root{
+  --ink:#15171A; --sub:#788091; --line:#E4E6EA; --line2:#F0F1F4;
+  --bg:#FFFFFF; --bg2:#F7F8FA; --accent:#2456E6; --danger:#C9403C;
+  --wait:#D98324; --done:#9AA1AD; --sat:#3D6FD8; --sun:#C9403C;
+}
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0 !important;}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+#app{max-width:960px;margin:0 auto;min-height:100%;padding-bottom:76px;}
+button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:9px 10px;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);}
+label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-bottom:4px;}
+
+/* ===== view header ===== */
+.vhead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 16px 10px;border-bottom:1px solid var(--ink);}
+.vhead h1{font-size:18px;font-weight:700;letter-spacing:.12em;}
+.vhead .sub{font-size:12px;color:var(--sub);letter-spacing:.05em;}
+
+/* ===== bottom nav ===== */
+#nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ink);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
+#nav button{flex:1;padding:10px 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;}
+#nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6;}
+#nav button.on{color:var(--ink);font-weight:700;}
+#nav{max-width:960px;margin:0 auto;}
+
+/* ===== chips ===== */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--line);scrollbar-width:none;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{flex:0 0 auto;padding:5px 12px;border:1px solid var(--line);font-size:12.5px;letter-spacing:.04em;white-space:nowrap;color:var(--sub);display:flex;align-items:center;gap:6px;}
+.chip .dot{width:8px;height:8px;display:inline-block;}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600;}
+.seg{display:flex;border:1px solid var(--line);margin:12px 16px 0;width:fit-content;}
+.seg button{padding:6px 16px;font-size:12.5px;color:var(--sub);letter-spacing:.05em;}
+.seg button.on{background:var(--ink);color:#fff;}
+
+/* ===== sections ===== */
+.sec{padding:0 0 4px;}
+.sec-h{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 6px;font-size:12px;letter-spacing:.14em;color:var(--sub);font-weight:600;}
+.sec-h .act{color:var(--accent);font-size:12.5px;letter-spacing:.04em;}
+
+/* ===== task items ===== */
+.titem{display:flex;align-items:stretch;border-bottom:1px solid var(--line2);cursor:pointer;}
+.titem .bar{width:4px;flex:0 0 4px;}
+.titem .body{flex:1;padding:10px 10px 10px 12px;min-width:0;}
+.titem .tt{font-size:15px;font-weight:500;display:flex;align-items:center;gap:6px;}
+.titem .tt.done{color:var(--done);text-decoration:line-through;font-weight:400;}
+.titem .meta{font-size:11.5px;color:var(--sub);display:flex;gap:10px;flex-wrap:wrap;margin-top:2px;}
+.titem .right{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;padding:8px 12px 8px 0;}
+.badge{font-size:10.5px;letter-spacing:.06em;padding:2px 8px;border:1px solid var(--line);color:var(--sub);white-space:nowrap;}
+.badge.todo{border-color:var(--line);}
+.badge.doing{border-color:var(--accent);color:var(--accent);}
+.badge.wait{border-color:var(--wait);color:var(--wait);background:#FBF3E6;font-weight:700;}
+.badge.done{border-color:var(--line);color:var(--done);}
+.pr1{color:var(--danger);font-weight:700;}
+.pr3{color:var(--sub);}
+.todayBtn{font-size:11px;padding:2px 8px;border:1px solid var(--line);color:var(--sub);white-space:nowrap;}
+.todayBtn.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.linkchips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+.linkchip{font-size:11px;padding:2px 9px;border:1px solid var(--line);color:var(--accent);display:flex;align-items:center;gap:4px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* quick add */
+.qadd{display:flex;gap:0;padding:12px 16px;border-bottom:1px solid var(--line);}
+.qadd input{border-right:none;flex:1;}
+.qadd select{width:110px;border-right:none;font-size:13px;}
+.qadd button{background:var(--ink);color:#fff;padding:0 18px;font-size:13px;letter-spacing:.1em;flex:0 0 auto;}
+
+/* ===== today ===== */
+.tdhead{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--line);gap:10px;}
+.tdhead .date .d1{font-size:26px;font-weight:700;letter-spacing:.02em;}
+.tdhead .date .d2{font-size:12px;color:var(--sub);letter-spacing:.08em;margin-top:2px;}
+.tdhead .date .hol{color:var(--danger);}
+.ring{position:relative;width:78px;height:78px;flex:0 0 78px;}
+.ring svg{transform:rotate(-90deg);}
+.ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;font-weight:700;}
+.ring .pct span{font-size:9px;color:var(--sub);font-weight:400;letter-spacing:.1em;}
+.timebar{padding:12px 16px;border-bottom:1px solid var(--line);}
+.timebar .row{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-bottom:6px;align-items:center;flex-wrap:wrap;gap:2px 8px;}
+.timebar .row b{color:var(--ink);font-size:13.5px;}
+.timebar .nums{white-space:nowrap;}
+.availEdit{margin-left:6px;}
+.timebar .gauge{height:6px;background:var(--bg2);position:relative;}
+.timebar .gauge i{position:absolute;top:0;bottom:0;left:0;background:var(--ink);}
+.timebar .gauge i.over{background:var(--danger);}
+.timebar .neg{color:var(--danger);font-weight:700;}
+.availEdit{font-size:12.5px;color:var(--accent);}
+.startBtn{display:block;width:calc(100% - 32px);margin:14px 16px 4px;background:var(--ink);color:#fff;padding:13px 0;font-size:15px;font-weight:700;letter-spacing:.2em;}
+.startBtn:active{opacity:.8;}
+.gmsg{padding:10px 16px 2px;font-size:13px;color:var(--sub);}
+
+/* routine check row */
+.ritem{display:flex;align-items:center;border-bottom:1px solid var(--line2);padding:9px 16px;gap:11px;}
+.ritem .chk{width:22px;height:22px;border:1.5px solid var(--ink);flex:0 0 22px;display:flex;align-items:center;justify-content:center;}
+.ritem.done .chk{background:var(--ink);}
+.ritem .chk svg{width:14px;height:14px;stroke:#fff;stroke-width:2.5;fill:none;}
+.ritem .rb{flex:1;min-width:0;}
+.ritem .rt{font-size:14.5px;}
+.ritem.done .rt{color:var(--done);text-decoration:line-through;}
+.ritem .rm{font-size:11px;color:var(--sub);}
+.slotTag{font-size:10px;letter-spacing:.1em;color:var(--sub);border:1px solid var(--line);padding:1px 6px;}
+
+/* ===== calendar ===== */
+.calbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);}
+.calbar .ym{font-size:18px;font-weight:700;letter-spacing:.05em;}
+.calbar .mv{display:flex;gap:2px;}
+.calbar .mv button{padding:5px 13px;border:1px solid var(--line);font-size:14px;}
+.calmode{display:flex;border:1px solid var(--line);}
+.calmode button{padding:5px 13px;font-size:12px;color:var(--sub);}
+.calmode button.on{background:var(--ink);color:#fff;}
+#calGrid{display:grid;grid-template-columns:repeat(7,1fr);}
+.dow{font-size:10.5px;text-align:center;color:var(--sub);letter-spacing:.1em;padding:6px 0;border-bottom:1px solid var(--line);}
+.cell{min-height:88px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:3px 3px 4px;position:relative;cursor:pointer;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;overflow:hidden;}
+.cell:nth-child(7n){border-right:none;}
+.cell.out{opacity:.35;}
+.cell.today .dn{background:var(--ink);color:#fff;}
+.cell .top{display:flex;align-items:center;gap:3px;}
+.cell .dn{font-size:12.5px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+.cell .dn.sat{color:var(--sat);} .cell .dn.sun{color:var(--sun);}
+.cell .rk{font-size:8.5px;color:var(--sub);letter-spacing:0;}
+.cell .rk.taian{color:var(--danger);}
+.cell .ich{font-size:8.5px;color:#B8860B;}
+.cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cell .marks{display:flex;gap:2px;padding:1px 0 1px 2px;flex-wrap:wrap;}
+.cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
+.evbar{font-size:9.5px;line-height:1.5;padding:0 3px;margin-top:1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);}
+.evmore{font-size:9px;color:var(--sub);padding-left:3px;}
+
+/* week/day */
+.wrow{display:flex;border-bottom:1px solid var(--line2);cursor:pointer;}
+.wrow .wd{flex:0 0 74px;padding:10px 8px;border-right:1px solid var(--line2);text-align:center;}
+.wrow .wd .n{font-size:17px;font-weight:700;}
+.wrow .wd .r{font-size:9.5px;color:var(--sub);}
+.wrow .wd .h{font-size:9.5px;color:var(--danger);}
+.wrow .wbody{flex:1;padding:8px 12px;min-width:0;}
+.wev{display:flex;gap:8px;font-size:13px;align-items:baseline;margin-bottom:3px;}
+.wev .t{color:var(--sub);font-size:11.5px;flex:0 0 auto;}
+.wev .c{width:8px;height:8px;flex:0 0 8px;align-self:center;}
+.dayhead{padding:16px;border-bottom:1px solid var(--line);}
+.dayhead .d1{font-size:22px;font-weight:700;}
+.dayhead .d2{font-size:12px;color:var(--sub);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;}
+.dayhead .hol{color:var(--danger);}
+.addrow{display:flex;gap:8px;padding:12px 16px;}
+.addrow button{flex:1;border:1px solid var(--ink);padding:9px 0;font-size:13px;letter-spacing:.1em;font-weight:600;}
+.addrow button.fill{background:var(--ink);color:#fff;}
+
+/* ===== modal ===== */
+#modalWrap{position:fixed;inset:0;background:rgba(21,23,26,.45);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+#modalWrap.show{display:flex;}
+#modal{background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:0 0 calc(16px + env(safe-area-inset-bottom));}
+#modal .mh{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:2;}
+#modal .mh b{letter-spacing:.1em;font-size:15px;}
+#modal .mh button{font-size:22px;line-height:1;color:var(--sub);padding:2px 6px;}
+.mbody{padding:14px 16px;}
+.frow{margin-bottom:12px;}
+.f2{display:flex;gap:10px;}
+.f2>div{flex:1;}
+.mbtns{display:flex;gap:8px;padding:4px 16px 8px;}
+.mbtns button{flex:1;padding:11px 0;font-size:13.5px;letter-spacing:.1em;border:1px solid var(--line);color:var(--sub);}
+.mbtns .save{background:var(--ink);color:#fff;border-color:var(--ink);flex:2;font-weight:700;}
+.mbtns .del{color:var(--danger);border-color:var(--danger);}
+.daysel{display:flex;gap:4px;}
+.daysel button{flex:1;padding:7px 0;border:1px solid var(--line);font-size:12.5px;color:var(--sub);}
+.daysel button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.linkedit{border:1px solid var(--line2);padding:8px;margin-bottom:6px;display:flex;gap:6px;align-items:center;}
+.linkedit input{padding:6px 8px;font-size:13px;}
+.linkedit .lb{width:34%;}
+.linkedit button{color:var(--danger);font-size:16px;padding:0 4px;}
+.addlink{font-size:12.5px;color:var(--accent);padding:2px 0;}
+.tmplchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.tmplchips .chip{cursor:pointer;}
+.colorsel{display:flex;gap:6px;flex-wrap:wrap;}
+.colorsel button{width:30px;height:30px;border:2px solid transparent;}
+.colorsel button.on{border-color:var(--ink);}
+
+/* color popover (bottom sheet) */
+#colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;}
+#colorSheet.show{display:block;}
+#colorSheet .t{font-size:12px;color:var(--sub);letter-spacing:.1em;margin-bottom:10px;}
+#colorSheet .sw{display:flex;gap:8px;}
+#colorSheet .sw button{flex:1;height:44px;border:1px solid var(--line);font-size:10px;color:var(--sub);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;}
+#colorSheet .sw .clear{background:var(--bg);}
+
+/* ===== flow (morning) ===== */
+#flow{position:fixed;inset:0;background:var(--ink);color:#fff;z-index:200;display:none;flex-direction:column;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));}
+#flow.show{display:flex;}
+#flow .fh{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.15em;color:#9AA1AD;}
+#flow .fh button{color:#9AA1AD;font-size:13px;}
+#flow .fmain{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
+#flow .slot{font-size:12px;letter-spacing:.2em;color:#9AA1AD;}
+#flow .rname{font-size:26px;font-weight:700;line-height:1.4;}
+#flow .rmeta{font-size:13px;color:#9AA1AD;}
+#flow .watch{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.04em;margin:10px 0;}
+#flow .flinks{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+#flow .flinks a{color:#fff;border:1px solid #4A4F58;padding:6px 14px;font-size:13px;text-decoration:none;}
+#flow .fbtns{display:flex;gap:10px;}
+#flow .fbtns button{flex:1;padding:15px 0;font-size:14px;letter-spacing:.15em;border:1px solid #4A4F58;color:#fff;}
+#flow .fbtns .ok{background:#fff;color:var(--ink);font-weight:700;border-color:#fff;}
+
+/* settings */
+.setrow{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line2);gap:10px;}
+.setrow .sl{font-size:14px;}
+.setrow .sd{font-size:11.5px;color:var(--sub);}
+.setrow input[type=time]{width:110px;}
+.setrow input[type=number]{width:80px;}
+.tgl{width:44px;height:26px;background:var(--line);position:relative;flex:0 0 44px;cursor:pointer;transition:background .15s;}
+.tgl.on{background:var(--ink);}
+.tgl i{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;transition:left .15s;}
+.tgl.on i{left:21px;}
+.mini{font-size:11.5px;color:var(--sub);padding:6px 16px 12px;line-height:1.7;}
+.listrow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2);cursor:pointer;}
+.listrow .dot{width:10px;height:10px;flex:0 0 10px;}
+.listrow svg,.wev svg,.dayhead .d2 svg,.colorsel button svg,.flinks svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.6;}
+.listrow .lt{flex:1;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.listrow .ls{font-size:11.5px;color:var(--sub);}
+
+/* dialog */
+#dlgWrap{position:fixed;inset:0;background:rgba(21,23,26,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:24px;}
+#dlgWrap.show{display:flex;}
+#dlg{background:var(--bg);width:100%;max-width:360px;border:1px solid var(--ink);}
+#dlg .dm{padding:20px 18px 14px;font-size:14.5px;line-height:1.7;white-space:pre-wrap;}
+#dlg input{margin-top:10px;}
+#dlg .db{display:flex;border-top:1px solid var(--line);}
+#dlg .db button{flex:1;padding:13px 0;font-size:14px;letter-spacing:.1em;color:var(--sub);}
+#dlg .db button.ok{background:var(--ink);color:#fff;font-weight:700;}
+#dlg .db button.dngr{color:var(--danger);font-weight:700;}
+
+/* celebrate */
+.burst{position:fixed;font-size:22px;z-index:300;pointer-events:none;animation:burst 1.2s ease-out forwards;}
+@keyframes burst{0%{transform:translateY(0) scale(.6);opacity:1;}100%{transform:translateY(-140px) scale(1.3);opacity:0;}}
+
+@media(min-width:700px){
+  .cell{min-height:110px;}
+  #modalWrap{align-items:center;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+</div>
+
+<nav id="nav">
+  <button data-v="today" onclick="switchView('today')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>今日</button>
+  <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h16M4 18h9"/><path d="M18 5l2 2 3-3" /></svg>タスク</button>
+  <button data-v="cal" onclick="switchView('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
+  <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
+  <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
+</nav>
+
+<div id="modalWrap" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
+<div id="dlgWrap"><div id="dlg"></div></div>
+<div id="colorSheet"></div>
+<div id="flow"></div>
+
+<script>
+'use strict';
+/* ========================= util ========================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const uid=()=> 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ds=(y,m,d)=>`${y}-${pad(m)}-${pad(d)}`;
+const dsOf=dt=>ds(dt.getFullYear(),dt.getMonth()+1,dt.getDate());
+const todayStr=()=>dsOf(new Date());
+const parseDs=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c);};
+const WD=['日','月','火','水','木','金','土'];
+function fmtMin(m){m=Math.round(m);if(!m)return'0分';const h=Math.floor(m/60),r=m%60;return(h?h+'時間':'')+(r?r+'分':'');}
+function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;}
+
+/* ========================= state ========================= */
+const LSKEY='homehub_taskcal_v1';
+const GROUP_COLORS=['#3D6FD8','#5B9E6F','#9A6BD0','#D88A3D','#C9575A','#3AA0A8','#7A7F8C','#C34FA0'];
+const PASTELS=[{c:'#FBE3E8',n:'もも'},{c:'#FCEFD9',n:'あんず'},{c:'#FBF6D3',n:'れもん'},{c:'#E1F1DC',n:'わかば'},{c:'#DDEBF9',n:'そら'},{c:'#E8E2F5',n:'ふじ'}];
+const SLOTS={morning:'朝',day:'昼',night:'夜',any:'いつでも'};
+const STATUS={todo:'未着手',doing:'進行中',wait:'相手待ち',done:'完了'};
+const MARK_ICONS={
+ cake:'<svg viewBox="0 0 24 24"><path d="M4 20h16M5 20v-6h14v6M5 14c1.2 1.4 2.6 1.4 3.5 0 1 1.4 2.4 1.4 3.5 0 1 1.4 2.4 1.4 3.5 0 .9 1.4 2.3 1.4 3.5 0M8 11V8m4 3V8m4 3V8M8 6c-.8-.8-.3-1.7 0-2.2M12 6c-.8-.8-.3-1.7 0-2.2M16 6c-.8-.8-.3-1.7 0-2.2"/></svg>',
+ gift:'<svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10"/><path d="M4 10h16M12 10v10M12 10 9 7a2 2 0 1 1 3-2 2 2 0 1 1 3 2l-3 3"/></svg>',
+ star:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
+ heart:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.7-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.3-7 10-7 10z"/></svg>',
+ flag:'<svg viewBox="0 0 24 24"><path d="M6 21V4M6 4h12l-3 4 3 4H6"/></svg>'};
+let S=null;
+function defaultState(){
+  const gHome={id:'g_home',name:'家庭',color:'#5B9E6F',parentId:null};
+  const gWork={id:'g_work',name:'仕事',color:'#3D6FD8',parentId:null};
+  const gPersonal={id:'g_personal',name:'個人',color:'#9A6BD0',parentId:null};
+  const gClient={id:'g_cliA',name:'クライアントA',color:'#D88A3D',parentId:'g_work'};
+  const gSub={id:'g_cliA_x',name:'顧客X（A社の先）',color:'#C9575A',parentId:'g_cliA'};
+  const t=todayStr();
+  return {
+    ver:1,
+    settings:{weekStart:0,showRokuyo:true,showIchiryu:true,showHoliday:true,showDue:true,
+      notifyOn:false,notifyMorning:'06:30',notifyNight:'22:00',availMin:480},
+    groups:[gHome,gWork,gPersonal,gClient,gSub],
+    tasks:[
+      {id:uid(),title:'例）請求書を送付する',groupId:'g_cliA',estMin:30,priority:1,status:'todo',links:[],due:t,today:t,memo:'',order:1,createdAt:t},
+      {id:uid(),title:'例）保育園の書類を提出',groupId:'g_home',estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',order:2,createdAt:t},
+      {id:uid(),title:'例）資料の戻り待ち（先方確認中）',groupId:'g_cliA_x',estMin:20,priority:2,status:'wait',waitNote:'先方の確認待ち',links:[],due:'',today:null,memo:'',order:3,createdAt:t},
+    ],
+    routines:[
+      {id:uid(),title:'朝の家事（洗濯・片付け）',slot:'morning',days:[0,1,2,3,4,5,6],estMin:20,links:[],order:1,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'子どもの世話（朝）',slot:'morning',days:[0,1,2,3,4,5,6],estMin:30,links:[],order:2,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'保育園の準備・送り',slot:'morning',days:[1,2,3,4,5],estMin:25,links:[],order:3,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'ゴミ集め・ゴミ出し',slot:'morning',days:[1,4],estMin:10,links:[],order:4,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'仕事のルーティン業務',slot:'day',days:[1,2,3,4,5],estMin:60,links:[],order:5,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'各所への報連相（日次）',slot:'day',days:[1,2,3,4,5],estMin:15,links:[],order:6,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'料理・仕込み',slot:'night',days:[0,1,2,3,4,5,6],estMin:45,links:[],order:7,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'夜の家事・かんたん掃除',slot:'night',days:[0,1,2,3,4,5,6],estMin:30,links:[],order:8,active:true,stats:{n:0,total:0}},
+      {id:uid(),title:'子どもの世話（夜・寝かしつけ）',slot:'night',days:[0,1,2,3,4,5,6],estMin:40,links:[],order:9,active:true,stats:{n:0,total:0}},
+    ],
+    events:[],templates:[],
+    birthdays:[],marks:[],
+    dayColors:{},dayLog:{},notes:'',lastNotify:{}
+  };
+}
+function load(){try{const r=localStorage.getItem(LSKEY);S=r?JSON.parse(r):defaultState();}catch(e){S=defaultState();}}
+function save(){localStorage.setItem(LSKEY,JSON.stringify(S));}
+function group(id){return S.groups.find(g=>g.id===id)||{name:'—',color:'#B5BAC4'};}
+function groupPath(id){const g=S.groups.find(x=>x.id===id);if(!g)return'—';return g.parentId?groupPath(g.parentId)+' ▸ '+g.name:g.name;}
+function dayLog(d){if(!S.dayLog[d])S.dayLog[d]={avail:S.settings.availMin,routines:{}};return S.dayLog[d];}
+
+/* ========================= 暦（祝日・六曜・一粒万倍日） ========================= */
+const RAD=Math.PI/180;
+function jdnOf(y,m,d){const a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;
+  return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
+function sunLong(jd){const n=jd-2451545.0;let L=(280.460+0.9856474*n)%360;const g=((357.528+0.9856003*n)%360)*RAD;
+  let lam=L+1.915*Math.sin(g)+0.020*Math.sin(2*g);lam%=360;if(lam<0)lam+=360;return lam;}
+function sunLongAtMidnightJST(jdn){return sunLong(jdn-0.5-9/24);}
+function newMoonJDE(k){const T=k/1236.85;
+  let jde=2451550.09766+29.530588861*k+0.00015437*T*T;
+  const E=1-0.002516*T;
+  const M=(2.5534+29.10535670*k)*RAD, Mp=(201.5643+385.81693528*k)*RAD, F=(160.7108+390.67050284*k)*RAD, Om=(124.7746-1.56375588*k)*RAD;
+  jde+= -0.40720*Math.sin(Mp)+0.17241*E*Math.sin(M)+0.01608*Math.sin(2*Mp)+0.01039*Math.sin(2*F)
+    +0.00739*E*Math.sin(Mp-M)-0.00514*E*Math.sin(Mp+M)+0.00208*E*E*Math.sin(2*M)
+    -0.00111*Math.sin(Mp-2*F)-0.00057*Math.sin(Mp+2*F)+0.00056*E*Math.sin(2*Mp+M)
+    -0.00042*Math.sin(3*Mp)+0.00042*E*Math.sin(M+2*F)+0.00038*E*Math.sin(M-2*F)
+    -0.00024*E*Math.sin(2*Mp-M)-0.00017*Math.sin(Om);
+  return jde;}
+const nmJdnCache={};
+function newMoonJdnJST(k){if(nmJdnCache[k]===undefined)nmJdnCache[k]=Math.floor(newMoonJDE(k)+9/24+0.5);return nmJdnCache[k];}
+function latestNewMoonK(jdn){let k=Math.floor((jdn-2451550)/29.5305888);
+  while(newMoonJdnJST(k+1)<=jdn)k++;
+  while(newMoonJdnJST(k)>jdn)k--;
+  return k;}
+function chukiOfLunation(k){ // 中気→月番号 / なければ0(閏月)
+  const a=newMoonJdnJST(k),b=newMoonJdnJST(k+1);
+  let l1=sunLongAtMidnightJST(a);
+  for(let j=a;j<b;j++){const l2=sunLongAtMidnightJST(j+1);
+    if(Math.floor(l1/30)!==Math.floor(l2/30)){const idx=Math.floor(l2/30);return ((idx+1)%12)+1;}
+    l1=l2;}
+  return 0;}
+const lunarCache={};
+function lunarOf(jdn){ // {m,d}
+  if(lunarCache[jdn])return lunarCache[jdn];
+  let k=latestNewMoonK(jdn);
+  const d=jdn-newMoonJdnJST(k)+1;
+  let m=0,kk=k;
+  for(let i=0;i<4;i++){m=chukiOfLunation(kk);if(m)break;kk--;} // 閏月は前月の数字
+  return lunarCache[jdn]={m:m||1,d};}
+const ROKUYO=['大安','赤口','先勝','友引','先負','仏滅'];
+function rokuyo(y,m,d){const l=lunarOf(jdnOf(y,m,d));return ROKUYO[(l.m+l.d)%6];}
+/* 一粒万倍日（節月×日の十二支・略算） */
+const ICHIRYU={1:[1,6],2:[9,2],3:[0,3],4:[3,4],5:[5,6],6:[9,6],7:[0,7],8:[3,8],9:[9,6],10:[9,10],11:[11,0],12:[3,0]};
+function sekkiMonth(jdn){const lam=sunLongAtMidnightJST(jdn);return Math.floor(((lam-315+720)%360)/30)+1;}
+function isIchiryu(y,m,d){const j=jdnOf(y,m,d);const br=(j+49)%12;return (ICHIRYU[sekkiMonth(j)]||[]).includes(br);}
+/* 祝日 */
+const holCache={};
+function holidaysOf(y){
+  if(holCache[y])return holCache[y];
+  const H={};const add=(m,d,n)=>H[m+'-'+d]=n;
+  const nthMon=(m,n)=>{const f=new Date(y,m-1,1).getDay();return 1+((8-f)%7)+(n-1)*7;};
+  add(1,1,'元日');add(1,nthMon(1,2),'成人の日');add(2,11,'建国記念の日');add(2,23,'天皇誕生日');
+  add(3,Math.floor(20.8431+0.242194*(y-1980)-Math.floor((y-1980)/4)),'春分の日');
+  add(4,29,'昭和の日');add(5,3,'憲法記念日');add(5,4,'みどりの日');add(5,5,'こどもの日');
+  add(7,nthMon(7,3),'海の日');add(8,11,'山の日');add(9,nthMon(9,3),'敬老の日');
+  add(9,Math.floor(23.2488+0.242194*(y-1980)-Math.floor((y-1980)/4)),'秋分の日');
+  add(10,nthMon(10,2),'スポーツの日');add(11,3,'文化の日');add(11,23,'勤労感謝の日');
+  // 振替休日
+  Object.keys(H).forEach(k=>{const[m,d]=k.split('-').map(Number);
+    if(new Date(y,m-1,d).getDay()===0){let dt=new Date(y,m-1,d+1);
+      while(H[(dt.getMonth()+1)+'-'+dt.getDate()])dt=new Date(y,dt.getMonth(),dt.getDate()+1);
+      H[(dt.getMonth()+1)+'-'+dt.getDate()]='振替休日';}});
+  // 国民の休日（敬老の日と秋分の日の間など）
+  for(let m=1;m<=12;m++)for(let d=2;d<=30;d++){
+    if(!H[m+'-'+d]&&H[m+'-'+(d-1)]&&H[m+'-'+(d+1)]&&new Date(y,m-1,d).getDay()!==0)H[m+'-'+d]='国民の休日';}
+  return holCache[y]=H;}
+function holidayName(y,m,d){return S.settings.showHoliday?(holidaysOf(y)[m+'-'+d]||null):null;}
+
+/* ========================= view切替 ========================= */
+let view='today';
+let calMode='month', calY,calX,calDate=todayStr();
+let taskSel=new Set(), taskSort='pr', calSel=new Set();
+{const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
+function switchView(v){view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();}
+function render(){
+  const el=$('#view');
+  if(view==='today')el.innerHTML=renderToday();
+  else if(view==='tasks')el.innerHTML=renderTasks();
+  else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();}
+  else if(view==='routine')el.innerHTML=renderRoutines();
+  else el.innerHTML=renderSettings();
+  window.scrollTo(0,0);
+}
+
+/* ========================= 今日 ========================= */
+function todaysRoutines(d){const wd=parseDs(d).getDay();
+  const order={morning:0,day:1,night:2,any:3};
+  return S.routines.filter(r=>r.active&&r.days.includes(wd)).sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
+function renderToday(){
+  const t=todayStr(),dt=new Date(),y=dt.getFullYear(),m=dt.getMonth()+1,d=dt.getDate();
+  const log=dayLog(t);
+  const routines=todaysRoutines(t);
+  const tasks=S.tasks.filter(x=>x.today===t);
+  const carry=S.tasks.filter(x=>x.today&&x.today<t&&x.status!=='done');
+  const evs=S.events.filter(e=>e.date===t).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const doneR=routines.filter(r=>log.routines[r.id]?.done).length;
+  const doneT=tasks.filter(x=>x.status==='done').length;
+  const total=routines.length+tasks.length, done=doneR+doneT;
+  const pct=total?Math.round(done/total*100):0;
+  const restMin=routines.filter(r=>!log.routines[r.id]?.done).reduce((s,r)=>s+(+r.estMin||0),0)
+    +tasks.filter(x=>x.status!=='done').reduce((s,x)=>s+(+x.estMin||0),0);
+  const avail=log.avail??S.settings.availMin;
+  const free=avail-restMin;
+  const hol=holidayName(y,m,d);
+  const rk=S.settings.showRokuyo?rokuyo(y,m,d):'';
+  const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
+  const R=26,CIRC=2*Math.PI*R;
+  const gmsg=pct===100&&total?'🎉 全部完了！今日は大勝利です':pct>=80?'あと少し！ラストスパート':pct>=50?'折り返し地点、いい調子':pct>0?'順調にスタートしています':'まずは1つ、始めましょう';
+  return `
+  <div class="tdhead">
+    <div class="date">
+      <div class="d1">${m}月${d}日 <span style="font-size:15px;">(${WD[dt.getDay()]})</span></div>
+      <div class="d2">${rk?rk+'　':''}${ich?'<span style="color:#B8860B;">一粒万倍日</span>　':''}${hol?`<span class="hol">${esc(hol)}</span>`:''}</div>
+    </div>
+    <div class="ring"><svg width="78" height="78">
+      <circle cx="39" cy="39" r="${R}" stroke="#EEF0F3" stroke-width="7" fill="none"/>
+      <circle cx="39" cy="39" r="${R}" stroke="${pct===100?'#2E9E5B':'#15171A'}" stroke-width="7" fill="none"
+        stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC*(1-pct/100)}"/>
+    </svg><div class="pct">${pct}%<span>${done}/${total} 完了</span></div></div>
+  </div>
+  <div class="timebar">
+    <div class="row"><span>残り作業 <b>${fmtMin(restMin)}</b> ／ 使える <b>${fmtMin(avail)}</b><button class="availEdit" onclick="editAvail()">変更</button></span>
+      <span class="nums ${free<0?'neg':''}">${free<0?'▲'+fmtMin(-free)+'超過':'空き '+fmtMin(free)}</span></div>
+    <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
+  </div>
+  <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
+  <div class="gmsg">${gmsg}</div>
+  ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${evs.map(e=>`
+    <div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="background:${group(e.groupId).color}"></div>
+    <div class="body"><div class="tt">${esc(e.title)}</div><div class="meta"><span>${e.start||''}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span></div>
+    ${linkChips(e.links)}</div></div>`).join('')}</div>`:''}
+  ${carry.length?`<div class="sec"><div class="sec-h" style="color:var(--wait);">昨日までの繰り越し
+    <button class="act" onclick="carryAll()">すべて今日へ</button></div>
+    ${carry.map(x=>taskRow(x)).join('')}</div>`:''}
+  <div class="sec"><div class="sec-h">今日のルーティン（${doneR}/${routines.length}）</div>
+    ${routines.length?routines.map(r=>{const dn=log.routines[r.id]?.done;const st=r.stats||{n:0,total:0};
+      return `<div class="ritem ${dn?'done':''}" onclick="toggleRoutine('${r.id}')">
+      <div class="chk">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
+      <div class="rb"><div class="rt">${esc(r.title)}</div>
+      <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?`・平均${fmtMin(st.total/st.n/60)}`:''}</div>
+      ${linkChips(r.links)}</div></div>`;}).join(''):'<div class="mini">今日のルーティンはありません</div>'}
+  </div>
+  <div class="sec"><div class="sec-h">今日やるタスク（${doneT}/${tasks.length}・${fmtMin(tasks.filter(x=>x.status!=='done').reduce((s,x)=>s+(+x.estMin||0),0))}）
+    <button class="act" onclick="switchView('tasks')">＋選ぶ</button></div>
+    ${tasks.length?tasks.sort((a,b)=>a.priority-b.priority).map(x=>taskRow(x)).join(''):'<div class="mini">「タスク」タブから今日やるものを選んでください（☀ボタン）</div>'}
+  </div>
+  <div class="qadd" style="border-top:1px solid var(--line);">
+    <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
+    <button onclick="quickAddToday()">追加</button>
+  </div>`;
+}
+function linkChips(links){if(!links||!links.length)return'';
+  return `<div class="linkchips">${links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${esc(l.label||l.url)}</a>`).join('')}</div>`;}
+async function editAvail(){const t=todayStr();const log=dayLog(t);
+  const v=await uiPrompt('今日タスクに使える時間（分）',log.avail??S.settings.availMin,'number');
+  if(v===null)return;log.avail=Math.max(0,parseInt(v)||0);save();render();}
+function quickAddToday(){const inp=$('#qaToday');const v=inp.value.trim();if(!v)return;
+  S.tasks.push({id:uid(),title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:todayStr(),memo:'',order:Date.now(),createdAt:todayStr()});
+  save();render();}
+function carryAll(){const t=todayStr();S.tasks.forEach(x=>{if(x.today&&x.today<t&&x.status!=='done')x.today=t;});save();render();}
+function toggleRoutine(id){const t=todayStr();const log=dayLog(t);
+  const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur};
+  save();render();checkCelebrate();}
+function checkCelebrate(){const t=todayStr();const log=dayLog(t);
+  const rs=todaysRoutines(t),ts=S.tasks.filter(x=>x.today===t);
+  const total=rs.length+ts.length;if(!total)return;
+  const done=rs.filter(r=>log.routines[r.id]?.done).length+ts.filter(x=>x.status==='done').length;
+  if(done===total)celebrate();}
+function celebrate(){const em=['🎉','✨','🌸','⭐','💮','🎊'];
+  for(let i=0;i<16;i++){const s=document.createElement('span');s.className='burst';
+    s.textContent=em[i%em.length];s.style.left=(10+Math.random()*80)+'vw';s.style.top=(30+Math.random()*40)+'vh';
+    s.style.animationDelay=(Math.random()*.5)+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),1800);}}
+
+/* ========================= タスク ========================= */
+function taskRow(x){const g=group(x.groupId);
+  return `<div class="titem" onclick="taskModal('${x.id}')">
+    <div class="bar" style="background:${g.color}"></div>
+    <div class="body">
+      <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
+      <div class="meta"><span style="color:${g.color};">●</span><span>${esc(groupPath(x.groupId))}</span>
+        ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
+        ${x.due?`<span>期限 ${fmtDateJa(x.due)}</span>`:''}
+        ${x.status==='wait'&&x.waitNote?`<span style="color:var(--wait);">${esc(x.waitNote)}</span>`:''}</div>
+      ${linkChips(x.links)}
+    </div>
+    <div class="right">
+      <button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>
+      <button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>
+    </div></div>`;}
+function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  const seq=['todo','doing','wait','done'];x.status=seq[(seq.indexOf(x.status)+1)%4];
+  if(x.status==='done'){x.doneAt=todayStr();}save();render();checkCelebrate();}
+function toggleToday(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  x.today=x.today===todayStr()?null:todayStr();save();render();}
+function visibleGroups(sel){ // 選択グループ＋その子孫
+  if(!sel.size)return null;
+  const ids=new Set();
+  const addKids=id=>{ids.add(id);S.groups.filter(g=>g.parentId===id).forEach(g=>addKids(g.id));};
+  sel.forEach(addKids);return ids;}
+function groupChipsHtml(sel,fn){
+  const roots=S.groups.filter(g=>!g.parentId);
+  const flat=[];const walk=(g,dep)=>{flat.push({g,dep});S.groups.filter(x=>x.parentId===g.id).forEach(c=>walk(c,dep+1));};
+  roots.forEach(g=>walk(g,0));
+  return `<div class="chips"><button class="chip ${!sel.size?'on':''}" onclick="${fn}('')">全体</button>
+    ${flat.map(({g,dep})=>`<button class="chip ${sel.has(g.id)?'on':''}" onclick="${fn}('${g.id}')">
+      <span class="dot" style="background:${g.color}"></span>${'▸'.repeat(dep)}${esc(g.name)}</button>`).join('')}</div>`;}
+function tglTaskSel(id){if(!id)taskSel.clear();else taskSel.has(id)?taskSel.delete(id):taskSel.add(id);render();}
+function tglCalSel(id){if(!id)calSel.clear();else calSel.has(id)?calSel.delete(id):calSel.add(id);render();attachCellPress();}
+function setTaskSort(s){taskSort=s;render();}
+function renderTasks(){
+  const ids=visibleGroups(taskSel);
+  let list=S.tasks.filter(x=>!ids||ids.has(x.groupId));
+  const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
+  const sortFn=(a,b)=>a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')||a.order-b.order;
+  let body='';
+  if(taskSort==='pr'){body=open.sort(sortFn).map(taskRow).join('');}
+  else{const gs=S.groups.filter(g=>!ids||ids.has(g.id));
+    body=gs.map(g=>{const ts=open.filter(x=>x.groupId===g.id).sort(sortFn);
+      return ts.length?`<div class="sec-h"><span style="color:${g.color};">●</span>　${esc(groupPath(g.id))}（${ts.length}）</div>${ts.map(taskRow).join('')}`:'';}).join('');}
+  return `
+  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
+  ${groupChipsHtml(taskSel,'tglTaskSel')}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;">
+    <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先順（全体）</button>
+    <button class="${taskSort==='grp'?'on':''}" onclick="setTaskSort('grp')">グループ別</button></div>
+    <button class="act" style="color:var(--accent);font-size:13px;" onclick="taskModal(null)">＋ 詳細追加</button>
+  </div>
+  <div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
+    <select id="qaGroup">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select>
+    <button onclick="quickAddTask()">追加</button></div>
+  ${body||'<div class="mini">タスクはありません</div>'}
+  ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act" onclick="clearDone()">完了を一括削除</button></div>
+    ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(taskRow).join('')}`:''}`;
+}
+function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
+  S.tasks.push({id:uid(),title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',order:Date.now(),createdAt:todayStr()});
+  save();render();}
+async function clearDone(){if(!await uiConfirm('完了済みタスクをすべて削除しますか？','削除'))return;
+  S.tasks=S.tasks.filter(x=>x.status!=='done');save();render();}
+
+/* ===== links editor（モーダル共通） ===== */
+let editLinks=[];
+function linksEditorHtml(){return `<div id="linksEd">${editLinks.map((l,i)=>`
+  <div class="linkedit"><input class="lb" value="${esc(l.label)}" placeholder="名前" oninput="editLinks[${i}].label=this.value">
+  <input value="${esc(l.url)}" placeholder="https://…" oninput="editLinks[${i}].url=this.value">
+  <button onclick="editLinks.splice(${i},1);refreshLinksEd()">✕</button></div>`).join('')}
+  <button class="addlink" onclick="editLinks.push({label:'',url:''});refreshLinksEd()">＋ リンクを追加（サイト・資料など）</button></div>`;}
+function refreshLinksEd(){$('#linksEd').outerHTML=linksEditorHtml();}
+function collectLinks(){return editLinks.filter(l=>l.url.trim()).map(l=>({label:l.label.trim()||l.url.trim().replace(/^https?:\/\//,'').slice(0,24),url:l.url.trim()}));}
+
+/* ===== task modal ===== */
+function taskModal(id){
+  const x=id?S.tasks.find(t=>t.id===id):null;
+  editLinks=(x?.links||[]).map(l=>({...l}));
+  openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
+    <div class="frow f2"><div><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
+      <div><label>所要時間（分）</label><input id="tmEst" type="number" min="0" value="${x?.estMin??15}"></div></div>
+    <div class="frow f2"><div><label>優先度</label><select id="tmPr">
+      <option value="1" ${x?.priority===1?'selected':''}>高</option><option value="2" ${!x||x.priority===2?'selected':''}>中</option><option value="3" ${x?.priority===3?'selected':''}>低</option></select></div>
+      <div><label>期限</label><input id="tmDue" type="date" value="${x?.due||''}"></div></div>
+    <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
+      ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
+    <div class="frow" id="tmWaitRow" style="display:${x?.status==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(x?.waitNote||'')}" placeholder="例）B様の返信待ち"></div>
+    <div class="frow"><label>メモ</label><textarea id="tmMemo" rows="2">${esc(x?.memo||'')}</textarea></div>
+    <div class="frow"><label>リンク（作業に使うサイト・資料）</label>${linksEditorHtml()}</div>
+  </div>
+  <div class="mbtns">
+    ${x?`<button class="del" onclick="delTask('${x.id}')">削除</button><button onclick="dupTask('${x.id}')">複製</button>`:''}
+    <button class="save" onclick="saveTask('${x?.id||''}')">保存</button>
+  </div>`);}
+function saveTask(id){
+  const title=$('#tmTitle').value.trim();if(!title){uiAlert('タスク名を入力してください');return;}
+  const data={title,groupId:$('#tmGroup').value,estMin:+$('#tmEst').value||0,priority:+$('#tmPr').value,
+    due:$('#tmDue').value,status:$('#tmSt').value,waitNote:$('#tmWait').value.trim(),
+    today:$('#tmToday').value?todayStr():null,memo:$('#tmMemo').value,links:collectLinks()};
+  if(id){Object.assign(S.tasks.find(t=>t.id===id),data);}
+  else S.tasks.push({id:uid(),...data,order:Date.now(),createdAt:todayStr()});
+  save();closeModal();render();}
+async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
+  S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();render();}
+function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  S.tasks.push({...JSON.parse(JSON.stringify(x)),id:uid(),title:x.title+'（コピー）',status:'todo',today:null,order:Date.now()});
+  save();closeModal();render();}
+
+/* ========================= カレンダー ========================= */
+function calNav(n){if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(calX>11){calX=0;calY++;}}
+  else{const d=parseDs(calDate);d.setDate(d.getDate()+(calMode==='week'?7*n:n));calDate=dsOf(d);calY=d.getFullYear();calX=d.getMonth();}
+  render();attachCellPress();}
+function setCalMode(m){calMode=m;render();attachCellPress();}
+function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();}
+function eventsOn(d){const ids=visibleGroups(calSel);
+  return S.events.filter(e=>e.date===d&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+function dueTasksOn(d){if(!S.settings.showDue)return[];const ids=visibleGroups(calSel);
+  return S.tasks.filter(x=>x.due===d&&x.status!=='done'&&(!ids||ids.has(x.groupId)));}
+function marksOn(m,d){const out=[];
+  S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+'さんの誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
+  S.marks.forEach(k=>{if(+k.month===m&&+k.day===d)out.push({icon:k.icon,color:k.color,name:k.name});});
+  return out;}
+function renderCal(){
+  const modeBtns=`<div class="calmode">${[['month','月'],['week','週'],['day','日']].map(([k,v])=>`<button class="${calMode===k?'on':''}" onclick="setCalMode('${k}')">${v}</button>`).join('')}</div>`;
+  let head='',body='';
+  if(calMode==='month'){
+    head=`${calY}年${calX+1}月`;
+    const ws=S.settings.weekStart;
+    const dows=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
+    const first=new Date(calY,calX,1);
+    let start=new Date(calY,calX,1-((first.getDay()-ws+7)%7));
+    let cells='';
+    for(let i=0;i<42;i++){
+      const c=new Date(start);c.setDate(start.getDate()+i);
+      const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dow=c.getDay(),dstr=dsOf(c);
+      if(i===35&&c.getMonth()!==calX)break;
+      const out=c.getMonth()!==calX;
+      const hol=holidayName(y,m,d);
+      const rk=S.settings.showRokuyo?rokuyo(y,m,d):'';
+      const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
+      const mks=marksOn(m,d);
+      const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
+      const items=[...evs.map(e=>({t:e.title,c:group(e.groupId).color,due:0})),...dues.map(x=>({t:x.title,c:'',due:1}))];
+      const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
+      cells+=`<div class="cell ${out?'out':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
+        <div class="top"><span class="dn ${hol||dow===0?'sun':dow===6?'sat':''}">${d}</span>
+          ${rk?`<span class="rk ${rk==='大安'?'taian':''}">${rk}</span>`:''}${ich?'<span class="ich">万倍</span>':''}</div>
+        ${hol?`<div class="holname">${esc(hol)}</div>`:''}
+        ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${MARK_ICONS[k.icon]||''}</span>`).join('')}</div>`:''}
+        ${items.slice(0,3).map(it=>`<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c}"`}>${esc(it.t)}</div>`).join('')}
+        ${items.length>3?`<div class="evmore">+${items.length-3}</div>`:''}
+      </div>`;}
+    body=`<div id="calGrid">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
+    <div class="mini">日付セルを<b>長押し</b>するとパステル6色で色分けできます／タップで日表示</div>`;
+  }else if(calMode==='week'){
+    const base=parseDs(calDate);const ws=S.settings.weekStart;
+    const start=new Date(base);start.setDate(base.getDate()-((base.getDay()-ws+7)%7));
+    const end=new Date(start);end.setDate(start.getDate()+6);
+    head=`${start.getMonth()+1}/${start.getDate()} 〜 ${end.getMonth()+1}/${end.getDate()}`;
+    body=[...Array(7)].map((_,i)=>{const c=new Date(start);c.setDate(start.getDate()+i);
+      const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dstr=dsOf(c);
+      const hol=holidayName(y,m,d);const evs=eventsOn(dstr),dues=dueTasksOn(dstr),mks=marksOn(m,d);
+      const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
+      return `<div class="wrow" onclick="calGoto('${dstr}')">
+        <div class="wd" ${bg?`style="background:${bg}"`:''}>
+          <div class="n ${hol||c.getDay()===0?'sun':''}" style="${c.getDay()===6?'color:var(--sat);':''}${hol||c.getDay()===0?'color:var(--sun);':''}">${d}</div>
+          <div class="r">${WD[c.getDay()]}${S.settings.showRokuyo?'・'+rokuyo(y,m,d):''}</div>
+          ${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
+        <div class="wbody">
+          ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${MARK_ICONS[k.icon]}</span><span>${esc(k.name)}</span></div>`).join('')}
+          ${evs.map(e=>`<div class="wev"><span class="c" style="background:${group(e.groupId).color}"></span><span class="t">${e.start||'終日'}</span><span>${esc(e.title)}</span></div>`).join('')}
+          ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
+          ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
+        </div></div>`;}).join('');
+  }else{
+    const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
+    head=`${m}月`;
+    const hol=holidayName(y,m,d);const evs=eventsOn(calDate),dues=dueTasksOn(calDate),mks=marksOn(m,d);
+    const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
+    body=`<div class="dayhead"><div class="d1">${m}月${d}日（${WD[c.getDay()]}）</div>
+      <div class="d2">${S.settings.showRokuyo?rokuyo(y,m,d):''}${ich?'<span style="color:#B8860B;">一粒万倍日</span>':''}${hol?`<span class="hol">${esc(hol)}</span>`:''}</div>
+      ${mks.length?`<div class="d2" style="margin-top:6px;">${mks.map(k=>`<span style="display:flex;align-items:center;gap:4px;color:${k.color};"><span style="width:15px;height:15px;display:inline-block;">${MARK_ICONS[k.icon]}</span>${esc(k.name)}</span>`).join('')}</div>`:''}
+    </div>
+    <div class="addrow"><button class="fill" onclick="eventModal(null,'${calDate}')">＋ 予定を追加</button>
+      <button onclick="taskModalWithDue('${calDate}')">＋ この日期限のタスク</button></div>
+    <div class="sec-h">予定</div>
+    ${evs.length?evs.map(e=>`<div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="background:${group(e.groupId).color}"></div>
+      <div class="body"><div class="tt">${esc(e.title)}</div>
+      <div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${e.memo?`<span>${esc(e.memo)}</span>`:''}</div>
+      ${linkChips(e.links)}</div></div>`).join(''):'<div class="mini">予定はありません</div>'}
+    <div class="sec-h">この日が期限のタスク</div>
+    ${dues.length?dues.map(taskRow).join(''):'<div class="mini">ありません</div>'}`;
+  }
+  return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替できます</span></div>
+  ${groupChipsHtml(calSel,'tglCalSel')}
+  <div class="calbar"><div class="mv"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calNav(1)">›</button></div>
+    <div class="ym">${head}</div>${modeBtns}</div>${body}`;
+}
+function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();attachCellPress();}
+function taskModalWithDue(d){taskModal(null);setTimeout(()=>{$('#tmDue').value=d;},0);}
+/* 長押し→色 */
+let pressT=null,pressMoved=false,suppress=false;
+function attachCellPress(){
+  $$('.cell').forEach(el=>{
+    el.addEventListener('contextmenu',e=>e.preventDefault());
+    el.addEventListener('pointerdown',e=>{pressMoved=false;
+      pressT=setTimeout(()=>{pressT=null;suppress=true;openColorSheet(el.dataset.d);},520);});
+    el.addEventListener('pointermove',()=>{pressMoved=true;if(pressT){clearTimeout(pressT);pressT=null;}});
+    el.addEventListener('pointerup',()=>{if(pressT){clearTimeout(pressT);pressT=null;
+      if(!pressMoved&&!suppress)calGoto(el.dataset.d);}suppress=false;});
+    el.addEventListener('pointercancel',()=>{if(pressT){clearTimeout(pressT);pressT=null;}});
+  });}
+function openColorSheet(dstr){
+  const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
+    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})">${p.n}</button>`).join('')}
+    <button class="clear" onclick="setDayColor('${dstr}',null)">なし</button></div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+function setDayColor(d,i){if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;
+  save();$('#colorSheet').classList.remove('show');render();attachCellPress();}
+
+/* ===== event modal ===== */
+function eventModal(id,presetDate){
+  const e=id?S.events.find(v=>v.id===id):null;
+  editLinks=(e?.links||[]).map(l=>({...l}));
+  openModal(`<div class="mh"><b>${e?'予定の編集':'予定の追加'}</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    ${!e&&S.templates.length?`<label>よく使う予定から</label><div class="tmplchips">${S.templates.map(t=>`
+      <button class="chip" onclick="applyTmpl('${t.id}')"><span class="dot" style="background:${group(t.groupId).color}"></span>${esc(t.title)}</button>
+      `).join('')}<button class="chip" style="color:var(--danger);" onclick="manageTmpl()">管理</button></div>`:''}
+    <div class="frow"><label>予定名</label><input id="emTitle" value="${esc(e?.title||'')}"></div>
+    <div class="frow f2"><div><label>日付</label><input id="emDate" type="date" value="${e?.date||presetDate||todayStr()}"></div>
+      <div><label>グループ</label><select id="emGroup">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div></div>
+    <div class="frow f2"><div><label>開始（空欄=終日）</label><input id="emStart" type="time" value="${e?.start||''}"></div>
+      <div><label>終了</label><input id="emEnd" type="time" value="${e?.end||''}"></div></div>
+    <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
+    <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emTmpl" style="width:auto;">
+      <span style="font-size:13px;">よく使う予定として登録（テンプレ化）</span></div>
+  </div>
+  <div class="mbtns">
+    ${e?`<button class="del" onclick="delEvent('${e.id}')">削除</button><button onclick="dupEvent('${e.id}')">複製</button>`:''}
+    <button class="save" onclick="saveEvent('${e?.id||''}')">保存</button>
+  </div>`);}
+function applyTmpl(tid){const t=S.templates.find(x=>x.id===tid);if(!t)return;
+  $('#emTitle').value=t.title;$('#emGroup').value=t.groupId;$('#emStart').value=t.start||'';$('#emEnd').value=t.end||'';$('#emMemo').value=t.memo||'';
+  editLinks=(t.links||[]).map(l=>({...l}));refreshLinksEd();}
+function manageTmpl(){
+  openModal(`<div class="mh"><b>よく使う予定の管理</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">${S.templates.length?S.templates.map(t=>`
+    <div class="listrow" style="cursor:default;"><span class="dot" style="background:${group(t.groupId).color}"></span>
+    <span class="lt">${esc(t.title)}</span><span class="ls">${t.start||'終日'}</span>
+    <button style="color:var(--danger);font-size:13px;" onclick="delTmpl('${t.id}')">削除</button></div>`).join('')
+    :'<div class="mini" style="padding:0;">テンプレはありません。予定の保存時に「よく使う予定として登録」にチェックすると追加されます。</div>'}
+  </div>`);}
+async function delTmpl(id){if(!await uiConfirm('このテンプレを削除しますか？','削除'))return;
+  S.templates=S.templates.filter(t=>t.id!==id);save();manageTmpl();}
+function saveEvent(id){
+  const title=$('#emTitle').value.trim();if(!title){uiAlert('予定名を入力してください');return;}
+  const data={title,date:$('#emDate').value,groupId:$('#emGroup').value,start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,links:collectLinks()};
+  if(id)Object.assign(S.events.find(e=>e.id===id),data);
+  else S.events.push({id:uid(),...data});
+  if($('#emTmpl').checked)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
+  save();closeModal();render();attachCellPress();}
+async function delEvent(id){if(!await uiConfirm('この予定を削除しますか？','削除'))return;
+  S.events=S.events.filter(e=>e.id!==id);save();closeModal();render();attachCellPress();}
+function dupEvent(id){const e=S.events.find(v=>v.id===id);if(!e)return;
+  S.events.push({...JSON.parse(JSON.stringify(e)),id:uid(),title:e.title+'（コピー）'});
+  save();closeModal();render();attachCellPress();}
+
+/* ========================= ルーティン ========================= */
+function renderRoutines(){
+  const order={morning:0,day:1,night:2,any:3};
+  const list=[...S.routines].sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);
+  let cur='';
+  return `<div class="vhead"><h1>ルーティン</h1><button class="act" style="color:var(--accent);font-size:13px;" onclick="routineModal(null)">＋ 追加</button></div>
+  <div class="mini">毎日・曜日ごとの決まった作業を登録すると「今日」に自動で並びます。実行時間は自動で記録され、平均が見えます。</div>
+  ${list.map(r=>{const h=r.slot!==cur?`<div class="sec-h">${SLOTS[r.slot]}</div>`:'';cur=r.slot;
+    const st=r.stats||{n:0,total:0};
+    return h+`<div class="titem" onclick="routineModal('${r.id}')">
+      <div class="bar" style="background:${r.active?'var(--ink)':'var(--line)'}"></div>
+      <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${esc(r.title)}</div>
+      <div class="meta"><span>${r.days.length===7?'毎日':r.days.map(d=>WD[d]).join('・')}</span><span>目安${fmtMin(r.estMin)}</span>
+      ${st.n?`<span>平均 ${fmtMin(st.total/st.n/60)}（${st.n}回）</span>`:''}${r.active?'':'<span>停止中</span>'}</div>
+      ${linkChips(r.links)}</div></div>`;}).join('')}`;
+}
+function routineModal(id){
+  const r=id?S.routines.find(x=>x.id===id):null;
+  editLinks=(r?.links||[]).map(l=>({...l}));
+  const days=r?[...r.days]:[0,1,2,3,4,5,6];
+  window._rdays=days;
+  openModal(`<div class="mh"><b>${r?'ルーティン編集':'ルーティン追加'}</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
+    <div class="frow f2"><div><label>時間帯</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${r?.slot===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div><label>目安時間（分）</label><input id="rmEst" type="number" min="0" value="${r?.estMin??15}"></div></div>
+    <div class="frow"><label>実行する曜日</label><div class="daysel" id="rmDays">
+      ${WD.map((w,i)=>`<button class="${days.includes(i)?'on':''}" onclick="tglRDay(${i},this)">${w}</button>`).join('')}</div></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmActive" style="width:auto;" ${!r||r.active?'checked':''}>
+      <span style="font-size:13px;">有効（今日のリストに表示する）</span></div>
+    <div class="frow"><label>リンク（開くサイト・マニュアル等）</label>${linksEditorHtml()}</div>
+    ${r?.stats?.n?`<div class="mini" style="padding:0;">これまで${r.stats.n}回実行・平均${fmtMin(r.stats.total/r.stats.n/60)}</div>`:''}
+  </div>
+  <div class="mbtns">
+    ${r?`<button class="del" onclick="delRoutine('${r.id}')">削除</button><button onclick="dupRoutine('${r.id}')">複製</button>`:''}
+    <button class="save" onclick="saveRoutine('${r?.id||''}')">保存</button>
+  </div>`);}
+function tglRDay(i,btn){const d=window._rdays;const p=d.indexOf(i);p>=0?d.splice(p,1):d.push(i);btn.classList.toggle('on');}
+function saveRoutine(id){
+  const title=$('#rmTitle').value.trim();if(!title){uiAlert('名前を入力してください');return;}
+  const data={title,slot:$('#rmSlot').value,estMin:+$('#rmEst').value||0,days:[...window._rdays].sort(),active:$('#rmActive').checked,links:collectLinks()};
+  if(id)Object.assign(S.routines.find(r=>r.id===id),data);
+  else S.routines.push({id:uid(),...data,order:Date.now(),stats:{n:0,total:0}});
+  save();closeModal();render();}
+async function delRoutine(id){if(!await uiConfirm('このルーティンを削除しますか？','削除'))return;
+  S.routines=S.routines.filter(r=>r.id!==id);save();closeModal();render();}
+function dupRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r)return;
+  S.routines.push({...JSON.parse(JSON.stringify(r)),id:uid(),title:r.title+'（コピー）',order:Date.now(),stats:{n:0,total:0}});
+  save();closeModal();render();}
+
+/* ========================= おはようフロー ========================= */
+let flowList=[],flowIdx=0,flowStart=0,flowTimer=null;
+function startFlow(){
+  const t=todayStr();const log=dayLog(t);
+  flowList=todaysRoutines(t).filter(r=>!log.routines[r.id]?.done);
+  if(!flowList.length){uiAlert('今日のルーティンはすべて完了しています🎉');return;}
+  flowIdx=0;$('#flow').classList.add('show');flowShow();}
+function flowShow(){
+  const r=flowList[flowIdx];flowStart=Date.now();
+  const st=r.stats||{n:0,total:0};
+  $('#flow').innerHTML=`
+    <div class="fh"><span>ルーティン ${flowIdx+1} / ${flowList.length}</span><button onclick="flowClose()">終了 ✕</button></div>
+    <div class="fmain">
+      <div class="slot">${SLOTS[r.slot]}のルーティン</div>
+      <div class="rname">${esc(r.title)}</div>
+      <div class="rmeta">目安 ${fmtMin(r.estMin)}${st.n?`　／　これまでの平均 ${fmtMin(st.total/st.n/60)}`:''}</div>
+      <div class="watch" id="fwatch">00:00</div>
+      ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
+    </div>
+    <div class="fbtns"><button onclick="flowSkip()">スキップ</button><button class="ok" onclick="flowDone()">完了 → 次へ</button></div>`;
+  clearInterval(flowTimer);
+  flowTimer=setInterval(()=>{const s=Math.floor((Date.now()-flowStart)/1000);
+    const el=$('#fwatch');if(el)el.textContent=pad(Math.floor(s/60))+':'+pad(s%60);},250);}
+function flowDone(){
+  const r=flowList[flowIdx];const sec=Math.round((Date.now()-flowStart)/1000);
+  const log=dayLog(todayStr());log.routines[r.id]={done:true,sec};
+  r.stats=r.stats||{n:0,total:0};r.stats.n++;r.stats.total+=sec;
+  save();flowNext();}
+function flowSkip(){flowNext();}
+function flowNext(){flowIdx++;
+  if(flowIdx>=flowList.length){flowClose();celebrateIfAll();}
+  else flowShow();}
+function celebrateIfAll(){render();checkCelebrate();}
+function flowClose(){clearInterval(flowTimer);$('#flow').classList.remove('show');render();}
+
+/* ========================= 設定 ========================= */
+function renderSettings(){
+  const s=S.settings;
+  const tgl=(key)=>`<div class="tgl ${s[key]?'on':''}" onclick="S.settings.${key}=!S.settings.${key};save();render();"><i></i></div>`;
+  return `<div class="vhead"><h1>設定</h1><span class="sub">G設定（全体設定）</span></div>
+  <div class="sec-h">カレンダー表示</div>
+  <div class="setrow"><div><div class="sl">週の開始</div></div>
+    <select style="width:100px;" onchange="S.settings.weekStart=+this.value;save();render();">
+      <option value="0" ${s.weekStart===0?'selected':''}>日曜</option><option value="1" ${s.weekStart===1?'selected':''}>月曜</option></select></div>
+  <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
+  <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれることがあります）</div></div>${tgl('showRokuyo')}</div>
+  <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
+  <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>
+
+  <div class="sec-h">誕生日<button class="act" onclick="bdayModal(null)">＋ 追加</button></div>
+  ${S.birthdays.length?S.birthdays.map(b=>`<div class="listrow" onclick="bdayModal('${b.id}')">
+    <span style="width:16px;height:16px;color:${b.gift?(b.color||'#E8618C'):'var(--sub)'};">${MARK_ICONS.cake}</span>
+    <span class="lt">${esc(b.name)}</span><span class="ls">${b.month}/${b.day}${b.gift?'・プレゼント準備':''}</span></div>`).join('')
+    :'<div class="mini">誕生日を登録するとカレンダーにケーキのマークが表示されます</div>'}
+
+  <div class="sec-h">マーク付きの日（記念日・準備が必要な日）<button class="act" onclick="markModal(null)">＋ 追加</button></div>
+  ${S.marks.length?S.marks.map(k=>`<div class="listrow" onclick="markModal('${k.id}')">
+    <span style="width:16px;height:16px;color:${k.color};">${MARK_ICONS[k.icon]}</span>
+    <span class="lt">${esc(k.name)}</span><span class="ls">${k.month}/${k.day}</span></div>`).join('')
+    :'<div class="mini">結婚記念日・母の日の準備など、毎年のマークを設定できます</div>'}
+
+  <div class="sec-h">グループ（カテゴリ）<button class="act" onclick="groupModal(null)">＋ 追加</button></div>
+  ${S.groups.map(g=>`<div class="listrow" onclick="groupModal('${g.id}')">
+    <span class="dot" style="background:${g.color}"></span><span class="lt">${esc(groupPath(g.id))}</span></div>`).join('')}
+  <div class="mini">クライアントは「仕事」の下に、クライアント様の先のお客様はそのクライアントの下に…と階層で作れます。</div>
+
+  <div class="sec-h">通知・リマインド</div>
+  <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリ（ブラウザ）を開いている間に通知します</div></div>
+    <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
+  <div class="setrow"><div><div class="sl">朝の通知</div><div class="sd">今日の計画を立てる合図</div></div>
+    <input type="time" value="${s.notifyMorning}" onchange="S.settings.notifyMorning=this.value;save();"></div>
+  <div class="setrow"><div><div class="sl">夜の通知</div><div class="sd">明日の準備・ふりかえり</div></div>
+    <input type="time" value="${s.notifyNight}" onchange="S.settings.notifyNight=this.value;save();"></div>
+  <div class="setrow"><div><div class="sl">1日に使える時間（既定値）</div><div class="sd">分単位</div></div>
+    <input type="number" min="0" value="${s.availMin}" onchange="S.settings.availMin=+this.value||0;save();"></div>
+  <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>
+
+  <div class="sec-h">データ</div>
+  <div class="setrow"><div><div class="sl">バックアップを書き出す</div><div class="sd">JSON形式で保存</div></div><button style="border:1px solid var(--ink);padding:7px 16px;font-size:13px;" onclick="exportData()">書き出し</button></div>
+  <div class="setrow"><div><div class="sl">バックアップを読み込む</div></div>
+    <label style="border:1px solid var(--line);padding:7px 16px;font-size:13px;margin:0;color:var(--ink);cursor:pointer;">読み込み<input type="file" accept=".json" style="display:none;" onchange="importData(this)"></label></div>
+  <div class="mini">現在データはこの端末内に保存されています。PC・スマホ間の同期／家族との共有は次の段階（Firebase連携）で追加予定です。それまでは書き出し→読み込みで移行できます。</div>
+
+  <div class="sec-h">改善メモ・リリース情報</div>
+  <div style="padding:0 16px 8px;"><label>次にやりたいこと・気づきメモ</label>
+    <textarea rows="3" placeholder="使っていて気づいた改善点をここにメモ" onchange="S.notes=this.value;save();">${esc(S.notes)}</textarea></div>
+  <div class="mini"><b>v1.0（2026-07-19）</b><br>
+  ・タスク（グループ階層・優先度・相手待ち・リンク・複製）<br>
+  ・今日ビュー（時間の見える化・進捗リング・おはようスタート＋ストップウォッチ記録）<br>
+  ・カレンダー（月/週/日・六曜・祝日・一粒万倍日・長押し色分け・誕生日マーク・テンプレ予定）<br>
+  ・ルーティン（曜日別・時間帯別・平均時間の記録）</div>`;
+}
+function toggleNotify(el){
+  if(!S.settings.notifyOn){
+    if(!('Notification'in window)){uiAlert('この環境は通知に対応していません');return;}
+    Notification.requestPermission().then(p=>{
+      if(p==='granted'){S.settings.notifyOn=true;save();render();new Notification('くらしタスク',{body:'通知をオンにしました'});}
+      else uiAlert('ブラウザの通知が許可されませんでした');});
+  }else{S.settings.notifyOn=false;save();render();}}
+function bdayModal(id){
+  const b=id?S.birthdays.find(x=>x.id===id):null;
+  openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
+    <div class="frow f2"><div><label>月</label><input id="bmM" type="number" min="1" max="12" value="${b?.month||''}"></div>
+      <div><label>日</label><input id="bmD" type="number" min="1" max="31" value="${b?.day||''}"></div></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="bmGift" style="width:auto;" ${b?.gift?'checked':''}>
+      <span style="font-size:13px;">プレゼントの準備が必要（色を強調）</span></div>
+    <div class="frow"><label>強調色</label><div class="colorsel" id="bmColor">
+      ${['#E8618C','#D88A3D','#B8860B','#5B9E6F','#3D6FD8','#9A6BD0'].map(c=>`<button data-c="${c}" class="${(b?.color||'#E8618C')===c?'on':''}" style="background:${c}" onclick="$$('#bmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+  </div>
+  <div class="mbtns">${b?`<button class="del" onclick="delBday('${b.id}')">削除</button>`:''}
+    <button class="save" onclick="saveBday('${b?.id||''}')">保存</button></div>`);}
+async function delBday(id){if(!await uiConfirm('この誕生日を削除しますか？','削除'))return;
+  S.birthdays=S.birthdays.filter(x=>x.id!==id);save();closeModal();render();}
+function saveBday(id){
+  const name=$('#bmName').value.trim(),m=+$('#bmM').value,d=+$('#bmD').value;
+  if(!name||!m||!d){uiAlert('名前と月日を入力してください');return;}
+  const color=$('#bmColor button.on')?.dataset.c||'#E8618C';
+  const data={name,month:m,day:d,gift:$('#bmGift').checked,color};
+  if(id)Object.assign(S.birthdays.find(x=>x.id===id),data);
+  else S.birthdays.push({id:uid(),...data});
+  save();closeModal();render();}
+function markModal(id){
+  const k=id?S.marks.find(x=>x.id===id):null;
+  openModal(`<div class="mh"><b>マーク付きの日</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="kmName" value="${esc(k?.name||'')}" placeholder="例）結婚記念日"></div>
+    <div class="frow f2"><div><label>月</label><input id="kmM" type="number" min="1" max="12" value="${k?.month||''}"></div>
+      <div><label>日</label><input id="kmD" type="number" min="1" max="31" value="${k?.day||''}"></div></div>
+    <div class="frow"><label>マーク</label><div class="colorsel" id="kmIcon">
+      ${Object.keys(MARK_ICONS).filter(x=>x!=='cake').map(ic=>`<button data-i="${ic}" class="${(k?.icon||'gift')===ic?'on':''}" style="background:var(--bg2);color:var(--ink);padding:4px;" onclick="$$('#kmIcon button').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${MARK_ICONS[ic]}</button>`).join('')}</div></div>
+    <div class="frow"><label>色</label><div class="colorsel" id="kmColor">
+      ${['#E8618C','#D88A3D','#B8860B','#5B9E6F','#3D6FD8','#9A6BD0'].map(c=>`<button data-c="${c}" class="${(k?.color||'#D88A3D')===c?'on':''}" style="background:${c}" onclick="$$('#kmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+  </div>
+  <div class="mbtns">${k?`<button class="del" onclick="delMark('${k.id}')">削除</button>`:''}
+    <button class="save" onclick="saveMark('${k?.id||''}')">保存</button></div>`);}
+async function delMark(id){if(!await uiConfirm('このマークを削除しますか？','削除'))return;
+  S.marks=S.marks.filter(x=>x.id!==id);save();closeModal();render();}
+function saveMark(id){
+  const name=$('#kmName').value.trim(),m=+$('#kmM').value,d=+$('#kmD').value;
+  if(!name||!m||!d){uiAlert('名前と月日を入力してください');return;}
+  const data={name,month:m,day:d,icon:$('#kmIcon button.on')?.dataset.i||'gift',color:$('#kmColor button.on')?.dataset.c||'#D88A3D'};
+  if(id)Object.assign(S.marks.find(x=>x.id===id),data);
+  else S.marks.push({id:uid(),...data});
+  save();closeModal();render();}
+function groupModal(id){
+  const g=id?S.groups.find(x=>x.id===id):null;
+  openModal(`<div class="mh"><b>グループ</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="gmName" value="${esc(g?.name||'')}" placeholder="例）クライアントB"></div>
+    <div class="frow"><label>親グループ（階層）</label><select id="gmParent">
+      <option value="">なし（最上位）</option>
+      ${S.groups.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${g?.parentId===x.id?'selected':''}>${esc(groupPath(x.id))}</option>`).join('')}</select></div>
+    <div class="frow"><label>色</label><div class="colorsel" id="gmColor">
+      ${GROUP_COLORS.map(c=>`<button data-c="${c}" class="${(g?.color||GROUP_COLORS[0])===c?'on':''}" style="background:${c}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+  </div>
+  <div class="mbtns">${g?`<button class="del" onclick="delGroup('${g.id}')">削除</button>`:''}
+    <button class="save" onclick="saveGroup('${g?.id||''}')">保存</button></div>`);}
+function saveGroup(id){
+  const name=$('#gmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
+  const parentId=$('#gmParent').value||null;
+  if(id&&parentId){let p=parentId;while(p){if(p===id){uiAlert('自分自身の下には移動できません');return;}p=S.groups.find(x=>x.id===p)?.parentId;}}
+  const color=$('#gmColor button.on')?.dataset.c||GROUP_COLORS[0];
+  if(id)Object.assign(S.groups.find(x=>x.id===id),{name,parentId,color});
+  else S.groups.push({id:uid(),name,parentId,color});
+  save();closeModal();render();}
+async function delGroup(id){
+  const kids=S.groups.some(g=>g.parentId===id);
+  const used=S.tasks.some(t=>t.groupId===id)||S.events.some(e=>e.groupId===id);
+  if(kids){uiAlert('先に下の階層のグループを削除してください');return;}
+  if(!await uiConfirm(used?'このグループのタスク・予定は最初のグループに移動します。削除しますか？':'このグループを削除しますか？','削除'))return;
+  const fb=S.groups.find(g=>g.id!==id)?.id;
+  S.tasks.forEach(t=>{if(t.groupId===id)t.groupId=fb;});
+  S.events.forEach(e=>{if(e.groupId===id)e.groupId=fb;});
+  S.groups=S.groups.filter(g=>g.id!==id);save();closeModal();render();}
+function exportData(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));
+  a.download=`くらしタスク_バックアップ_${todayStr()}.json`;a.click();}
+function importData(inp){const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{try{const d=JSON.parse(r.result);
+    if(!d.tasks||!d.settings)throw 0;
+    if(!await uiConfirm('現在のデータを読み込んだ内容で置き換えます。よろしいですか？'))return;
+    S=d;save();render();uiAlert('読み込みました');}catch(e){uiAlert('ファイルを読み込めませんでした');}};
+  r.readAsText(f);}
+
+/* ========================= modal共通・ダイアログ・通知 ========================= */
+function openModal(html){$('#modal').innerHTML=html;$('#modalWrap').classList.add('show');}
+function closeModal(){$('#modalWrap').classList.remove('show');}
+/* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
+let dlgResolve=null;
+function dlgEnd(v){$('#dlgWrap').classList.remove('show');const r=dlgResolve;dlgResolve=null;if(r)r(v);}
+function uiAlert(msg){return new Promise(res=>{dlgResolve=res;
+  $('#dlg').innerHTML=`<div class="dm">${esc(msg)}</div><div class="db"><button class="ok" onclick="dlgEnd()">OK</button></div>`;
+  $('#dlgWrap').classList.add('show');});}
+function uiConfirm(msg,okLabel){return new Promise(res=>{dlgResolve=res;
+  $('#dlg').innerHTML=`<div class="dm">${esc(msg)}</div><div class="db">
+    <button onclick="dlgEnd(false)">やめる</button>
+    <button class="${okLabel==='削除'?'dngr':'ok'}" onclick="dlgEnd(true)">${esc(okLabel||'OK')}</button></div>`;
+  $('#dlgWrap').classList.add('show');});}
+function uiPrompt(msg,def,type){return new Promise(res=>{dlgResolve=res;
+  $('#dlg').innerHTML=`<div class="dm">${esc(msg)}<input id="dlgInput" type="${type||'text'}" value="${esc(def??'')}"></div>
+    <div class="db"><button onclick="dlgEnd(null)">やめる</button>
+    <button class="ok" onclick="dlgEnd($('#dlgInput').value)">OK</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  setTimeout(()=>$('#dlgInput')?.focus(),80);});}
+setInterval(()=>{
+  if(!S?.settings.notifyOn||Notification.permission!=='granted')return;
+  const now=new Date();const hm=pad(now.getHours())+':'+pad(now.getMinutes());const t=todayStr();
+  [['notifyMorning','おはようございます☀ 今日の計画を立てましょう','m'],['notifyNight','おつかれさまでした🌙 明日の準備とふりかえりを','n']]
+  .forEach(([key,msg,tag])=>{
+    if(S.settings[key]===hm&&S.lastNotify[t+tag]!==1){
+      S.lastNotify={[t+'m']:S.lastNotify[t+'m'],[t+'n']:S.lastNotify[t+'n'],[t+tag]:1};
+      save();new Notification('くらしタスク',{body:msg});}});
+},20000);
+
+/* ========================= 起動 ========================= */
+load();save();
+switchView('today');
+</script>
+</body>
+</html>
