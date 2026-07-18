@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#15171A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="くらしタスク">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <title>くらしタスク｜タスク&カレンダー</title>
 <style>
 :root{
@@ -404,7 +411,7 @@ function defaultState(){
     ver:1,
     settings:{weekStart:0,showRokuyo:true,showIchiryu:true,showHoliday:true,showDue:true,
       notifyOn:false,notifyMorning:'06:30',notifyNight:'22:00',availMin:480,
-      wakeDef:'06:30',sleepDef:'23:00',notifyEmail:'baritone0111@gmail.com'},
+      wakeDef:'06:30',sleepDef:'23:00',notifyEmail:''},
     groups:[gHome,gWork,gPersonal,gClient,gSub],
     tasks:[
       {id:uid(),title:'例）請求書を送付する',groupId:'g_cliA',estMin:30,priority:1,status:'todo',links:[],due:t,today:t,memo:'',order:1,createdAt:t},
@@ -429,7 +436,7 @@ function defaultState(){
 }
 function migrate(){const st=S.settings;
   st.wakeDef=st.wakeDef||'06:30';st.sleepDef=st.sleepDef||'23:00';
-  st.notifyEmail=st.notifyEmail||'baritone0111@gmail.com';
+  st.notifyEmail=st.notifyEmail||'';
   st.feedbackUrl=st.feedbackUrl||'';
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
