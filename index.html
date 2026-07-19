@@ -304,6 +304,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow.show{display:flex;}
 #flow .fh{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.15em;color:#9AA1AD;}
 #flow .fh button{color:#9AA1AD;font-size:13px;}
+#flow .fstats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:#9AA1AD;margin-top:10px;padding-top:10px;border-top:1px solid #2A2E35;}
+#flow .fstats b{color:#fff;font-weight:700;}
 #flow .fmain{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
 #flow .slot{font-size:12px;letter-spacing:.2em;color:#9AA1AD;}
 #flow .rname{font-size:26px;font-weight:700;line-height:1.4;}
@@ -507,6 +509,7 @@ function migrate(){const st=S.settings;
   if(st.showAdjShade===undefined)st.showAdjShade=true;
   st.monthMax=st.monthMax||4;
   if(!S.links)S.links=[];
+  if(!S.patterns)S.patterns=[];
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];});
@@ -531,7 +534,8 @@ function markCss(id,deg){const c=gchain(id);deg=deg||135;
 function hm2min(s){const[a,b]=(s||'0:0').split(':').map(Number);return a*60+b;}
 function dayWake(d){return dayLog(d).wake||S.settings.wakeDef;}
 function daySleep(d){return dayLog(d).sleep||S.settings.sleepDef;}
-function availOf(d){let m=hm2min(daySleep(d))-hm2min(dayWake(d));if(m<=0)m+=1440;return m;}
+function dayStart(d){return dayLog(d).startAt||dayWake(d);}
+function availOf(d){let m=hm2min(daySleep(d))-hm2min(dayStart(d));if(m<=0)m+=1440;return m;}
 /* 今日に表示するタスク: 今日指定 ＋ 毎日表示(pin)。「今日は隠す」(snooze)は除外 */
 function todayTasks(t){return S.tasks.filter(x=>((x.today===t)||(x.pin&&(x.status!=='done'||x.doneAt===t)))&&x.snooze!==t);}
 const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.quad||9)-(b.quad||9)||a.qOrder-b.qOrder||a.priority-b.priority;
@@ -570,6 +574,7 @@ function tpType(id){
 function tpClear(id){const el=$('#'+id);el.value='';
   $('#'+id+'_h').value='';$('#'+id+'_m').value='';
   if(el.onchange)el.onchange();}
+function tpSet(id,v){const[h,m]=(v||'').split(':');$('#'+id).value=v;if($('#'+id+'_h')){$('#'+id+'_h').value=h||'';$('#'+id+'_m').value=m||'';}}
 /* ===== 連続4桁タイム入力（開始→終了を続けてテンキー入力） ===== */
 function timeField(id,val,opts={}){
   return `<span class="tfrow">
@@ -763,7 +768,11 @@ function routineOccursOn(r,dstr){const dt=parseDs(dstr),wd=dt.getDay();
   return (r.nths||[]).some(o=>o.d===wd&&(o.n===nth||(o.n===-1&&isLast)));}
 function todaysRoutines(d){
   const order={morning:0,day:1,night:2,any:3};
-  return S.routines.filter(r=>r.active&&routineOccursOn(r,d)).sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
+  const plan=dayLog(d).planRoutines;
+  const list=plan
+    ? plan.map(id=>S.routines.find(r=>r.id===id)).filter(r=>r&&r.active)
+    : S.routines.filter(r=>r.active&&routineOccursOn(r,d));
+  return list.sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
 function nthLabel(o){return (o.n===-1?'最終':'第'+o.n)+WD[o.d];}
 function scheduleText(r){
   if((r.freq||'weekly')==='weekly')return (r.days||[]).length===7?'毎日':((r.days||[]).length?r.days.slice().sort().map(d=>WD[d]).join('・'):'曜日未設定');
@@ -807,8 +816,11 @@ function renderToday(){
     <div class="row"><span>残り作業 <b>${fmtMin(restMin)}</b> ／ 使える <b>${fmtMin(avail)}</b></span>
       <span class="nums ${free<0?'neg':''}">${free<0?'▲'+fmtMin(-free)+'超過':'空き '+fmtMin(free)}</span></div>
     <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
-    <div class="row" style="margin:7px 0 0;"><span>起床 <b>${dayWake(t)}</b> ・ 就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
+    <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
       ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
+  </div>
+  <div class="addrow" style="padding:12px 16px 0;">
+    <button onclick="composeToday()">🧩 今日のルーティンを組む${dayLog(t).planRoutines?'（編成中）':''}</button>
   </div>
   <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
   <div class="gmsg">${gmsg}</div>
@@ -828,18 +840,23 @@ function renderToday(){
 }
 function linkChips(links){if(!links||!links.length)return'';
   return `<div class="linkchips">${links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${esc(l.label||l.url)}</a>`).join('')}</div>`;}
-function editDayTimes(){const t=todayStr();
-  openModal(`<div class="mh"><b>今日の起床・就寝</b><button onclick="closeModal()">✕</button></div>
+function editDayTimes(){const t=todayStr();const now=new Date();const nowHm=pad(now.getHours())+':'+pad(now.getMinutes());
+  openModal(`<div class="mh"><b>今日の時間</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow f2"><div><label>起床</label>${timeInput('dtWake',dayWake(t))}</div>
       <div><label>就寝</label>${timeInput('dtSleep',daySleep(t))}</div></div>
+    <div class="frow"><label>活動開始（ここから就寝までを「使える時間」に）</label>
+      <div style="display:flex;gap:8px;align-items:center;">${timeInput('dtStart',dayLog(t).startAt||dayWake(t))}
+        <button class="inlineadd" onclick="tpSet('dtStart','${nowHm}')">今から（${nowHm}）</button></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="dtDef" style="width:auto;">
-      <span style="font-size:13px;">この時刻を既定値としても保存する</span></div>
-    <div class="mini" style="padding:0;">使える時間 ＝ 起床から就寝までの時間。明日の予定に合わせて今日だけ変えることもできます。</div>
+      <span style="font-size:13px;">起床・就寝を既定値としても保存する</span></div>
+    <div class="mini" style="padding:0;">朝に今日を組むときは「活動開始」を今の時刻にすると、残り時間の計算が実態に合います（起床のままでもOK）。</div>
   </div>
-  <div class="mbtns"><button class="save" onclick="saveDayTimes()">保存</button></div>`);}
+  <div class="mbtns"><button class="del" onclick="clearDayStart()">開始をリセット</button><button class="save" onclick="saveDayTimes()">保存</button></div>`);}
+function clearDayStart(){const t=todayStr();delete dayLog(t).startAt;save();closeModal();render();}
 function saveDayTimes(){const t=todayStr();const log=dayLog(t);
   log.wake=$('#dtWake').value||S.settings.wakeDef;log.sleep=$('#dtSleep').value||S.settings.sleepDef;
+  const st=$('#dtStart').value;log.startAt=(st&&st!==log.wake)?st:undefined;
   if($('#dtDef').checked){S.settings.wakeDef=log.wake;S.settings.sleepDef=log.sleep;}
   save();closeModal();render();}
 function snoozeTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -881,9 +898,13 @@ function moveDoItem(tok,dir){const t=todayStr();
   const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok),j=i+dir;if(i<0||j<0||j>=toks.length)return;
   [toks[i],toks[j]]=[toks[j],toks[i]];dayLog(t).doOrder=toks;save();render();}
+function todayArrows(tok){return `<div class="arrows">
+  <button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button>
+  <button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button>
+  <button onclick="event.stopPropagation();moveDoItemBottom('${tok}')" title="後回し">⤓</button></div>`;}
 function doItemRow(it,t){
   const tok=it.type+'_'+it.obj.id;
-  const arrows=`<div class="arrows"><button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button><button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button></div>`;
+  const arrows=todayArrows(tok);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
     return `<div class="ritem ${dn?'done':''}">
       <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
@@ -891,6 +912,52 @@ function doItemRow(it,t){
       <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}</div>${linkChips(r.links)}</div>
       ${arrows}</div>`;}
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
+function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
+  const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
+/* ===== 今日のルーティンを組む（パターン保存・適用） ===== */
+let _composeSel=new Set();
+function composeToday(){const t=todayStr();
+  const plan=dayLog(t).planRoutines;
+  _composeSel=new Set(plan||S.routines.filter(r=>r.active&&routineOccursOn(r,t)).map(r=>r.id));
+  renderCompose();}
+function renderCompose(){const t=todayStr();
+  const acts=S.routines.filter(r=>r.active);
+  const order={morning:0,day:1,night:2,any:3};acts.sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);
+  openModal(`<div class="mh"><b>今日のルーティンを組む</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    ${S.patterns.length?`<label>パターンから適用</label><div class="tmplchips">${S.patterns.map(p=>`
+      <button class="chip" onclick="applyPattern('${p.id}')">${esc(p.name)}（${p.routineIds.length}）</button>`).join('')}
+      <button class="chip" style="color:var(--danger);" onclick="managePatterns()">管理</button></div>`:''}
+    <label>入れるルーティンを選ぶ（${_composeSel.size}件）</label>
+    <div id="composeList">${acts.map(r=>`
+      <label class="listrow" style="cursor:pointer;gap:11px;">
+        <input type="checkbox" style="width:auto;" ${_composeSel.has(r.id)?'checked':''} onchange="tglCompose('${r.id}',this.checked)">
+        <span class="lt">${esc(r.title)}</span><span class="ls">${SLOTS[r.slot]}・${scheduleText(r)}</span></label>`).join('')
+      ||'<div class="mini" style="padding:0;">先に「ルーティン」タブでルーティンを作成してください</div>'}</div>
+    <div class="mini" style="padding:8px 0 0;">組んだ後は「今日やること」で▲▼並び替え・後回しができます。</div>
+  </div>
+  <div class="mbtns">
+    <button onclick="savePatternFromSel()">パターン保存</button>
+    ${dayLog(t).planRoutines?`<button class="del" onclick="clearPlan()">自動に戻す</button>`:''}
+    <button class="save" onclick="saveCompose()">この内容で組む</button>
+  </div>`);}
+function tglCompose(id,on){on?_composeSel.add(id):_composeSel.delete(id);
+  const lbl=$('#composeList')?.closest('.mbody')?.querySelector('label');if(lbl)lbl.textContent=`入れるルーティンを選ぶ（${_composeSel.size}件）`;}
+function applyPattern(pid){const p=S.patterns.find(x=>x.id===pid);if(!p)return;_composeSel=new Set(p.routineIds);renderCompose();}
+function saveCompose(){const t=todayStr();dayLog(t).planRoutines=[..._composeSel];
+  // 今日の並びをリセットして組み直す
+  delete dayLog(t).doOrder;save();closeModal();render();}
+function clearPlan(){const t=todayStr();delete dayLog(t).planRoutines;delete dayLog(t).doOrder;save();closeModal();render();}
+async function savePatternFromSel(){if(!_composeSel.size){uiAlert('先にルーティンを選んでください');return;}
+  const name=await uiPrompt('パターン名（例：平日の朝）');if(name===null)return;const nm=name.trim();if(!nm)return;
+  S.patterns.push({id:uid(),name:nm,routineIds:[..._composeSel]});save();renderCompose();}
+function managePatterns(){openModal(`<div class="mh"><b>パターンの管理</b><button onclick="composeToday()">‹ もどる</button></div>
+  <div class="mbody">${S.patterns.length?S.patterns.map(p=>`<div class="listrow" style="cursor:default;">
+    <span class="lt">${esc(p.name)}</span><span class="ls">${p.routineIds.length}件</span>
+    <button style="color:var(--danger);font-size:13px;" onclick="delPattern('${p.id}')">削除</button></div>`).join('')
+    :'<div class="mini" style="padding:0;">パターンはまだありません。ルーティンを選んで「パターン保存」で作成できます。</div>'}</div>`);}
+async function delPattern(id){if(!await uiConfirm('このパターンを削除しますか？','削除'))return;
+  S.patterns=S.patterns.filter(p=>p.id!==id);save();managePatterns();}
 
 /* ========================= タスク ========================= */
 function taskRow(x,o={}){
@@ -898,9 +965,8 @@ function taskRow(x,o={}){
     ?(o.today?`<button class="todayBtn" onclick="event.stopPropagation();snoozeTask('${x.id}')">今日は隠す</button>`
              :`<span class="pinbadge">毎日</span>`)
     :`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
-  const arrows=(o.arrows||o.arrowsTok)?`<div class="arrows">
-    <button onclick="event.stopPropagation();${o.arrowsTok?`moveDoItem('${o.arrowsTok}',-1)`:`moveToday('${x.id}',-1)`}">▲</button>
-    <button onclick="event.stopPropagation();${o.arrowsTok?`moveDoItem('${o.arrowsTok}',1)`:`moveToday('${x.id}',1)`}">▼</button></div>`:'';
+  const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
+    :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
   return `<div class="titem" onclick="taskModal('${x.id}')">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="body">
@@ -1378,14 +1444,21 @@ function dupRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r)return;
 let flowList=[],flowIdx=0,flowStart=0,flowTimer=null;
 function startFlow(){
   const t=todayStr();const log=dayLog(t);
-  flowList=todaysRoutines(t).filter(r=>!log.routines[r.id]?.done);
+  flowList=doItems(t).filter(it=>it.type==='r'&&!log.routines[it.obj.id]?.done).map(it=>it.obj);
   if(!flowList.length){uiAlert('今日のルーティンはすべて完了しています🎉');return;}
   flowIdx=0;$('#flow').classList.add('show');flowShow();}
 function flowShow(){
   const r=flowList[flowIdx];flowStart=Date.now();
   const st=r.stats||{n:0,total:0};
+  const t=todayStr();
+  const remCount=flowList.length-flowIdx;
+  const remEst=flowList.slice(flowIdx).reduce((s,x)=>s+(+x.estMin||0),0);
+  const tks=todayTasks(t).filter(x=>x.status!=='done');
+  const taskEst=tks.reduce((s,x)=>s+(+x.estMin||0),0);
+  const now=new Date();const bed=Math.max(0,hm2min(daySleep(t))-(now.getHours()*60+now.getMinutes()));
   $('#flow').innerHTML=`
     <div class="fh"><span>ルーティン ${flowIdx+1} / ${flowList.length}</span><button onclick="flowClose()">終了 ✕</button></div>
+    <div class="fstats"><span>残りルーティン <b>${remCount}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>タスク <b>${tks.length}</b>件・<b>${fmtMin(taskEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
     <div class="fmain">
       <div class="slot">${SLOTS[r.slot]}のルーティン</div>
       <div class="rname">${esc(r.title)}</div>
@@ -1491,7 +1564,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.7（2026-07-19）</b><br>
+  <div class="mini"><b>v1.8（2026-07-20）</b><br>
+  ・「今日のルーティンを組む」を追加。ルーティンを選んで1日の流れを編成、よく使う組合せは<b>パターン保存</b>して呼び出し可<br>
+  ・「活動開始」時刻を今日だけ調整でき（今からボタン）、残り時間が実態に合うように<br>
+  ・おはようスタート中に残りルーティン数・目安時間・タスク量・就寝までを表示<br>
+  ・今日やることに「後回し（⤓＝一番下へ）」を追加<br>
+  <b>v1.7（2026-07-19）</b><br>
   ・ルーティンのチェック等で画面が上に戻らないよう、スクロール位置を保持<br>
   ・今日タブの「ルーティン＋タスク」を1つのリストに統合。▲▼で自由に並び替え（ルーティンをタスクの間に配置可）<br>
   ・昼夜の目印を🌙から、予定の左端の色分けに変更（昼＝山吹色／夜＝紫）<br>
