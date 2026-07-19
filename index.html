@@ -245,6 +245,42 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .wdsel button{width:30px;padding:7px 0;border:1px solid var(--line);font-size:12px;color:var(--sub);}
 .wdsel button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
 .inlineadd{font-size:12px;color:var(--accent);border:1px solid var(--line);padding:9px 10px;white-space:nowrap;}
+/* 月ALL全表示 */
+.allbadge{font-size:8px;color:#fff;background:var(--sub);padding:0 3px;margin-left:3px;vertical-align:middle;letter-spacing:.05em;}
+.calmode button.on .allbadge{background:#fff;color:var(--ink);}
+.evtime{font-size:8px;opacity:.9;margin-right:2px;font-variant-numeric:tabular-nums;}
+.nightglyph{margin-right:1px;}
+.cell.shade{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(0,0,0,.05) 5px 6px);}
+/* 日ビュー 2カラム（左=予定 / 右=タスク） */
+.daycols{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink);}
+.daycol{border-right:1px solid var(--line2);min-width:0;}
+.daycol:last-child{border-right:none;}
+.dch{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;font-size:12px;letter-spacing:.1em;color:var(--sub);border-bottom:1px solid var(--line);}
+.dch b{color:var(--ink);font-size:12.5px;}
+.dch button{border:1px solid var(--line);width:26px;height:26px;font-size:16px;color:var(--ink);}
+.tl{display:flex;gap:7px;padding:9px 9px;border-bottom:1px solid var(--line2);cursor:pointer;}
+.tl .tlt{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 40px;}
+.tl .tlt small{display:block;font-size:9px;color:var(--sub);font-weight:400;}
+.tl .tlbar{width:3px;flex:0 0 3px;}
+.tl .tlb{flex:1;min-width:0;}
+.tl .tlname{font-size:13px;word-break:break-word;line-height:1.4;}
+.tl .tlg{font-size:10px;color:var(--sub);}
+.nightsep{font-size:10px;letter-spacing:.15em;color:#5457A6;background:#F1F1F9;padding:3px 10px;border-bottom:1px solid var(--line2);}
+.dtask{display:flex;gap:7px;padding:9px 9px;border-bottom:1px solid var(--line2);align-items:flex-start;}
+.dtask .cb{width:20px;height:20px;border:1.5px solid var(--ink);flex:0 0 20px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:1px;}
+.dtask.done .cb{background:var(--ink);}
+.dtask .cb svg{width:13px;height:13px;stroke:#fff;stroke-width:2.5;fill:none;}
+.dtask .dtb{flex:1;min-width:0;cursor:pointer;}
+.dtask .dtn{font-size:13px;word-break:break-word;line-height:1.4;}
+.dtask.done .dtn{text-decoration:line-through;color:var(--done);}
+.dtask .dtm{font-size:10px;color:var(--sub);}
+.dempty{padding:14px 10px;color:var(--line);font-size:12px;text-align:center;}
+/* 設定 階層メニュー */
+.setback{display:flex;align-items:center;gap:8px;padding:15px 16px;border-bottom:1px solid var(--ink);font-weight:700;letter-spacing:.05em;cursor:pointer;}
+.setback .bk{font-size:20px;line-height:1;}
+.setmenu .listrow{padding:16px;}
+.setmenu .listrow .lt{font-size:15px;}
+.setmenu .chev{color:var(--sub);}
 
 /* color popover (bottom sheet) */
 #colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;}
@@ -456,6 +492,11 @@ function migrate(){const st=S.settings;
   st.notifyEmail=st.notifyEmail||'';
   st.feedbackUrl=st.feedbackUrl||'';
   st.calDefault=st.calDefault||'month';
+  st.nightStart=st.nightStart||'18:00';
+  if(st.showNight===undefined)st.showNight=true;
+  if(st.showAdjShade===undefined)st.showAdjShade=true;
+  st.monthMax=st.monthMax||4;
+  if(!S.links)S.links=[];
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];});
@@ -679,11 +720,12 @@ function holidayName(y,m,d){return S.settings.showHoliday?(holidaysOf(y)[m+'-'+d
 
 /* ========================= view切替 ========================= */
 let view='today';
-let calMode='month', calY,calX,calDate=todayStr();
+let calMode='month', calMonthAll=false, calY,calX,calDate=todayStr();
 let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 {const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
 function switchView(v){
-  if(v==='cal'){calMode=S.settings.calDefault||'month';const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
+  if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
+  if(v==='set')setPage='';
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();}
 function render(){
   const el=$('#view');
@@ -751,6 +793,7 @@ function renderToday(){
   </div>
   <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
   <div class="gmsg">${gmsg}</div>
+  ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${evs.map(e=>`
     <div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="${markCss(e.groupId,180)}"></div>
     <div class="body"><div class="tt">${esc(evTitle(e))}</div><div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${repTag(e)}</div>
@@ -976,7 +1019,9 @@ function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
 function calNav(n){if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(calX>11){calX=0;calY++;}}
   else{const d=parseDs(calDate);d.setDate(d.getDate()+(calMode==='week'?7*n:n));calDate=dsOf(d);calY=d.getFullYear();calX=d.getMonth();}
   render();attachCellPress();}
-function setCalMode(m){calMode=m;render();attachCellPress();}
+function setCalMode(m){calMode=m;if(m!=='month')calMonthAll=false;render();}
+function onMonthBtn(){if(calMode==='month')calMonthAll=!calMonthAll;else{calMonthAll=false;calMode='month';}render();}
+function isNight(e){return !!(e.start&&S.settings.showNight&&e.start>=S.settings.nightStart);}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
@@ -987,7 +1032,10 @@ function marksOn(m,d){const out=[];
   S.marks.forEach(k=>{if(+k.month===m&&+k.day===d)out.push({icon:k.icon,color:k.color,name:k.name});});
   return out;}
 function renderCal(){
-  const modeBtns=`<div class="calmode">${[['month','月'],['week','週'],['day','日']].map(([k,v])=>`<button class="${calMode===k?'on':''}" onclick="setCalMode('${k}')">${v}</button>`).join('')}</div>`;
+  const modeBtns=`<div class="calmode">
+    <button class="${calMode==='month'?'on':''}" onclick="onMonthBtn()">月${calMode==='month'&&calMonthAll?'<span class="allbadge">ALL</span>':''}</button>
+    <button class="${calMode==='week'?'on':''}" onclick="setCalMode('week')">週</button>
+    <button class="${calMode==='day'?'on':''}" onclick="setCalMode('day')">日</button></div>`;
   let head='',body='';
   if(calMode==='month'){
     head=`${calY}年${calX+1}月`;
@@ -1006,18 +1054,20 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:evTitle(e),c:group(e.groupId).color,due:0})),...dues.map(x=>({t:x.title,c:'',due:1}))];
+      const items=[...evs.map(e=>({t:evTitle(e),c:group(e.groupId).color,due:0,time:e.start||'',night:isNight(e)})),
+                   ...dues.map(x=>({t:x.title,c:'',due:1,time:'',night:false}))];
+      const max=S.settings.monthMax||4;const shown=calMonthAll?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
-      cells+=`<div class="cell ${out?'out':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
+      cells+=`<div class="cell ${out?'out':''} ${out&&S.settings.showAdjShade?'shade':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
         <div class="top"><span class="dn ${hol||dow===0?'sun':dow===6?'sat':''}">${d}</span>
           ${rk?`<span class="rk ${rk==='大安'?'taian':''}">${rk}</span>`:''}${ich?'<span class="ich">万倍</span>':''}</div>
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
-        ${items.slice(0,3).map(it=>`<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c}"`}>${esc(it.t)}</div>`).join('')}
-        ${items.length>3?`<div class="evmore">+${items.length-3}</div>`:''}
+        ${shown.map(it=>`<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c}"`}>${it.night?'<span class="nightglyph">🌙</span>':''}${it.time?`<span class="evtime">${it.time}</span>`:''}${esc(it.t)}</div>`).join('')}
+        ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
-    body=`<div id="calGrid">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
-    <div class="mini">日付セルを<b>長押し</b>するとパステル6色で色分けできます／タップで日表示</div>`;
+    body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
+    <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示</div>`;
   }else if(calMode==='week'){
     const base=parseDs(calDate);const ws=S.settings.weekStart;
     const start=new Date(base);start.setDate(base.getDate()-((base.getDay()-ws+7)%7));
@@ -1034,7 +1084,7 @@ function renderCal(){
           ${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>`<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span><span>${esc(evTitle(e))}</span>${repTag(e)}</div>`).join('')}
+          ${evs.map(e=>`<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span>${isNight(e)?'<span class="nightglyph">🌙</span>':''}<span>${esc(evTitle(e))}</span>${repTag(e)}</div>`).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -1047,15 +1097,7 @@ function renderCal(){
       <div class="d2">${S.settings.showRokuyo?rokuyo(y,m,d):''}${ich?'<span style="color:#B8860B;">一粒万倍日</span>':''}${hol?`<span class="hol">${esc(hol)}</span>`:''}</div>
       ${mks.length?`<div class="d2" style="margin-top:6px;">${mks.map(k=>`<span style="display:flex;align-items:center;gap:4px;color:${k.color};"><span style="width:15px;height:15px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</span>`).join('')}</div>`:''}
     </div>
-    <div class="addrow"><button class="fill" onclick="eventModal(null,'${calDate}')">＋ 予定を追加</button>
-      <button onclick="taskModalWithDue('${calDate}')">＋ この日期限のタスク</button></div>
-    <div class="sec-h">予定</div>
-    ${evs.length?evs.map(e=>`<div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="${markCss(e.groupId,180)}"></div>
-      <div class="body"><div class="tt">${esc(evTitle(e))}</div>
-      <div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${repTag(e)}${e.memo?`<span>${esc(e.memo)}</span>`:''}</div>
-      ${linkChips(e.links)}</div></div>`).join(''):'<div class="mini">予定はありません</div>'}
-    <div class="sec-h">この日が期限のタスク</div>
-    ${dues.length?dues.map(taskRow).join(''):'<div class="mini">ありません</div>'}`;
+    ${dayScheduleHtml(calDate)}`;
   }
   return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替できます</span></div>
   ${groupChipsHtml(calSel,'tglCalSel')}
@@ -1064,17 +1106,56 @@ function renderCal(){
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();attachCellPress();}
 function taskModalWithDue(d){taskModal(null);setTimeout(()=>{$('#tmDue').value=d;},0);}
-/* 長押し→色 */
-let pressT=null,pressMoved=false,suppress=false;
+function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();}
+  save();render();checkCelebrate();}
+function dayScheduleHtml(dstr){
+  const evs=[...eventsOn(dstr)].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const dtasks=S.tasks.filter(x=>x.due===dstr||x.today===dstr).sort((a,b)=>(a.status==='done')-(b.status==='done')||a.priority-b.priority);
+  let nightShown=false;
+  const tl=evs.map(e=>{let sep='';
+    if(S.settings.showNight&&isNight(e)&&!nightShown){nightShown=true;sep=`<div class="nightsep">🌙 夜（${S.settings.nightStart}〜）</div>`;}
+    return sep+`<div class="tl" onclick="eventModal('${e.id}')">
+      <div class="tlt">${e.start||'終日'}${e.end?`<small>〜${e.end}</small>`:''}</div>
+      <div class="tlbar" style="${markCss(e.groupId,180)}"></div>
+      <div class="tlb"><div class="tlname">${esc(evTitle(e))} ${repTag(e)}</div>
+      <div class="tlg">${esc(group(e.groupId).name)}${e.memo?' ・'+esc(e.memo):''}</div>
+      ${linkChips(e.links)}</div></div>`;}).join('');
+  const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}">
+    <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
+    <div class="dtb" onclick="taskModal('${x.id}')"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
+    <div class="dtm"><span class="gmark" style="${markCss(x.groupId)}"></span> ${esc(group(x.groupId).name)}${x.estMin?' ・'+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}</div></div></div>`).join('');
+  return `<div class="daycols">
+    <div class="daycol"><div class="dch"><b>予定</b><button onclick="eventModal(null,'${dstr}')">＋</button></div>
+      ${evs.length?tl:'<div class="dempty">予定なし</div>'}</div>
+    <div class="daycol"><div class="dch"><b>タスク</b><button onclick="taskModalWithDue('${dstr}')">＋</button></div>
+      ${dtasks.length?tk:'<div class="dempty">タスクなし</div>'}</div>
+  </div>`;}
+/* 長押し→色（タップでは発動しない。移動・スクロール・指を離すと確実にキャンセル） */
+let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressDocBound=false;
+function endPressTimer(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
 function attachCellPress(){
+  if(!pressDocBound){pressDocBound=true;
+    document.addEventListener('pointermove',e=>{
+      if(!pressTimer||!pressStart)return;
+      if(Math.abs(e.clientX-pressStart[0])>10||Math.abs(e.clientY-pressStart[1])>10)endPressTimer();
+    },{passive:true});
+    document.addEventListener('pointerup',()=>{
+      const had=!!pressTimer;endPressTimer();
+      if(had&&pressCell&&!pressFired)calGoto(pressCell.dataset.d);
+      pressCell=null;pressFired=false;pressStart=null;});
+    document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressFired=false;pressStart=null;});
+    window.addEventListener('scroll',()=>endPressTimer(),{passive:true});
+  }
   $$('.cell').forEach(el=>{
     el.addEventListener('contextmenu',e=>e.preventDefault());
-    el.addEventListener('pointerdown',e=>{pressMoved=false;
-      pressT=setTimeout(()=>{pressT=null;suppress=true;try{navigator.vibrate&&navigator.vibrate(25);}catch(_){}openColorSheet(el.dataset.d);},1000);});
-    el.addEventListener('pointermove',()=>{pressMoved=true;if(pressT){clearTimeout(pressT);pressT=null;}});
-    el.addEventListener('pointerup',()=>{if(pressT){clearTimeout(pressT);pressT=null;
-      if(!pressMoved&&!suppress)calGoto(el.dataset.d);}suppress=false;});
-    el.addEventListener('pointercancel',()=>{if(pressT){clearTimeout(pressT);pressT=null;}});
+    el.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      endPressTimer();pressFired=false;pressCell=el;pressStart=[e.clientX,e.clientY];
+      pressTimer=setTimeout(()=>{pressTimer=null;pressFired=true;
+        try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}
+        openColorSheet(el.dataset.d);},600);
+    });
   });}
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
@@ -1274,73 +1355,93 @@ function celebrateIfAll(){render();checkCelebrate();}
 function flowClose(){clearInterval(flowTimer);$('#flow').classList.remove('show');render();}
 
 /* ========================= 設定 ========================= */
+let setPage='';
+function goSet(p){setPage=p;render();}
 function renderSettings(){
   const s=S.settings;
   const tgl=(key)=>`<div class="tgl ${s[key]?'on':''}" onclick="S.settings.${key}=!S.settings.${key};save();render();"><i></i></div>`;
-  return `<div class="vhead"><h1>設定</h1><span class="sub">G設定（全体設定）</span></div>
-  <div class="sec-h">カレンダー表示</div>
-  <div class="setrow"><div><div class="sl">週の開始</div></div>
-    <select style="width:100px;" onchange="S.settings.weekStart=+this.value;save();render();">
-      <option value="0" ${s.weekStart===0?'selected':''}>日曜</option><option value="1" ${s.weekStart===1?'selected':''}>月曜</option></select></div>
-  <div class="setrow"><div><div class="sl">カレンダーの初期表示</div><div class="sd">カレンダータブを押したとき開く表示</div></div>
-    <select style="width:100px;" onchange="S.settings.calDefault=this.value;save();">
-      <option value="month" ${s.calDefault==='month'?'selected':''}>月</option>
-      <option value="week" ${s.calDefault==='week'?'selected':''}>週</option>
-      <option value="day" ${s.calDefault==='day'?'selected':''}>日</option></select></div>
-  <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
-  <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれることがあります）</div></div>${tgl('showRokuyo')}</div>
-  <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
-  <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>
-
-  <div class="sec-h">リスト管理（開いて追加・編集）</div>
-  <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示、プレゼント準備は色で強調</div></div><span style="color:var(--sub);">▸</span></div>
-  <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など毎年のマーク（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
-  <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）</div><div class="sd">${S.groups.length}件・階層と色系統の管理</div></div><span style="color:var(--sub);">▸</span></div>
-  <div class="setrow" style="cursor:pointer;" onclick="manageTmpl()"><div><div class="sl">よく使う予定（テンプレ）</div><div class="sd">${S.templates.length}件</div></div><span style="color:var(--sub);">▸</span></div>
-
-  <div class="sec-h">通知・リマインド</div>
-  <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリ（ブラウザ）を開いている間に通知します</div></div>
-    <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
-  <div class="setrow"><div><div class="sl">朝の通知</div><div class="sd">今日の計画を立てる合図</div></div>
-    ${timeInput('setNm',s.notifyMorning,{onchange:"S.settings.notifyMorning=this.value;save();"})}</div>
-  <div class="setrow"><div><div class="sl">夜の通知</div><div class="sd">明日の準備・ふりかえり</div></div>
-    ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
-  <div class="setrow"><div><div class="sl">起床時刻（既定）</div><div class="sd">「使える時間」を起床〜就寝から自動計算します</div></div>
-    ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
-  <div class="setrow"><div><div class="sl">就寝時刻（既定）</div><div class="sd">その日だけの変更は「今日」画面の「変更」から</div></div>
-    ${timeInput('setSl',s.sleepDef,{onchange:"S.settings.sleepDef=this.value;save();"})}</div>
-  <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>
-
-  <div class="sec-h">クラウド同期（Supabase）</div>
-  <div style="padding:0 16px 4px;">
-    <div class="frow"><label>プロジェクトURL</label><input id="syUrl" placeholder="https://xxxx.supabase.co" value="${esc(SYNC.url||'')}"></div>
-    <div class="frow"><label>anonキー</label><input id="syKey" placeholder="eyJ…" value="${esc(SYNC.key||'')}"></div>
-    <div class="frow"><label>同期キー（合言葉。同じキーを入れた端末同士でデータが揃います）</label><input id="syRoom" placeholder="例）kurashi-haruka-0111" value="${esc(SYNC.room||'')}"></div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="saveSyncCfg()">保存して接続</button>
-      ${syncReady()?`<button style="border:1px solid var(--line);padding:8px 16px;font-size:13px;" onclick="pullState(true)">今すぐ同期</button>`:''}
-      <span style="font-size:12px;color:${syncState.err?'var(--danger)':'var(--sub)'};">${esc(syncState.msg)}${syncState.t?'・'+new Date(syncState.t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):''}</span>
-    </div>
-    ${syncState.err?`<div class="mini" style="padding:6px 0 0;color:var(--danger);">${esc(syncState.err)}</div>`:''}
-  </div>
-  <div class="mini">未設定でもローカルだけで完全に動きます。設定すると保存のたびに自動でクラウドへ送られ、他の端末を開いたとき新しい方が採用されます。設定手順は README_セットアップ.md を参照。</div>
-
-  <div class="sec-h">データ</div>
-  <div class="setrow"><div><div class="sl">バックアップを書き出す</div><div class="sd">JSON形式で保存</div></div><button style="border:1px solid var(--ink);padding:7px 16px;font-size:13px;" onclick="exportData()">書き出し</button></div>
-  <div class="setrow"><div><div class="sl">バックアップを読み込む</div></div>
-    <label style="border:1px solid var(--line);padding:7px 16px;font-size:13px;margin:0;color:var(--ink);cursor:pointer;">読み込み<input type="file" accept=".json" style="display:none;" onchange="importData(this)"></label></div>
-  <div class="mini">データは端末内に保存され、上の「クラウド同期」を設定すると自動でSupabaseにも保存されます。書き出し→読み込みは手動での移行・保険用です。家族・チームでの共有機能は次の段階で追加予定です。</div>
-
-  <div class="sec-h">改善メモ・リリース情報</div>
-  <div style="padding:0 16px 8px;"><label>次にやりたいこと・気づきメモ</label>
-    <textarea rows="3" placeholder="使っていて気づいた改善点をここにメモ" onchange="S.notes=this.value;save();">${esc(S.notes)}</textarea>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-      <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">${s.feedbackUrl?'📮 改善DBへ送信（Gmail通知つき）':'📧 メモをGmailへ送る'}</button>
-    </div>
-    <div class="mini" style="padding:8px 0 0;">通知先メール：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
-    改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
-    <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>
-  <div class="mini"><b>v1.4（2026-07-19）</b><br>
+  const back=`<div class="setback" onclick="goSet('')"><span class="bk">‹</span>設定にもどる</div>`;
+  const P=setPage;
+  if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ</span></div><div class="setmenu">
+    ${[['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
+       ['time','時間関連設定','起床/就寝・夜の開始・通知時刻'],
+       ['event','予定・カテゴリ設定','誕生日・マーク・グループ・テンプレ・よく使うリンク'],
+       ['data','同期・データ','クラウド同期・バックアップ'],
+       ['personal','個人・改善設定','通知先メール・改善メモ送信'],
+       ['release','リリース情報','更新履歴']]
+      .map(([k,t,d])=>`<div class="listrow" onclick="goSet('${k}')"><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>`;
+  if(P==='disp')return back+`<div class="vhead"><h1>表示設定</h1></div>
+    <div class="setrow"><div><div class="sl">週の開始</div></div>
+      <select style="width:100px;" onchange="S.settings.weekStart=+this.value;save();">
+        <option value="0" ${s.weekStart===0?'selected':''}>日曜</option><option value="1" ${s.weekStart===1?'selected':''}>月曜</option></select></div>
+    <div class="setrow"><div><div class="sl">カレンダーの初期表示</div><div class="sd">タブを押したとき開く表示</div></div>
+      <select style="width:100px;" onchange="S.settings.calDefault=this.value;save();">
+        <option value="month" ${s.calDefault==='month'?'selected':''}>月</option>
+        <option value="week" ${s.calDefault==='week'?'selected':''}>週</option>
+        <option value="day" ${s.calDefault==='day'?'selected':''}>日</option></select></div>
+    <div class="setrow"><div><div class="sl">月セルの最大表示件数</div><div class="sd">これを超えると「+N」。月をもう一度押すと全表示</div></div>
+      <select style="width:80px;" onchange="S.settings.monthMax=+this.value;save();">
+        ${[3,4,5,6,7,8].map(n=>`<option value="${n}" ${s.monthMax===n?'selected':''}>${n}</option>`).join('')}</select></div>
+    <div class="setrow"><div><div class="sl">前月・翌月を網かけ</div><div class="sd">当月以外の日をうすいグレーの網かけに</div></div>${tgl('showAdjShade')}</div>
+    <div class="setrow"><div><div class="sl">夜の予定を切り分け表示</div><div class="sd">🌙マーク・日表示で「夜」の区切り</div></div>${tgl('showNight')}</div>
+    <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
+    <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
+    <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
+    <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>`;
+  if(P==='time')return back+`<div class="vhead"><h1>時間関連設定</h1></div>
+    <div class="setrow"><div><div class="sl">起床時刻（既定）</div><div class="sd">「使える時間」を起床〜就寝から自動計算</div></div>
+      ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">就寝時刻（既定）</div><div class="sd">その日だけの変更は「今日」画面から</div></div>
+      ${timeInput('setSl',s.sleepDef,{onchange:"S.settings.sleepDef=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">夜の開始時刻</div><div class="sd">これ以降を「夜の予定」として切り分け</div></div>
+      ${timeInput('setNs',s.nightStart,{onchange:"S.settings.nightStart=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリを開いている間に通知します</div></div>
+      <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
+    <div class="setrow"><div><div class="sl">朝の通知</div><div class="sd">今日の計画を立てる合図</div></div>
+      ${timeInput('setNm',s.notifyMorning,{onchange:"S.settings.notifyMorning=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">夜の通知</div><div class="sd">明日の準備・ふりかえり</div></div>
+      ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
+    <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>`;
+  if(P==='event')return back+`<div class="vhead"><h1>予定・カテゴリ設定</h1></div>
+    <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示</div></div><span style="color:var(--sub);">▸</span></div>
+    <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
+    <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）</div><div class="sd">${S.groups.length}件・階層と色系統</div></div><span style="color:var(--sub);">▸</span></div>
+    <div class="setrow" style="cursor:pointer;" onclick="manageTmpl()"><div><div class="sl">よく使う予定（テンプレ）</div><div class="sd">${S.templates.length}件</div></div><span style="color:var(--sub);">▸</span></div>
+    <div class="setrow" style="cursor:pointer;" onclick="linkList()"><div><div class="sl">よく使うリンク</div><div class="sd">${S.links.length}件・今日の画面から素早く開ける</div></div><span style="color:var(--sub);">▸</span></div>`;
+  if(P==='data')return back+`<div class="vhead"><h1>同期・データ</h1></div>
+    <div class="sec-h">クラウド同期（Supabase）</div>
+    <div style="padding:0 16px 4px;">
+      <div class="frow"><label>プロジェクトURL</label><input id="syUrl" placeholder="https://xxxx.supabase.co" value="${esc(SYNC.url||'')}"></div>
+      <div class="frow"><label>anonキー</label><input id="syKey" placeholder="eyJ…" value="${esc(SYNC.key||'')}"></div>
+      <div class="frow"><label>同期キー（合言葉。同じキーの端末同士でデータが揃う）</label><input id="syRoom" placeholder="例）kurashi-haruka-0111" value="${esc(SYNC.room||'')}"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="saveSyncCfg()">保存して接続</button>
+        ${syncReady()?`<button style="border:1px solid var(--line);padding:8px 16px;font-size:13px;" onclick="pullState(true)">今すぐ同期</button>`:''}
+        <span style="font-size:12px;color:${syncState.err?'var(--danger)':'var(--sub)'};">${esc(syncState.msg)}${syncState.t?'・'+new Date(syncState.t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):''}</span></div>
+      ${syncState.err?`<div class="mini" style="padding:6px 0 0;color:var(--danger);">${esc(syncState.err)}</div>`:''}</div>
+    <div class="mini">未設定でもローカルだけで完全に動きます。設定すると保存のたびに自動でクラウドへ。手順は README_セットアップ.md 参照。</div>
+    <div class="sec-h">バックアップ</div>
+    <div class="setrow"><div><div class="sl">書き出す</div><div class="sd">JSON形式で保存</div></div><button style="border:1px solid var(--ink);padding:7px 16px;font-size:13px;" onclick="exportData()">書き出し</button></div>
+    <div class="setrow"><div><div class="sl">読み込む</div></div>
+      <label style="border:1px solid var(--line);padding:7px 16px;font-size:13px;margin:0;color:var(--ink);cursor:pointer;">読み込み<input type="file" accept=".json" style="display:none;" onchange="importData(this)"></label></div>`;
+  if(P==='personal')return back+`<div class="vhead"><h1>個人・改善設定</h1></div>
+    <div style="padding:12px 16px 8px;">
+      <label>改善メモ（次にやりたいこと・気づき）</label>
+      <textarea rows="3" placeholder="使っていて気づいた改善点をここにメモ" onchange="S.notes=this.value;save();">${esc(S.notes)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+        <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">${s.feedbackUrl?'📮 改善DBへ送信（Gmail通知つき）':'📧 メモをGmailへ送る'}</button></div>
+      <div class="mini" style="padding:10px 0 0;">通知先メール：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
+      改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
+      <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
+  return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v1.5（2026-07-19）</b><br>
+  ・色分け長押しの誤発動を修正（指を離す・動かす・スクロールで確実にキャンセル）<br>
+  ・月をもう一度押すと<b>ALL</b>全表示（縦スクロール）。通常は最大${s.monthMax}件＋「+N」<br>
+  ・月セルに時刻を小さく表示／前月翌月の網かけON/OFF<br>
+  ・日表示を刷新：左=予定（時間メインのタイムライン）／右=タスク（チェックで全体と連動）<br>
+  ・「夜の開始時刻」を追加し、夜の予定を🌙で切り分け（月・週・日）<br>
+  ・設定を階層メニュー化（表示／時間／予定・カテゴリ／同期・データ／個人・改善／リリース）＋よく使うリンク<br>
+  <b>v1.4（2026-07-19）</b><br>
   ・ルーティンを「毎月 第2水曜」など（複数可）で設定可能に＋▲▼で並び替え<br>
   ・カレンダータブを押すと初期表示（既定=月）に戻る。初期表示は設定で変更可<br>
   ・上部に余白を追加（スマホ最上部のかぶり対策）<br>
@@ -1402,6 +1503,29 @@ function markList(){openModal(`<div class="mh"><b>マーク付きの日</b><butt
       <span class="lt">${esc(k.name)}</span><span class="ls">${k.month}/${k.day}</span></div>`).join('')
       :'<div class="mini" style="padding:8px 0;">結婚記念日・母の日の準備など、毎年のマークを設定できます</div>'}
   </div>`);}
+function linkList(){openModal(`<div class="mh"><b>よく使うリンク</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <button class="addlink" style="margin-bottom:8px;" onclick="linkModal(null)">＋ リンクを追加</button>
+    ${S.links.length?S.links.map(l=>`<div class="listrow" onclick="linkModal('${l.id}')">
+      <span style="color:var(--accent);">↗</span><span class="lt">${esc(l.label||l.url)}</span><span class="ls">${esc((l.url||'').replace(/^https?:\/\//,'').slice(0,22))}</span></div>`).join('')
+      :'<div class="mini" style="padding:8px 0;">ルーティンでよく開くサイト・フォーム・Googleのページなどを登録すると、今日の画面から素早く開けます。</div>'}
+    <div class="mini" style="padding:8px 0 0;">※Googleブックマークの一括取り込みは今後の対応予定です（今は手動で追加）。</div>
+  </div>`);}
+function linkModal(id){const l=id?S.links.find(x=>x.id===id):null;
+  openModal(`<div class="mh"><b>リンク</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="lkLabel" value="${esc(l?.label||'')}" placeholder="例）勤怠フォーム"></div>
+    <div class="frow"><label>URL</label><input id="lkUrl" value="${esc(l?.url||'')}" placeholder="https://…"></div>
+  </div>
+  <div class="mbtns">${l?`<button class="del" onclick="delLink('${l.id}')">削除</button>`:''}
+    <button class="save" onclick="saveLink('${l?.id||''}')">保存</button></div>`);}
+function saveLink(id){const url=$('#lkUrl').value.trim();if(!url){uiAlert('URLを入力してください');return;}
+  const label=$('#lkLabel').value.trim()||url.replace(/^https?:\/\//,'').slice(0,24);
+  const data={label,url};
+  if(id)Object.assign(S.links.find(x=>x.id===id),data);else S.links.push({id:uid(),...data});
+  save();linkList();render();}
+async function delLink(id){if(!await uiConfirm('このリンクを削除しますか？','削除'))return;
+  S.links=S.links.filter(x=>x.id!==id);save();linkList();render();}
 function groupList(){openModal(`<div class="mh"><b>グループ（カテゴリ）</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <button class="addlink" style="margin-bottom:8px;" onclick="groupModal(null)">＋ グループを追加</button>
