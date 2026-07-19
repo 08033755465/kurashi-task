@@ -582,13 +582,20 @@ function tfNorm(id){let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'');
   const v=pad(h)+':'+pad(m);$('#'+id).value=v;$('#'+id+'_v').value=v;const el=$('#'+id);if(el.onchange)el.onchange();}
 function tfClear(id){$('#'+id).value='';$('#'+id+'_v').value='';const el=$('#'+id);if(el.onchange)el.onchange();}
 function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+id+'_v').value=val||'';}
-/* 週・日ビューの左右スワイプで日付移動 */
+/* カレンダーの左右スワイプで前後へ（月=前後月・週=前後週・日=前後日）。リスナーは1度だけ登録 */
+let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false;
 function attachCalSwipe(){
-  if(calMode==='month')return;
-  const el=$('#view');if(!el)return;let sx=0,sy=0,st=0;
-  el.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
-  el.addEventListener('touchend',e=>{const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
-    if(Date.now()-st<600&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)calNav(dx<0?1:-1);});}
+  if(swipeBound)return;const el=$('#view');if(!el)return;swipeBound=true;
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1){swValid=false;return;}
+    const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;},{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!swValid||view!=='cal')return;swValid=false;
+    if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show'))return;
+    // 横スクロールできる要素（グループのチップ等）の上なら移動しない
+    let n=e.target;while(n&&n!==el){if(n.scrollWidth-n.clientWidth>4&&/auto|scroll/.test(getComputedStyle(n).overflowX))return;n=n.parentElement;}
+    const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
+    if(Date.now()-swT<500&&Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.8)calNav(dx<0?1:-1);});}
 /* 予定の繰り返し */
 const REPEAT_LABEL={weekly:'毎週',biweekly:'隔週',monthly:'毎月'};
 function eventOccursOn(e,dstr){
@@ -974,7 +981,7 @@ function refreshLinksEd(){$('#linksEd').outerHTML=linksEditorHtml();}
 function collectLinks(){return editLinks.filter(l=>l.url.trim()).map(l=>({label:l.label.trim()||l.url.trim().replace(/^https?:\/\//,'').slice(0,24),url:l.url.trim()}));}
 
 /* ===== task modal ===== */
-function taskModal(id){
+function taskModal(id,presetDue){
   const x=id?S.tasks.find(t=>t.id===id):null;
   editLinks=(x?.links||[]).map(l=>({...l}));
   openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
@@ -984,7 +991,7 @@ function taskModal(id){
       <div><label>所要時間（分）</label><input id="tmEst" type="number" inputmode="numeric" min="0" value="${x?.estMin??15}"></div></div>
     <div class="frow f2"><div><label>優先度</label><select id="tmPr">
       <option value="1" ${x?.priority===1?'selected':''}>高</option><option value="2" ${!x||x.priority===2?'selected':''}>中</option><option value="3" ${x?.priority===3?'selected':''}>低</option></select></div>
-      <div><label>期限</label><input id="tmDue" type="date" value="${x?.due||''}"></div></div>
+      <div><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div></div>
     <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
       ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
@@ -1105,7 +1112,7 @@ function renderCal(){
     <div class="ym">${head}</div>${modeBtns}</div>${body}`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();attachCellPress();}
-function taskModalWithDue(d){taskModal(null);setTimeout(()=>{$('#tmDue').value=d;},0);}
+function taskModalWithDue(d){taskModal(null,d);}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();}
   save();render();checkCelebrate();}
@@ -1434,7 +1441,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.5（2026-07-19）</b><br>
+  <div class="mini"><b>v1.5.1（2026-07-19）</b><br>
+  ・スワイプの多重発火を修正（月/週/日が飛びすぎる不具合）。日は前日/翌日へ<br>
+  ・タスクのグループ選択（チップ）が横スクロールで最後まで押せるように<br>
+  ・日表示の「＋」から追加したタスクがその日に正しく表示されるように<br>
+  <b>v1.5（2026-07-19）</b><br>
   ・色分け長押しの誤発動を修正（指を離す・動かす・スクロールで確実にキャンセル）<br>
   ・月をもう一度押すと<b>ALL</b>全表示（縦スクロール）。通常は最大${s.monthMax}件＋「+N」<br>
   ・月セルに時刻を小さく表示／前月翌月の網かけON/OFF<br>
