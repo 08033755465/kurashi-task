@@ -25,7 +25,7 @@ body{
   color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
-#app{max-width:960px;margin:0 auto;min-height:100%;padding-bottom:76px;}
+#app{max-width:960px;margin:0 auto;min-height:100%;padding-bottom:76px;padding-top:max(env(safe-area-inset-top),6px);}
 button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:9px 10px;width:100%;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);}
@@ -228,6 +228,23 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .qtask .qt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .qtask button{font-size:10px;color:var(--sub);padding:1px 3px;}
 .qtask.sel button{color:#fff;}
+/* 連続4桁タイム入力 */
+.tfrow{display:flex;align-items:center;}
+.tf{width:96px;text-align:center;font-size:18px;font-weight:600;letter-spacing:.1em;}
+.tf-clear{font-size:11px;color:var(--sub);border:1px solid var(--line);padding:8px 9px;margin-left:6px;white-space:nowrap;}
+.rep{font-size:10.5px;color:var(--accent);border:1px solid var(--line);padding:1px 6px;}
+/* ルーティン頻度ビルダー */
+.nthbuild{border:1px solid var(--line2);padding:8px;}
+.nthlist{display:flex;flex-wrap:wrap;gap:5px;}
+.nthlist:empty{display:none;}
+.nthlist .nc{border:1px solid var(--ink);padding:3px 4px 3px 9px;font-size:12.5px;display:flex;gap:4px;align-items:center;}
+.nthlist .nc button{color:var(--danger);font-size:14px;padding:0 3px;}
+.nthadd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+.nthadd select{width:auto;padding:7px 8px;}
+.wdsel{display:flex;gap:3px;}
+.wdsel button{width:30px;padding:7px 0;border:1px solid var(--line);font-size:12px;color:var(--sub);}
+.wdsel button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.inlineadd{font-size:12px;color:var(--accent);border:1px solid var(--line);padding:9px 10px;white-space:nowrap;}
 
 /* color popover (bottom sheet) */
 #colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;}
@@ -438,8 +455,12 @@ function migrate(){const st=S.settings;
   st.wakeDef=st.wakeDef||'06:30';st.sleepDef=st.sleepDef||'23:00';
   st.notifyEmail=st.notifyEmail||'';
   st.feedbackUrl=st.feedbackUrl||'';
+  st.calDefault=st.calDefault||'month';
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
+  S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];});
+  (S.events||[]).forEach(e=>{if(e.repeat===undefined)e.repeat='';});
+  (S.birthdays||[]).forEach(b=>{if(b.honorific===undefined)b.honorific='';});
   (S.marks||[]).forEach(k=>{if(!ICONS[k.icon])k.icon='gift';});}
 function load(){try{const r=localStorage.getItem(LSKEY);S=r?JSON.parse(r):defaultState();}catch(e){S=defaultState();}
   migrate();}
@@ -498,6 +519,56 @@ function tpType(id){
 function tpClear(id){const el=$('#'+id);el.value='';
   $('#'+id+'_h').value='';$('#'+id+'_m').value='';
   if(el.onchange)el.onchange();}
+/* ===== 連続4桁タイム入力（開始→終了を続けてテンキー入力） ===== */
+function timeField(id,val,opts={}){
+  return `<span class="tfrow">
+    <input type="hidden" id="${id}" value="${val||''}">
+    <input class="tf" id="${id}_v" type="text" inputmode="numeric" maxlength="5" value="${val||''}" placeholder="--:--"
+      onfocus="this.select()" oninput="tfType('${id}',${opts.next?`'${opts.next}'`:'null'})" onblur="tfNorm('${id}')">
+    ${opts.clear?`<button type="button" class="tf-clear" onclick="tfClear('${id}')">終日</button>`:''}
+  </span>`;}
+function tfType(id,next){
+  let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'').slice(0,4);
+  $('#'+id+'_v').value=raw.length>2?raw.slice(0,2)+':'+raw.slice(2):raw;
+  if(raw.length===4){const h=Math.min(23,+raw.slice(0,2)),m=Math.min(59,+raw.slice(2));
+    const v=pad(h)+':'+pad(m);$('#'+id).value=v;$('#'+id+'_v').value=v;
+    const el=$('#'+id);if(el.onchange)el.onchange();
+    if(next){const nx=$('#'+next+'_v');if(nx){nx.focus();nx.select();}}}
+  else{$('#'+id).value='';}}
+function tfNorm(id){let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'');
+  if(!raw){$('#'+id).value='';$('#'+id+'_v').value='';const e=$('#'+id);if(e.onchange)e.onchange();return;}
+  let h,m;if(raw.length<=2){h=Math.min(23,+raw);m=0;}else{raw=raw.slice(0,4).padStart(4,'0');h=Math.min(23,+raw.slice(0,2));m=Math.min(59,+raw.slice(2));}
+  const v=pad(h)+':'+pad(m);$('#'+id).value=v;$('#'+id+'_v').value=v;const el=$('#'+id);if(el.onchange)el.onchange();}
+function tfClear(id){$('#'+id).value='';$('#'+id+'_v').value='';const el=$('#'+id);if(el.onchange)el.onchange();}
+function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+id+'_v').value=val||'';}
+/* 週・日ビューの左右スワイプで日付移動 */
+function attachCalSwipe(){
+  if(calMode==='month')return;
+  const el=$('#view');if(!el)return;let sx=0,sy=0,st=0;
+  el.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
+  el.addEventListener('touchend',e=>{const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Date.now()-st<600&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)calNav(dx<0?1:-1);});}
+/* 予定の繰り返し */
+const REPEAT_LABEL={weekly:'毎週',biweekly:'隔週',monthly:'毎月'};
+function eventOccursOn(e,dstr){
+  if(!e.date)return false;
+  if(!e.repeat)return e.date===dstr;
+  if(dstr<e.date)return false;
+  const diff=Math.round((parseDs(dstr)-parseDs(e.date))/86400000);
+  if(e.repeat==='weekly')return diff%7===0;
+  if(e.repeat==='biweekly')return diff%14===0;
+  if(e.repeat==='monthly')return parseDs(e.date).getDate()===parseDs(dstr).getDate();
+  return e.date===dstr;}
+function evTitle(e){return e.title&&e.title.trim()?e.title:(e.start?e.start+'の予定':'予定');}
+function repTag(e){return e.repeat?`<span class="rep">🔁${REPEAT_LABEL[e.repeat]||''}</span>`:'';}
+/* 予定・タスクのフォームからその場で新規カテゴリ追加 */
+async function addGroupInline(selId){
+  const name=await uiPrompt('新しいカテゴリ名');if(name===null)return;
+  const nm=name.trim();if(!nm)return;
+  const used=new Set(S.groups.map(g=>g.color));
+  const color=PALETTE.find(c=>!used.has(c))||PALETTE[Math.floor(S.groups.length%PALETTE.length)];
+  const g={id:uid(),name:nm,parentId:null,color};S.groups.push(g);save();
+  const sel=$('#'+selId);if(sel){sel.innerHTML=S.groups.map(x=>`<option value="${x.id}">${esc(groupPath(x.id))}</option>`).join('');sel.value=g.id;}}
 
 /* ========================= Supabase同期（オフラインファースト） ========================= */
 /* ローカル(localStorage)が本体。設定があれば自動でクラウドへ押し上げ、新しい方を採用する */
@@ -611,28 +682,39 @@ let view='today';
 let calMode='month', calY,calX,calDate=todayStr();
 let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 {const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
-function switchView(v){view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();}
+function switchView(v){
+  if(v==='cal'){calMode=S.settings.calDefault||'month';const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
+  view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();}
 function render(){
   const el=$('#view');
   if(view==='today')el.innerHTML=renderToday();
   else if(view==='tasks')el.innerHTML=renderTasks();
-  else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();}
+  else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();attachCalSwipe();}
   else if(view==='routine')el.innerHTML=renderRoutines();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,0);
 }
 
 /* ========================= 今日 ========================= */
-function todaysRoutines(d){const wd=parseDs(d).getDay();
+function routineOccursOn(r,dstr){const dt=parseDs(dstr),wd=dt.getDay();
+  if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(wd);
+  const nth=Math.floor((dt.getDate()-1)/7)+1;
+  const isLast=dt.getDate()+7>new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();
+  return (r.nths||[]).some(o=>o.d===wd&&(o.n===nth||(o.n===-1&&isLast)));}
+function todaysRoutines(d){
   const order={morning:0,day:1,night:2,any:3};
-  return S.routines.filter(r=>r.active&&r.days.includes(wd)).sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
+  return S.routines.filter(r=>r.active&&routineOccursOn(r,d)).sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
+function nthLabel(o){return (o.n===-1?'最終':'第'+o.n)+WD[o.d];}
+function scheduleText(r){
+  if((r.freq||'weekly')==='weekly')return (r.days||[]).length===7?'毎日':((r.days||[]).length?r.days.slice().sort().map(d=>WD[d]).join('・'):'曜日未設定');
+  return (r.nths||[]).length?('毎月 '+r.nths.map(nthLabel).join('・')):'日付未設定';}
 function renderToday(){
   const t=todayStr(),dt=new Date(),y=dt.getFullYear(),m=dt.getMonth()+1,d=dt.getDate();
   const log=dayLog(t);
   const routines=todaysRoutines(t);
   const tasks=todayTasks(t);
   const carry=S.tasks.filter(x=>x.today&&x.today<t&&x.status!=='done'&&!x.pin);
-  const evs=S.events.filter(e=>e.date===t).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const evs=S.events.filter(e=>eventOccursOn(e,t)).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   const doneR=routines.filter(r=>log.routines[r.id]?.done).length;
   const doneT=tasks.filter(x=>x.status==='done').length;
   const total=routines.length+tasks.length, done=doneR+doneT;
@@ -670,8 +752,8 @@ function renderToday(){
   <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
   <div class="gmsg">${gmsg}</div>
   ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${evs.map(e=>`
-    <div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="background:${group(e.groupId).color}"></div>
-    <div class="body"><div class="tt">${esc(e.title)}</div><div class="meta"><span>${e.start||''}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span></div>
+    <div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="${markCss(e.groupId,180)}"></div>
+    <div class="body"><div class="tt">${esc(evTitle(e))}</div><div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${repTag(e)}</div>
     ${linkChips(e.links)}</div></div>`).join('')}</div>`:''}
   ${carry.length?`<div class="sec"><div class="sec-h" style="color:var(--wait);">昨日までの繰り越し
     <button class="act" onclick="carryAll()">すべて今日へ</button></div>
@@ -897,11 +979,11 @@ function calNav(n){if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(c
 function setCalMode(m){calMode=m;render();attachCellPress();}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();}
 function eventsOn(d){const ids=visibleGroups(calSel);
-  return S.events.filter(e=>e.date===d&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+  return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 function dueTasksOn(d){if(!S.settings.showDue)return[];const ids=visibleGroups(calSel);
   return S.tasks.filter(x=>x.due===d&&x.status!=='done'&&(!ids||ids.has(x.groupId)));}
 function marksOn(m,d){const out=[];
-  S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+'さんの誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
+  S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+(b.honorific||'さん')+'の誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
   S.marks.forEach(k=>{if(+k.month===m&&+k.day===d)out.push({icon:k.icon,color:k.color,name:k.name});});
   return out;}
 function renderCal(){
@@ -924,7 +1006,7 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:e.title,c:group(e.groupId).color,due:0})),...dues.map(x=>({t:x.title,c:'',due:1}))];
+      const items=[...evs.map(e=>({t:evTitle(e),c:group(e.groupId).color,due:0})),...dues.map(x=>({t:x.title,c:'',due:1}))];
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
       cells+=`<div class="cell ${out?'out':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
         <div class="top"><span class="dn ${hol||dow===0?'sun':dow===6?'sat':''}">${d}</span>
@@ -952,7 +1034,7 @@ function renderCal(){
           ${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>`<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span><span>${esc(e.title)}</span></div>`).join('')}
+          ${evs.map(e=>`<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span><span>${esc(evTitle(e))}</span>${repTag(e)}</div>`).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -968,9 +1050,9 @@ function renderCal(){
     <div class="addrow"><button class="fill" onclick="eventModal(null,'${calDate}')">＋ 予定を追加</button>
       <button onclick="taskModalWithDue('${calDate}')">＋ この日期限のタスク</button></div>
     <div class="sec-h">予定</div>
-    ${evs.length?evs.map(e=>`<div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="background:${group(e.groupId).color}"></div>
-      <div class="body"><div class="tt">${esc(e.title)}</div>
-      <div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${e.memo?`<span>${esc(e.memo)}</span>`:''}</div>
+    ${evs.length?evs.map(e=>`<div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="${markCss(e.groupId,180)}"></div>
+      <div class="body"><div class="tt">${esc(evTitle(e))}</div>
+      <div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${repTag(e)}${e.memo?`<span>${esc(e.memo)}</span>`:''}</div>
       ${linkChips(e.links)}</div></div>`).join(''):'<div class="mini">予定はありません</div>'}
     <div class="sec-h">この日が期限のタスク</div>
     ${dues.length?dues.map(taskRow).join(''):'<div class="mini">ありません</div>'}`;
@@ -988,7 +1070,7 @@ function attachCellPress(){
   $$('.cell').forEach(el=>{
     el.addEventListener('contextmenu',e=>e.preventDefault());
     el.addEventListener('pointerdown',e=>{pressMoved=false;
-      pressT=setTimeout(()=>{pressT=null;suppress=true;openColorSheet(el.dataset.d);},520);});
+      pressT=setTimeout(()=>{pressT=null;suppress=true;try{navigator.vibrate&&navigator.vibrate(25);}catch(_){}openColorSheet(el.dataset.d);},1000);});
     el.addEventListener('pointermove',()=>{pressMoved=true;if(pressT){clearTimeout(pressT);pressT=null;}});
     el.addEventListener('pointerup',()=>{if(pressT){clearTimeout(pressT);pressT=null;
       if(!pressMoved&&!suppress)calGoto(el.dataset.d);}suppress=false;});
@@ -1014,11 +1096,20 @@ function eventModal(id,presetDate){
     ${!e&&S.templates.length?`<label>よく使う予定から</label><div class="tmplchips">${S.templates.map(t=>`
       <button class="chip" onclick="applyTmpl('${t.id}')"><span class="dot" style="${markCss(t.groupId)}"></span>${esc(t.title)}</button>
       `).join('')}<button class="chip" style="color:var(--danger);" onclick="manageTmpl()">管理</button></div>`:''}
-    <div class="frow"><label>予定名</label><input id="emTitle" value="${esc(e?.title||'')}"></div>
-    <div class="frow f2"><div><label>日付</label><input id="emDate" type="date" value="${e?.date||presetDate||todayStr()}"></div>
-      <div><label>グループ</label><select id="emGroup">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div></div>
-    <div class="frow f2"><div><label>開始（✕=終日）</label>${timeInput('emStart',e?.start||'',{clear:true})}</div>
-      <div><label>終了</label>${timeInput('emEnd',e?.end||'',{clear:true})}</div></div>
+    <div class="frow"><label>日付 <span id="emDow" style="color:var(--ink);font-weight:600;"></span></label>
+      <input id="emDate" type="date" value="${e?.date||presetDate||todayStr()}" onchange="emDowUpd()"></div>
+    <div class="frow"><label>繰り返し</label>
+      <select id="emRepeat" onchange="emDowUpd()">
+        <option value="" ${!e?.repeat?'selected':''}>なし（1回だけ）</option>
+        <option value="weekly" ${e?.repeat==='weekly'?'selected':''}>毎週（同じ曜日）</option>
+        <option value="biweekly" ${e?.repeat==='biweekly'?'selected':''}>隔週</option>
+        <option value="monthly" ${e?.repeat==='monthly'?'selected':''}>毎月（同じ日）</option></select></div>
+    <div class="frow"><label>グループ</label>
+      <div style="display:flex;gap:6px;"><select id="emGroup" style="flex:1;">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
+      <button type="button" class="inlineadd" onclick="addGroupInline('emGroup')">＋新規</button></div></div>
+    <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||'',{clear:true,next:'emEnd'})}</div>
+      <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
+    <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emTmpl" style="width:auto;">
@@ -1027,9 +1118,18 @@ function eventModal(id,presetDate){
   <div class="mbtns">
     ${e?`<button class="del" onclick="delEvent('${e.id}')">削除</button><button onclick="dupEvent('${e.id}')">複製</button>`:''}
     <button class="save" onclick="saveEvent('${e?.id||''}')">保存</button>
-  </div>`);}
+  </div>`);
+  emDowUpd();}
+function emDowUpd(){const v=$('#emDate')?.value;const el=$('#emDow');if(!el)return;
+  if(!v){el.textContent='';return;}
+  const d=parseDs(v);let s='（'+WD[d.getDay()]+'）';
+  const rep=$('#emRepeat')?.value;
+  if(rep==='weekly')s+=' 毎週'+WD[d.getDay()]+'曜';
+  else if(rep==='biweekly')s+=' 隔週'+WD[d.getDay()]+'曜';
+  else if(rep==='monthly')s+=' 毎月'+d.getDate()+'日';
+  el.textContent=s;}
 function applyTmpl(tid){const t=S.templates.find(x=>x.id===tid);if(!t)return;
-  $('#emTitle').value=t.title;$('#emGroup').value=t.groupId;$('#emStart').value=t.start||'';$('#emEnd').value=t.end||'';$('#emMemo').value=t.memo||'';
+  $('#emTitle').value=t.title||'';$('#emGroup').value=t.groupId;setTf('emStart',t.start||'');setTf('emEnd',t.end||'');$('#emMemo').value=t.memo||'';
   editLinks=(t.links||[]).map(l=>({...l}));refreshLinksEd();}
 function manageTmpl(){
   openModal(`<div class="mh"><b>よく使う予定の管理</b><button onclick="closeModal()">✕</button></div>
@@ -1042,8 +1142,9 @@ function manageTmpl(){
 async function delTmpl(id){if(!await uiConfirm('このテンプレを削除しますか？','削除'))return;
   S.templates=S.templates.filter(t=>t.id!==id);save();manageTmpl();}
 function saveEvent(id){
-  const title=$('#emTitle').value.trim();if(!title){uiAlert('予定名を入力してください');return;}
-  const data={title,date:$('#emDate').value,groupId:$('#emGroup').value,start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,links:collectLinks()};
+  const date=$('#emDate').value;if(!date){uiAlert('日付を選んでください');return;}
+  const data={title:$('#emTitle').value.trim(),date,groupId:$('#emGroup').value,repeat:$('#emRepeat').value,
+    start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,links:collectLinks()};
   if(id)Object.assign(S.events.find(e=>e.id===id),data);
   else S.events.push({id:uid(),...data});
   if($('#emTmpl').checked)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
@@ -1060,28 +1161,42 @@ function renderRoutines(){
   const list=[...S.routines].sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);
   let cur='';
   return `<div class="vhead"><h1>ルーティン</h1><button class="act" style="color:var(--accent);font-size:13px;" onclick="routineModal(null)">＋ 追加</button></div>
-  <div class="mini">毎日・曜日ごとの決まった作業を登録すると「今日」に自動で並びます。実行時間は自動で記録され、平均が見えます。</div>
+  <div class="mini">毎週の曜日、または毎月「第2水曜」などで登録できます（複数可）。「今日」に自動で並び、実行時間の平均も記録されます。▲▼で並び替えできます。</div>
   ${list.map(r=>{const h=r.slot!==cur?`<div class="sec-h">${SLOTS[r.slot]}</div>`:'';cur=r.slot;
     const st=r.stats||{n:0,total:0};
     return h+`<div class="titem" onclick="routineModal('${r.id}')">
       <div class="bar" style="background:${r.active?'var(--ink)':'var(--line)'}"></div>
       <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${esc(r.title)}</div>
-      <div class="meta"><span>${r.days.length===7?'毎日':r.days.map(d=>WD[d]).join('・')}</span><span>目安${fmtMin(r.estMin)}</span>
+      <div class="meta"><span>${esc(scheduleText(r))}</span><span>目安${fmtMin(r.estMin)}</span>
       ${st.n?`<span>平均 ${fmtMin(st.total/st.n/60)}（${st.n}回）</span>`:''}${r.active?'':'<span>停止中</span>'}</div>
-      ${linkChips(r.links)}</div></div>`;}).join('')}`;
+      ${linkChips(r.links)}</div>
+      <div class="arrows"><button onclick="event.stopPropagation();moveRoutine('${r.id}',-1)">▲</button>
+      <button onclick="event.stopPropagation();moveRoutine('${r.id}',1)">▼</button></div></div>`;}).join('')}`;
 }
 function routineModal(id){
   const r=id?S.routines.find(x=>x.id===id):null;
   editLinks=(r?.links||[]).map(l=>({...l}));
-  const days=r?[...r.days]:[0,1,2,3,4,5,6];
-  window._rdays=days;
+  const days=r&&r.days?[...r.days]:[0,1,2,3,4,5,6];
+  window._rdays=days;window._rnths=r&&r.nths?JSON.parse(JSON.stringify(r.nths)):[];window._rnthWd=null;
   openModal(`<div class="mh"><b>${r?'ルーティン編集':'ルーティン追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
     <div class="frow f2"><div><label>時間帯</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${r?.slot===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div></div>
-    <div class="frow"><label>実行する曜日</label><div class="daysel" id="rmDays">
+    <div class="frow"><label>繰り返し</label>
+      <select id="rmFreq" onchange="rSetFreq(this.value)">
+        <option value="weekly" ${(r?.freq||'weekly')==='weekly'?'selected':''}>毎週（曜日で指定）</option>
+        <option value="monthly" ${r?.freq==='monthly'?'selected':''}>毎月（第◯曜で指定・複数可）</option></select></div>
+    <div class="frow" id="rmWeeklyRow" style="display:${(r?.freq||'weekly')==='weekly'?'block':'none'};"><label>実行する曜日</label><div class="daysel" id="rmDays">
       ${WD.map((w,i)=>`<button class="${days.includes(i)?'on':''}" onclick="tglRDay(${i},this)">${w}</button>`).join('')}</div></div>
+    <div class="frow" id="rmMonthlyRow" style="display:${r?.freq==='monthly'?'block':'none'};"><label>毎月の実行日（第◯曜・複数追加できます）</label>
+      <div class="nthbuild">
+        <div class="nthlist" id="rmNthList"></div>
+        <div class="nthadd">
+          <select id="rmNthN"><option value="1">第1</option><option value="2">第2</option><option value="3">第3</option><option value="4">第4</option><option value="5">第5</option><option value="-1">最終</option></select>
+          <div class="wdsel" id="rmNthWd">${WD.map((w,i)=>`<button type="button" data-d="${i}" onclick="rWdPick(${i})">${w}</button>`).join('')}</div>
+          <button type="button" class="inlineadd" onclick="rAddNth()">＋追加</button>
+        </div></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmActive" style="width:auto;" ${!r||r.active?'checked':''}>
       <span style="font-size:13px;">有効（今日のリストに表示する）</span></div>
     <div class="frow"><label>リンク（開くサイト・マニュアル等）</label>${linksEditorHtml()}</div>
@@ -1090,11 +1205,30 @@ function routineModal(id){
   <div class="mbtns">
     ${r?`<button class="del" onclick="delRoutine('${r.id}')">削除</button><button onclick="dupRoutine('${r.id}')">複製</button>`:''}
     <button class="save" onclick="saveRoutine('${r?.id||''}')">保存</button>
-  </div>`);}
+  </div>`);rNthRefresh();}
 function tglRDay(i,btn){const d=window._rdays;const p=d.indexOf(i);p>=0?d.splice(p,1):d.push(i);btn.classList.toggle('on');}
+function rSetFreq(v){$('#rmWeeklyRow').style.display=v==='weekly'?'block':'none';$('#rmMonthlyRow').style.display=v==='monthly'?'block':'none';}
+function rWdPick(i){window._rnthWd=i;$$('#rmNthWd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===i));}
+function rAddNth(){if(window._rnthWd===null){uiAlert('曜日を選んでください');return;}
+  const n=+$('#rmNthN').value,d=window._rnthWd;
+  if(!window._rnths.some(o=>o.n===n&&o.d===d))window._rnths.push({n,d});
+  window._rnthWd=null;$$('#rmNthWd button').forEach(b=>b.classList.remove('on'));rNthRefresh();}
+function rDelNth(i){window._rnths.splice(i,1);rNthRefresh();}
+function rNthRefresh(){const el=$('#rmNthList');if(!el)return;
+  el.innerHTML=window._rnths.map((o,i)=>`<span class="nc">${nthLabel(o)}<button type="button" onclick="rDelNth(${i})">✕</button></span>`).join('');}
+function moveRoutine(id,dir){const r=S.routines.find(x=>x.id===id);if(!r)return;
+  const list=S.routines.filter(x=>x.slot===r.slot).sort((a,b)=>a.order-b.order);
+  list.forEach((x,i)=>x.order=i);
+  const i=list.findIndex(x=>x.id===id),j=i+dir;if(j<0||j>=list.length)return;
+  list[i].order=j;list[j].order=i;save();render();}
 function saveRoutine(id){
   const title=$('#rmTitle').value.trim();if(!title){uiAlert('名前を入力してください');return;}
-  const data={title,slot:$('#rmSlot').value,estMin:+$('#rmEst').value||0,days:[...window._rdays].sort(),active:$('#rmActive').checked,links:collectLinks()};
+  const freq=$('#rmFreq').value;
+  if(freq==='weekly'&&!window._rdays.length){uiAlert('実行する曜日を選んでください');return;}
+  if(freq==='monthly'&&!window._rnths.length){uiAlert('毎月の実行日（第◯曜）を1つ以上追加してください');return;}
+  const data={title,slot:$('#rmSlot').value,estMin:+$('#rmEst').value||0,freq,
+    days:[...window._rdays].sort(),nths:JSON.parse(JSON.stringify(window._rnths)),
+    active:$('#rmActive').checked,links:collectLinks()};
   if(id)Object.assign(S.routines.find(r=>r.id===id),data);
   else S.routines.push({id:uid(),...data,order:Date.now(),stats:{n:0,total:0}});
   save();closeModal();render();}
@@ -1148,6 +1282,11 @@ function renderSettings(){
   <div class="setrow"><div><div class="sl">週の開始</div></div>
     <select style="width:100px;" onchange="S.settings.weekStart=+this.value;save();render();">
       <option value="0" ${s.weekStart===0?'selected':''}>日曜</option><option value="1" ${s.weekStart===1?'selected':''}>月曜</option></select></div>
+  <div class="setrow"><div><div class="sl">カレンダーの初期表示</div><div class="sd">カレンダータブを押したとき開く表示</div></div>
+    <select style="width:100px;" onchange="S.settings.calDefault=this.value;save();">
+      <option value="month" ${s.calDefault==='month'?'selected':''}>月</option>
+      <option value="week" ${s.calDefault==='week'?'selected':''}>週</option>
+      <option value="day" ${s.calDefault==='day'?'selected':''}>日</option></select></div>
   <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
   <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれることがあります）</div></div>${tgl('showRokuyo')}</div>
   <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
@@ -1201,7 +1340,15 @@ function renderSettings(){
     <div class="mini" style="padding:8px 0 0;">通知先メール：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
     改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
     <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>
-  <div class="mini"><b>v1.2（2026-07-19）</b><br>
+  <div class="mini"><b>v1.4（2026-07-19）</b><br>
+  ・ルーティンを「毎月 第2水曜」など（複数可）で設定可能に＋▲▼で並び替え<br>
+  ・カレンダータブを押すと初期表示（既定=月）に戻る。初期表示は設定で変更可<br>
+  ・上部に余白を追加（スマホ最上部のかぶり対策）<br>
+  ・長押し色分けを1秒＋振動に（タップ誤発動を防止）<br>
+  ・誕生日に敬称（空欄なら「さん」）<br>
+  ・予定追加からその場で新規カテゴリ追加／週表示は左右スワイプで移動<br>
+  ・予定に曜日連動表示と繰り返し（毎週・隔週・毎月）／時間は開始4桁→終了4桁の連続テンキー／予定名は任意で下に配置<br>
+  <b>v1.2（2026-07-19）</b><br>
   ・時刻入力をテンキー対応に（数字タップでテンキー、▲▼で微調整・分は15分刻み）<br>
   ・Supabaseクラウド同期（ローカル優先・自動アップロード・新しい方を採用）<br>
   ・改善メモをGAS経由でNotion改善DB＋Gmailへ自動送信（未設定時はメール下書き）<br>
@@ -1244,7 +1391,7 @@ function bdayList(){openModal(`<div class="mh"><b>誕生日</b><button onclick="
     <button class="addlink" style="margin-bottom:8px;" onclick="bdayModal(null)">＋ 誕生日を追加</button>
     ${S.birthdays.length?S.birthdays.map(b=>`<div class="listrow" onclick="bdayModal('${b.id}')">
       <span style="width:16px;height:16px;color:${b.gift?(b.color||'#E8618C'):'var(--sub)'};">${icSvg('cake')}</span>
-      <span class="lt">${esc(b.name)}</span><span class="ls">${b.month}/${b.day}${b.gift?'・プレゼント準備':''}</span></div>`).join('')
+      <span class="lt">${esc(b.name)}${esc(b.honorific||'さん')}</span><span class="ls">${b.month}/${b.day}${b.gift?'・プレゼント準備':''}</span></div>`).join('')
       :'<div class="mini" style="padding:8px 0;">登録するとカレンダーにケーキのマークが表示されます</div>'}
   </div>`);}
 function markList(){openModal(`<div class="mh"><b>マーク付きの日</b><button onclick="closeModal()">✕</button></div>
@@ -1266,7 +1413,8 @@ function bdayModal(id){
   const b=id?S.birthdays.find(x=>x.id===id):null;
   openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
-    <div class="frow"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
+    <div class="frow f2"><div style="flex:2;"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
+      <div><label>敬称（空欄なら「さん」）</label><input id="bmHon" value="${esc(b?.honorific||'')}" placeholder="さん"></div></div>
     <div class="frow f2"><div><label>月</label><input id="bmM" type="number" inputmode="numeric" min="1" max="12" value="${b?.month||''}"></div>
       <div><label>日</label><input id="bmD" type="number" inputmode="numeric" min="1" max="31" value="${b?.day||''}"></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="bmGift" style="width:auto;" ${b?.gift?'checked':''}>
@@ -1282,7 +1430,7 @@ function saveBday(id){
   const name=$('#bmName').value.trim(),m=+$('#bmM').value,d=+$('#bmD').value;
   if(!name||!m||!d){uiAlert('名前と月日を入力してください');return;}
   const color=$('#bmColor button.on')?.dataset.c||'#E8618C';
-  const data={name,month:m,day:d,gift:$('#bmGift').checked,color};
+  const data={name,month:m,day:d,gift:$('#bmGift').checked,color,honorific:$('#bmHon').value.trim()};
   if(id)Object.assign(S.birthdays.find(x=>x.id===id),data);
   else S.birthdays.push({id:uid(),...data});
   save();bdayList();render();}
