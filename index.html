@@ -120,7 +120,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 
 /* ===== calendar ===== */
 .calbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);}
-.calbar .ym{font-size:18px;font-weight:700;letter-spacing:.05em;}
+.calbar{gap:6px;}
+.calbar .ym{font-size:16px;font-weight:700;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto;}
+.calmode button{padding:5px 10px;}
 .calbar .mv{display:flex;gap:2px;}
 .calbar .mv button{padding:5px 13px;border:1px solid var(--line);font-size:14px;}
 .calmode{display:flex;border:1px solid var(--line);}
@@ -249,7 +251,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .allbadge{font-size:8px;color:#fff;background:var(--sub);padding:0 3px;margin-left:3px;vertical-align:middle;letter-spacing:.05em;}
 .calmode button.on .allbadge{background:#fff;color:var(--ink);}
 .evtime{font-size:8px;opacity:.9;margin-right:2px;font-variant-numeric:tabular-nums;}
+.evfrac{display:inline-flex;flex-direction:column;line-height:.82;font-size:6.5px;vertical-align:middle;margin-right:2px;text-align:center;font-variant-numeric:tabular-nums;opacity:.85;}
 .nightglyph{margin-right:1px;}
+.nightsep.am{color:#B07D12;background:#FAF5E6;}
+.nightsep.pm{color:#A96A1A;background:#FAF1E2;}
+.wrow.wtoday{background:#EEF2FF;}
+.wtodaytag{font-size:9px;color:#2456E6;font-weight:700;margin-top:2px;}
 .cell.shade{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(0,0,0,.05) 5px 6px);}
 /* 日ビュー 2カラム（左=予定 / 右=タスク） */
 .daycols{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink);}
@@ -493,6 +500,7 @@ function migrate(){const st=S.settings;
   st.feedbackUrl=st.feedbackUrl||'';
   st.calDefault=st.calDefault||'month';
   st.nightStart=st.nightStart||'18:00';
+  st.pmStart=st.pmStart||'12:00';
   if(st.showNight===undefined)st.showNight=true;
   if(st.showAdjShade===undefined)st.showAdjShade=true;
   st.monthMax=st.monthMax||4;
@@ -801,10 +809,7 @@ function renderToday(){
   <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
-  ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${evs.map(e=>`
-    <div class="titem" onclick="eventModal('${e.id}')"><div class="bar" style="${markCss(e.groupId,180)}"></div>
-    <div class="body"><div class="tt">${esc(evTitle(e))}</div><div class="meta"><span>${e.start||'終日'}${e.end?'〜'+e.end:''}</span><span>${esc(group(e.groupId).name)}</span>${repTag(e)}</div>
-    ${linkChips(e.links)}</div></div>`).join('')}</div>`:''}
+  ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${scheduleListHtml(evs,dayWake(t))}</div>`:''}
   ${carry.length?`<div class="sec"><div class="sec-h" style="color:var(--wait);">昨日までの繰り越し
     <button class="act" onclick="carryAll()">すべて今日へ</button></div>
     ${carry.map(x=>taskRow(x)).join('')}</div>`:''}
@@ -1029,6 +1034,28 @@ function calNav(n){if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(c
 function setCalMode(m){calMode=m;if(m!=='month')calMonthAll=false;render();}
 function onMonthBtn(){if(calMode==='month')calMonthAll=!calMonthAll;else{calMonthAll=false;calMode='month';}render();}
 function isNight(e){return !!(e.start&&S.settings.showNight&&e.start>=S.settings.nightStart);}
+/* 時間帯（午前/午後/夜）。夜は「夜の開始〜翌日の起床まで」 */
+function bandOf(t,wake){
+  if(!t)return 'am';
+  const m=hm2min(t),w=hm2min(wake||S.settings.wakeDef),p=hm2min(S.settings.pmStart),n=hm2min(S.settings.nightStart);
+  if(m>=n||m<w)return 'night';
+  if(m>=p)return 'pm';
+  return 'am';}
+function bandLabel(b){return b==='night'?`🌙 夜（${S.settings.nightStart}〜）`:b==='pm'?`🌤 午後（${S.settings.pmStart}〜）`:'☀ 午前';}
+/* 起床起点の分（起床前の早朝は前日夜の続きとして最後に並べる） */
+function dayMin(t,wake){if(!t)return -1;const m=hm2min(t),w=hm2min(wake||S.settings.wakeDef);return m<w?m+1440:m;}
+/* 予定を午前/午後/夜の区切り付きタイムラインで表示（日ビュー・今日で共用） */
+function scheduleListHtml(evs,wake){
+  const sorted=[...evs].sort((a,b)=>dayMin(a.start,wake)-dayMin(b.start,wake));
+  let cur=null,html='';
+  sorted.forEach(e=>{const b=bandOf(e.start,wake);
+    if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
+    html+=`<div class="tl" onclick="eventModal('${e.id}')">
+      <div class="tlt">${e.start||'終日'}${e.end?`<small>〜${e.end}</small>`:''}</div>
+      <div class="tlbar" style="${markCss(e.groupId,180)}"></div>
+      <div class="tlb"><div class="tlname">${esc(evTitle(e))} ${repTag(e)}</div>
+      <div class="tlg">${esc(group(e.groupId).name)}${e.memo?' ・'+esc(e.memo):''}</div>${linkChips(e.links)}</div></div>`;});
+  return html;}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
@@ -1070,7 +1097,8 @@ function renderCal(){
           ${rk?`<span class="rk ${rk==='大安'?'taian':''}">${rk}</span>`:''}${ich?'<span class="ich">万倍</span>':''}</div>
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
-        ${shown.map(it=>`<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c}"`}>${it.night?'<span class="nightglyph">🌙</span>':''}${it.time?`<span class="evtime">${it.time}</span>`:''}${esc(it.t)}</div>`).join('')}
+        ${shown.map(it=>{const tf=(calMonthAll&&it.time)?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:'';
+          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c}"`}>${it.night?'<span class="nightglyph">🌙</span>':''}${tf}${esc(it.t)}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
     body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -1084,11 +1112,11 @@ function renderCal(){
       const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dstr=dsOf(c);
       const hol=holidayName(y,m,d);const evs=eventsOn(dstr),dues=dueTasksOn(dstr),mks=marksOn(m,d);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
-      return `<div class="wrow" onclick="calGoto('${dstr}')">
+      return `<div class="wrow ${dstr===todayStr()?'wtoday':''}" onclick="calGoto('${dstr}')">
         <div class="wd" ${bg?`style="background:${bg}"`:''}>
           <div class="n ${hol||c.getDay()===0?'sun':''}" style="${c.getDay()===6?'color:var(--sat);':''}${hol||c.getDay()===0?'color:var(--sun);':''}">${d}</div>
           <div class="r">${WD[c.getDay()]}${S.settings.showRokuyo?'・'+rokuyo(y,m,d):''}</div>
-          ${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
+          ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
           ${evs.map(e=>`<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span>${isNight(e)?'<span class="nightglyph">🌙</span>':''}<span>${esc(evTitle(e))}</span>${repTag(e)}</div>`).join('')}
@@ -1117,17 +1145,10 @@ function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
-  const evs=[...eventsOn(dstr)].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const evs=eventsOn(dstr);
+  const wake=dstr===todayStr()?dayWake(dstr):S.settings.wakeDef;
   const dtasks=S.tasks.filter(x=>x.due===dstr||x.today===dstr).sort((a,b)=>(a.status==='done')-(b.status==='done')||a.priority-b.priority);
-  let nightShown=false;
-  const tl=evs.map(e=>{let sep='';
-    if(S.settings.showNight&&isNight(e)&&!nightShown){nightShown=true;sep=`<div class="nightsep">🌙 夜（${S.settings.nightStart}〜）</div>`;}
-    return sep+`<div class="tl" onclick="eventModal('${e.id}')">
-      <div class="tlt">${e.start||'終日'}${e.end?`<small>〜${e.end}</small>`:''}</div>
-      <div class="tlbar" style="${markCss(e.groupId,180)}"></div>
-      <div class="tlb"><div class="tlname">${esc(evTitle(e))} ${repTag(e)}</div>
-      <div class="tlg">${esc(group(e.groupId).name)}${e.memo?' ・'+esc(e.memo):''}</div>
-      ${linkChips(e.links)}</div></div>`;}).join('');
+  const tl=scheduleListHtml(evs,wake);
   const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}">
     <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="dtb" onclick="taskModal('${x.id}')"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
@@ -1390,7 +1411,7 @@ function renderSettings(){
       <select style="width:80px;" onchange="S.settings.monthMax=+this.value;save();">
         ${[3,4,5,6,7,8].map(n=>`<option value="${n}" ${s.monthMax===n?'selected':''}>${n}</option>`).join('')}</select></div>
     <div class="setrow"><div><div class="sl">前月・翌月を網かけ</div><div class="sd">当月以外の日をうすいグレーの網かけに</div></div>${tgl('showAdjShade')}</div>
-    <div class="setrow"><div><div class="sl">夜の予定を切り分け表示</div><div class="sd">🌙マーク・日表示で「夜」の区切り</div></div>${tgl('showNight')}</div>
+    <div class="setrow"><div><div class="sl">時間帯で切り分け表示</div><div class="sd">午前/午後/夜で区切り＋🌙マーク（今日・日表示）</div></div>${tgl('showNight')}</div>
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
     <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
     <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
@@ -1400,7 +1421,9 @@ function renderSettings(){
       ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
     <div class="setrow"><div><div class="sl">就寝時刻（既定）</div><div class="sd">その日だけの変更は「今日」画面から</div></div>
       ${timeInput('setSl',s.sleepDef,{onchange:"S.settings.sleepDef=this.value;save();"})}</div>
-    <div class="setrow"><div><div class="sl">夜の開始時刻</div><div class="sd">これ以降を「夜の予定」として切り分け</div></div>
+    <div class="setrow"><div><div class="sl">午後の開始時刻</div><div class="sd">これ以降を「午後」に（午前と切り分け）</div></div>
+      ${timeInput('setPm',s.pmStart,{onchange:"S.settings.pmStart=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">夜の開始時刻</div><div class="sd">これ以降を「夜」に。夜は翌朝の起床まで</div></div>
       ${timeInput('setNs',s.nightStart,{onchange:"S.settings.nightStart=this.value;save();"})}</div>
     <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリを開いている間に通知します</div></div>
       <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
@@ -1441,7 +1464,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.5.1（2026-07-19）</b><br>
+  <div class="mini"><b>v1.6（2026-07-19）</b><br>
+  ・今日・日表示を午前／午後／夜で区切り（夜は「夜の開始〜翌朝の起床」まで）。設定に「午後の開始」を追加<br>
+  ・週表示で今日の行を強調<br>
+  ・月カレンダーの時刻はALL表示のときだけ、極小のHH／MM（分数表示）に<br>
+  <b>v1.5.1（2026-07-19）</b><br>
   ・スワイプの多重発火を修正（月/週/日が飛びすぎる不具合）。日は前日/翌日へ<br>
   ・タスクのグループ選択（チップ）が横スクロールで最後まで押せるように<br>
   ・日表示の「＋」から追加したタスクがその日に正しく表示されるように<br>
