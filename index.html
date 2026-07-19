@@ -831,11 +831,11 @@ function renderToday(){
     ${carry.map(x=>taskRow(x)).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     <button class="act" onclick="switchView('tasks')">＋選ぶ</button></div>
+    <div class="qadd">
+      <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
+      <button onclick="quickAddToday()">追加</button>
+    </div>
     ${doList.length?doList.map(it=>doItemRow(it,t)).join(''):'<div class="mini">ルーティンや、タスクタブで「☀今日」にした項目がここに並びます。▲▼で順番を入れ替えできます。</div>'}
-  </div>
-  <div class="qadd" style="border-top:1px solid var(--line);">
-    <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
-    <button onclick="quickAddToday()">追加</button>
   </div>`;
 }
 function linkChips(links){if(!links||!links.length)return'';
