@@ -1743,8 +1743,8 @@ function flowShow(keep){
     <div class="fbtns2">
       <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 戻る</button>
       <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
-      <button onclick="flowHardSkip()">⏭ 次へスキップ</button>
     </div>
+    <div class="fbtns3"><button onclick="flowHardSkip()">⏭ 次のタスクへスキップ</button></div>
     <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
