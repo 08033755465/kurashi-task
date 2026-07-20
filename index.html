@@ -635,12 +635,14 @@ function attachCalSwipe(){
     if(e.touches.length!==1){swValid=false;return;}
     const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;},{passive:true});
   el.addEventListener('touchend',e=>{
-    if(!swValid||view!=='cal')return;swValid=false;
-    if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show'))return;
-    // 横スクロールできる要素（グループのチップ等）の上なら移動しない
+    if(!swValid)return;swValid=false;
+    if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
+    // 横スクロールできる要素（グループのチップ等）の上なら反応しない
     let n=e.target;while(n&&n!==el){if(n.scrollWidth-n.clientWidth>4&&/auto|scroll/.test(getComputedStyle(n).overflowX))return;n=n.parentElement;}
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
-    if(Date.now()-swT<500&&Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.8)calNav(dx<0?1:-1);});}
+    if(!(Date.now()-swT<500&&Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.8))return;
+    if(view==='cal'){calNav(dx<0?1:-1);return;}
+    if(view==='today'){let r=e.target;while(r&&r!==el){if(r.dataset&&r.dataset.do){swipeComplete(r.dataset.do);return;}r=r.parentElement;}}});}
 /* 予定の繰り返し */
 const REPEAT_LABEL={weekly:'毎週',biweekly:'隔週',monthly:'毎月'};
 function eventOccursOn(e,dstr){
@@ -788,7 +790,7 @@ function render(){
   else if(view==='routine')el.innerHTML=renderRoutines();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,sy); // 再描画でスクロール位置を保つ（チェック操作で上に飛ばない）
-  updateFlowBar();
+  updateFlowBar();attachCellPress();attachCalSwipe();
 }
 function toTop(){window.scrollTo(0,0);}
 
@@ -941,7 +943,7 @@ function doItemRow(it,t){
   const tok=it.type+'_'+it.obj.id;
   const arrows=todayArrows(tok);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
-    return `<div class="ritem ${dn?'done':''}">
+    return `<div class="ritem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}">
       <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
       <div class="rb" onclick="routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span>${r.optional?'<span class="rtag opt">時間があれば</span>':''}</div>
       <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}${r.memo?'・📝メモ':''}</div>${linkChips(r.links)}</div>
@@ -1002,7 +1004,7 @@ function taskRow(x,o={}){
     :`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
   const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
-  return `<div class="titem" onclick="taskModal('${x.id}')">
+  return `<div class="titem" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="taskModal('${x.id}')" style="${pastelBg(x)}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="body">
       <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.pin&&o.today?'<span class="pinbadge">毎日</span>':''}</div>
@@ -1292,7 +1294,7 @@ function dayScheduleHtml(dstr){
       ${dtasks.length?tk:'<div class="dempty">タスクなし</div>'}</div>
   </div>`;}
 /* 長押し→色（タップでは発動しない。移動・スクロール・指を離すと確実にキャンセル） */
-let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressDocBound=false;
+let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressLp=null,lpSuppress=false,pressDocBound=false;
 function endPressTimer(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
 function attachCellPress(){
   if(!pressDocBound){pressDocBound=true;
@@ -1303,20 +1305,44 @@ function attachCellPress(){
     document.addEventListener('pointerup',()=>{
       const had=!!pressTimer;endPressTimer();
       if(had&&pressCell&&!pressFired)calGoto(pressCell.dataset.d);
-      pressCell=null;pressFired=false;pressStart=null;});
-    document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressFired=false;pressStart=null;});
+      pressCell=null;pressLp=null;pressStart=null;setTimeout(()=>{pressFired=false;},0);});
+    document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressLp=null;pressStart=null;});
     window.addEventListener('scroll',()=>endPressTimer(),{passive:true});
+    document.addEventListener('click',e=>{if(lpSuppress){e.stopPropagation();e.preventDefault();lpSuppress=false;}},true);
   }
-  $$('.cell').forEach(el=>{
+  const bind=(el,kind)=>{if(el._lp)return;el._lp=1;
     el.addEventListener('contextmenu',e=>e.preventDefault());
     el.addEventListener('pointerdown',e=>{
       if(e.pointerType==='mouse'&&e.button!==0)return;
-      endPressTimer();pressFired=false;pressCell=el;pressStart=[e.clientX,e.clientY];
+      endPressTimer();pressFired=false;pressCell=kind==='cell'?el:null;pressLp=kind==='lp'?el:null;pressStart=[e.clientX,e.clientY];
       pressTimer=setTimeout(()=>{pressTimer=null;pressFired=true;
         try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}
-        openColorSheet(el.dataset.d);},600);
-    });
-  });}
+        if(kind==='cell')openColorSheet(el.dataset.d);
+        else{lpSuppress=true;openItemColorSheet(el.dataset.lp);}},600);
+    });};
+  $$('.cell').forEach(el=>bind(el,'cell'));
+  $$('[data-lp]').forEach(el=>bind(el,'lp'));}
+function pastelBg(obj){return (obj&&obj.color!=null&&PASTELS[obj.color])?`background:${PASTELS[obj.color].c};`:'';}
+function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
+  const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
+  const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">${esc(obj.title)} の色分け</div><div class="sw">
+    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})">${p.n}</button>`).join('')}
+    <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+function setItemColor(tok,i){const type=tok.slice(0,1),id=tok.slice(2);
+  const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);
+  if(obj){if(i===null)delete obj.color;else obj.color=i;}
+  save();$('#colorSheet').classList.remove('show');render();}
+async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
+  if(type==='r'){const r=S.routines.find(x=>x.id===id);if(!r)return;const log=dayLog(t);const done=!!log.routines[id]?.done;
+    if(!await uiConfirm(`「${r.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
+    log.routines[id]={...(log.routines[id]||{}),done:!done};save();render();if(!done)checkCelebrate();}
+  else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
+    if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
+    x.status=done?'todo':'done';if(!done)x.doneAt=t;save();render();if(!done)checkCelebrate();}}
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
@@ -1431,7 +1457,7 @@ function renderRoutines(){
     :'毎週の曜日や毎月「第2水曜」などで登録（複数可）。「今日」に自動で並びます。順番を変えるときは「並び替え」。'}</div>
   ${list.map(r=>{const h=r.slot!==cur?`<div class="sec-h">${SLOTS[r.slot]}</div>`:'';cur=r.slot;
     const st=r.stats||{n:0,total:0};const sel=routineSel.has(r.id);
-    return h+`<div class="titem ${sel?'rsel':''}" onclick="${routineReorder?`tglRoutineSel('${r.id}')`:`routineModal('${r.id}')`}">
+    return h+`<div class="titem ${sel?'rsel':''}" ${routineReorder?'':`data-lp="r_${r.id}"`} onclick="${routineReorder?`tglRoutineSel('${r.id}')`:`routineModal('${r.id}')`}" style="${sel?'':pastelBg(r)}">
       <div class="bar" style="background:${sel?'var(--accent)':(r.active?'var(--ink)':'var(--line)')}"></div>
       <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${routineReorder?(sel?'☑ ':'☐ '):''}${esc(r.title)}${r.optional?' <span class="rtag opt">時間があれば</span>':''}</div>
       <div class="meta"><span>${esc(scheduleText(r))}</span><span>目安${fmtMin(r.estMin)}</span>
@@ -1677,7 +1703,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.11（2026-07-20）</b><br>
+  <div class="mini"><b>v1.12（2026-07-20）</b><br>
+  ・今日タブで行を<b>左右スワイプ→「完了しますか？」</b>（完了・未完了に戻すの両方）<br>
+  ・タスク・ルーティンを<b>長押しでパステル色分け</b>（今日/タスク/ルーティンの各タブと連動）<br>
+  <b>v1.11（2026-07-20）</b><br>
   ・おはようスタートに<b>タスクも一緒に</b>含めて計測（ルーティン＋タスク）<br>
   ・フロー中に「◀戻る（前へ）」を追加。タップするまで自動で進まず計測を継続<br>
   ・フローを「最小化」して別画面（タスク追加・並び替え・予定編集）に行き来→下の帯から再開<br>
