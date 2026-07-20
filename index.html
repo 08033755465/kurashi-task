@@ -318,7 +318,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .fedit{color:#9AA1AD;font-size:15px;margin-left:8px;border:1px solid #4A4F58;padding:1px 8px;vertical-align:middle;}
 #flow .fmemo{font-size:13px;color:#C6CAD2;max-width:88%;white-space:pre-wrap;line-height:1.6;}
 #flow .watch.paused{color:#7A8089;}
-#flow .fpausetag{font-size:11px;letter-spacing:.2em;color:#D8B65A;margin-top:-4px;}
+#flow .fpause{width:54px;height:54px;border-radius:50% !important;border:1.5px solid #565B64;color:#fff;font-size:15px;letter-spacing:1px;margin:12px auto 0;display:flex;align-items:center;justify-content:center;}
+#flow .fpause:active{background:#20242B;}
+#flow .fpausetag{font-size:11px;letter-spacing:.2em;color:#D8B65A;margin-top:8px;}
 #flow .fbtns2{display:flex;gap:8px;margin-bottom:8px;}
 #flow .fbtns2 button{flex:1;padding:12px 0;font-size:12.5px;letter-spacing:.05em;border:1px solid #4A4F58;color:#fff;}
 #flow .fbtns2 button[disabled]{pointer-events:none;}
@@ -1777,6 +1779,7 @@ function flowShow(keep){
       <div class="rmeta" id="frmeta">${meta}</div>
       ${isR&&r.memo?`<div class="fmemo">${esc(r.memo)}</div>`:''}
       <div class="watch ${paused?'paused':''}" id="fwatch">${fmtWatch(flowElapsed())}</div>
+      <button class="fpause" onclick="flowPause()" title="${paused?'再開':'一時停止'}">${paused?'▶':'❚❚'}</button>
       ${paused?'<div class="fpausetag">一時停止中</div>':''}
       ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
       ${(()=>{const up=flowList.slice(flowIdx+1,flowIdx+4);return up.length
@@ -1784,10 +1787,9 @@ function flowShow(keep){
         :'<div class="fnext">これで最後です</div>';})()}`}
     </div>
     <div class="fbtns2">
-      <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 戻る</button>
-      <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
+      <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 前へ</button>
+      <button onclick="flowHardSkip()">次へスキップ ▶</button>
     </div>
-    <div class="fbtns3"><button onclick="flowHardSkip()">⏭ 次のタスクへスキップ</button></div>
     <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowManualDone()">⌨ 手動で完了</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
