@@ -39,7 +39,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 
 /* ===== bottom nav ===== */
 #nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ink);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
-#nav button{flex:1;padding:10px 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;}
+#nav button{flex:1;padding:10px 0 8px;font-size:10px;letter-spacing:.02em;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;}
 #nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6;}
 #nav button.on{color:var(--ink);font-weight:700;}
 #nav{max-width:960px;margin:0 auto;}
@@ -340,6 +340,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .flic{width:20px;flex:0 0 20px;text-align:center;font-size:14px;}
 #flow .flit{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;}
 #flow .flie{font-size:11px;color:#8A909A;flex:0 0 auto;}
+#flow .fli .flit{cursor:pointer;}
+#flow .fliar{display:flex;gap:3px;flex:0 0 auto;}
+#flow .fliar button{border:1px solid #3A3E45;color:#C6CAD2;width:32px;height:32px;font-size:11px;}
+#flow .flireorder{width:100%;margin-top:12px;padding:11px 0;border:1px solid #4A4F58;color:#C6CAD2;font-size:13px;}
+#flow .fnexti{cursor:pointer;}
 #flow .fh span:last-child{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 #flowbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
 #flowbar.show{display:flex;}
@@ -422,6 +427,25 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #lightbox.show{display:flex;}
 #lightbox img{max-width:96vw;max-height:88vh;object-fit:contain;}
 .lbclose{position:fixed;top:calc(12px + env(safe-area-inset-top));right:16px;color:#fff;font-size:24px;border:1px solid #777;width:44px;height:44px;z-index:2;}
+/* こまめ習慣 */
+.hcard{border-bottom:1px solid var(--line2);padding:14px 16px;}
+.hc-top{cursor:pointer;}
+.hc-title{font-size:16px;font-weight:600;}
+.hc-stat{font-size:12px;color:var(--sub);margin-top:3px;}
+.hc-stat b{color:var(--ink);font-size:15px;}
+.hc-btns{display:flex;gap:8px;margin-top:10px;}
+.hc-plus{flex:2;background:var(--ink);color:#fff;padding:11px 0;font-size:14px;font-weight:700;letter-spacing:.05em;}
+.hc-timer{flex:1;border:1px solid var(--line);color:var(--ink);padding:11px 0;font-size:12.5px;}
+.hstats{display:flex;gap:8px;text-align:center;}
+.hstats>div{flex:1;border:1px solid var(--line2);padding:10px 0;}
+.hstats b{display:block;font-size:22px;font-weight:700;}
+.hstats span{font-size:11px;color:var(--sub);}
+.wdbars{display:flex;gap:6px;align-items:flex-end;height:96px;padding:6px 0;}
+.wdbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;}
+.wdbar .wdb{width:70%;background:var(--accent);}
+.wdbar small{font-size:10px;color:var(--sub);}
+.wdbar span{font-size:11px;color:var(--sub);}
+.htwatch{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;margin:14px 0 4px;text-align:center;}
 .burst{position:fixed;font-size:22px;z-index:300;pointer-events:none;animation:burst 1.2s ease-out forwards;}
 @keyframes burst{0%{transform:translateY(0) scale(.6);opacity:1;}100%{transform:translateY(-140px) scale(1.3);opacity:0;}}
 
@@ -441,6 +465,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h16M4 18h9"/><path d="M18 5l2 2 3-3" /></svg>タスク</button>
   <button data-v="cal" onclick="switchView('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
+  <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>こまめ</button>
   <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
 </nav>
 
@@ -588,6 +613,7 @@ function migrate(){const st=S.settings;
   st.monthMax=st.monthMax||4;
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
+  if(!S.habits)S.habits=[];
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
@@ -841,6 +867,7 @@ function render(){
   else if(view==='tasks')el.innerHTML=renderTasks();
   else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();attachCalSwipe();}
   else if(view==='routine')el.innerHTML=renderRoutines();
+  else if(view==='habit')el.innerHTML=renderHabits();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,sy); // 再描画でスクロール位置を保つ（チェック操作で上に飛ばない）
   updateFlowBar();attachCellPress();attachCalSwipe();
@@ -1782,6 +1809,67 @@ function dupRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r)return;
   S.routines.push({...JSON.parse(JSON.stringify(r)),id:uid(),title:r.title+'（コピー）',order:Date.now(),stats:{n:0,total:0}});
   save();closeModal();render();}
 
+/* ========================= こまめ習慣（スキマ時間に何度もやる） ========================= */
+function habitStats(h){const t=todayStr();
+  return {today:h.logs.filter(l=>l.d===t).length,
+    week:h.logs.filter(l=>weekOnceRange(t).includes(l.d)).length,
+    month:h.logs.filter(l=>l.d.slice(0,7)===t.slice(0,7)).length,
+    total:h.logs.length,totalSec:h.logs.reduce((s,l)=>s+(l.sec||0),0)};}
+function renderHabits(){
+  return `<div class="vhead"><h1>こまめ</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
+  <div class="mini">スキマ時間にこまめにやること（ストレッチ等）。やるたびに「＋1回」。<b>多いほど◎</b>。回数と時間を記録します。</div>
+  ${S.habits.length?S.habits.map(h=>habitCard(h)).join(''):'<div class="mini" style="padding:16px;">「＋追加」で、こまめにやりたいことを登録しましょう（例：ストレッチ、スクワット、水を飲む、深呼吸…）</div>'}`;}
+function habitCard(h){const s=habitStats(h);
+  return `<div class="hcard" style="${h.color!=null?`background:${PASTELS[h.color].c}`:''}">
+    <div class="hc-top" onclick="habitDetail('${h.id}')">
+      <div class="hc-title">${esc(h.title)}</div>
+      <div class="hc-stat">今日 <b>${s.today}</b> ・ 週 ${s.week} ・ 月 ${s.month}${s.totalSec?` ・ 累計${fmtMin(s.totalSec/60)}`:''}</div></div>
+    <div class="hc-btns">
+      <button class="hc-plus" onclick="habitLog('${h.id}',0)">＋ 1回</button>
+      <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div></div>`;}
+function habitLog(id,sec){const h=S.habits.find(x=>x.id===id);if(!h)return;
+  h.logs.push({d:todayStr(),sec:sec||0});save();render();
+  const s=habitStats(h);toast('記録！ 今日 '+s.today+' 回目'+(sec?'・'+fmtMin(sec/60):''));}
+let habitTId=null,habitTStart=0,habitTInt=null;
+function habitTimer(id){habitTId=id;habitTStart=Date.now();
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:center;">${esc(S.habits.find(h=>h.id===id).title)}<div class="htwatch" id="htwatch">00:00</div></div>
+    <div class="db"><button onclick="habitTimerCancel()">やめる</button><button class="ok" onclick="habitTimerStop()">停止して記録</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  clearInterval(habitTInt);habitTInt=setInterval(()=>{const el=$('#htwatch');if(el)el.textContent=fmtWatch(Date.now()-habitTStart);},250);}
+function habitTimerStop(){const sec=Math.round((Date.now()-habitTStart)/1000);clearInterval(habitTInt);dlgEnd();habitLog(habitTId,sec);}
+function habitTimerCancel(){clearInterval(habitTInt);dlgEnd();}
+function habitDetail(id){const h=S.habits.find(x=>x.id===id);if(!h)return;const s=habitStats(h);
+  const byWd=[0,0,0,0,0,0,0];h.logs.forEach(l=>byWd[parseDs(l.d).getDay()]++);const maxWd=Math.max(1,...byWd);
+  openModal(`<div class="mh"><b>${esc(h.title)}</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="hstats"><div><b>${s.today}</b><span>今日</span></div><div><b>${s.week}</b><span>今週</span></div><div><b>${s.month}</b><span>今月</span></div><div><b>${s.total}</b><span>累計</span></div></div>
+    ${s.totalSec?`<div class="mini" style="padding:8px 0;">累計時間 ${fmtMin(s.totalSec/60)}${s.total?`（平均 ${fmtMin(s.totalSec/60/s.total)}／回）`:''}</div>`:''}
+    <label style="margin-top:6px;">曜日ごとの回数</label>
+    <div class="wdbars">${byWd.map((c,i)=>`<div class="wdbar"><small>${c}</small><div class="wdb" style="height:${Math.round(c/maxWd*56)+2}px"></div><span style="color:${i===0?'var(--sun)':i===6?'var(--sat)':''}">${WD[i]}</span></div>`).join('')}</div>
+    <div class="hc-btns" style="padding:12px 0 0;">
+      <button class="hc-plus" onclick="habitLog('${h.id}',0);habitDetail('${h.id}')">＋ 1回</button>
+      <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div>
+    ${h.logs.length?`<button class="addlink" style="margin-top:8px;" onclick="habitUndo('${h.id}')">直近の記録を取り消す</button>`:''}
+  </div>
+  <div class="mbtns"><button class="del" onclick="delHabit('${h.id}')">削除</button><button onclick="habitModal('${h.id}')">編集</button></div>`);}
+function habitUndo(id){const h=S.habits.find(x=>x.id===id);if(!h||!h.logs.length)return;h.logs.pop();save();habitDetail(id);}
+function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
+  openModal(`<div class="mh"><b>${h?'こまめ習慣を編集':'こまめ習慣を追加'}</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">
+    <div class="frow"><label>名前</label><input id="hmName" value="${esc(h?.title||'')}" placeholder="例）ストレッチ"></div>
+    <div class="frow"><label>色</label><div class="colorsel c6" id="hmColor">
+      ${PASTELS.map((p,i)=>`<button data-c="${i}" class="${h?.color===i?'on':''}" style="background:${p.c}" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')"></button>`).join('')}
+      <button data-c="" class="none ${h?.color==null?'on':''}" style="grid-column:auto;" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">なし</button></div></div>
+  </div>
+  <div class="mbtns">${h?`<button class="del" onclick="delHabit('${h.id}')">削除</button>`:''}<button class="save" onclick="saveHabit('${h?.id||''}')">保存</button></div>`);}
+function saveHabit(id){const name=$('#hmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
+  const csel=$('#hmColor button.on');const color=(csel&&csel.dataset.c!=='')?+csel.dataset.c:null;
+  if(id){const h=S.habits.find(x=>x.id===id);h.title=name;h.color=color;}
+  else S.habits.push({id:uid(),title:name,color,logs:[]});
+  save();closeModal();render();}
+async function delHabit(id){if(!await uiConfirm('この習慣を削除しますか？（記録も消えます）','削除'))return;
+  S.habits=S.habits.filter(h=>h.id!==id);save();closeModal();render();}
+
 /* ========================= おはようフロー ========================= */
 let flowList=[],flowIdx=0,flowTimer=null,flowBase=0,flowSince=0,flowListOpen=false;
 const FLOWKEY='homehub_flow';
@@ -1829,7 +1917,7 @@ function flowShow(keep){
       ${paused?'<div class="fpausetag">一時停止中</div>':''}
       ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
       ${(()=>{const up=flowList.slice(flowIdx+1,flowIdx+4);return up.length
-        ?`<div class="fnext"><div class="fnexth">つぎ</div>${up.map(x=>`<div class="fnexti">${x.type==='r'?'🔁':'📋'} ${esc(x.obj.title)}${x.type==='r'&&x.obj.optional?' <span style="color:#D8B65A;">（時間があれば）</span>':''}</div>`).join('')}</div>`
+        ?`<div class="fnext"><div class="fnexth">つぎ（タップでそこへ）</div>${up.map((x,k)=>`<div class="fnexti" onclick="flowJump(${flowIdx+1+k})">${x.type==='r'?'🔁':'📋'} ${esc(x.obj.title)}${x.type==='r'&&x.obj.optional?' <span style="color:#D8B65A;">（時間があれば）</span>':''}</div>`).join('')}</div>`
         :'<div class="fnext"><div class="fnexth">これで最後です</div></div>';})()}`}
     </div>
     <div class="fbtns2">
@@ -1844,10 +1932,17 @@ function flowPause(){if(flowSince){flowBase+=Date.now()-flowSince;flowSince=0;}e
 function flowMinimize(){clearInterval(flowTimer);$('#flow').classList.remove('show');flowPersist();render();}
 function flowResume(){if(!flowList.length)return;$('#flow').classList.add('show');flowShow(true);}
 function flowListHtml(){return `<div class="flist">${flowList.map((it,i)=>{const done=flowItemDone(it);const cur=i===flowIdx;
-  return `<div class="fli ${cur?'cur':''} ${done?'done':''}" onclick="flowJump(${i})">
-    <span class="flic">${done?'✓':cur?'▶':'○'}</span>
-    <span class="flit">${it.type==='r'?'🔁':'📋'} ${esc(it.obj.title)}${it.type==='r'&&it.obj.optional?' <span style="color:#D8B65A;font-size:11px;">（時間があれば）</span>':''}</span>
-    <span class="flie">${fmtMin(it.obj.estMin)}${it.obj.links?.length?' 🔗':''}</span></div>`;}).join('')}</div>`;}
+  return `<div class="fli ${cur?'cur':''} ${done?'done':''}">
+    <span class="flic" onclick="flowJump(${i})">${done?'✓':cur?'▶':'○'}</span>
+    <span class="flit" onclick="flowJump(${i})">${it.type==='r'?'🔁':'📋'} ${esc(it.obj.title)}${it.type==='r'&&it.obj.optional?' <span style="color:#D8B65A;font-size:11px;">（時間があれば）</span>':''}</span>
+    <span class="flie">${fmtMin(it.obj.estMin)}${it.obj.links?.length?' 🔗':''}</span>
+    <span class="fliar"><button onclick="flowMoveItem(${i},-1)">▲</button><button onclick="flowMoveItem(${i},1)">▼</button></span></div>`;}).join('')}
+  <button class="flireorder" onclick="flowGotoRoutineReorder()">ルーティンタブでまとめて並び替え →</button></div>`;}
+function flowMoveItem(i,dir){const j=i+dir;if(j<0||j>=flowList.length)return;
+  [flowList[i],flowList[j]]=[flowList[j],flowList[i]];
+  if(flowIdx===i)flowIdx=j;else if(flowIdx===j)flowIdx=i;
+  flowPersist();flowShow(true);}
+function flowGotoRoutineReorder(){flowMinimize();switchView('routine');enterReorder();}
 function flowToggleList(){flowListOpen=!flowListOpen;flowShow(true);}
 function flowJump(i){flowListOpen=false;if(i!==flowIdx){flowIdx=i;flowBase=0;flowSince=Date.now();}flowPersist();flowShow(true);}
 function flowEdit(){const it=flowList[flowIdx];const r=it.obj;editLinks=(r.links||[]).map(l=>({...l}));
@@ -1996,7 +2091,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.26（2026-07-20）</b><br>
+  <div class="mini"><b>v1.27（2026-07-20）</b><br>
+  ・「こまめ」タブを追加。スキマ時間に何度もやること（ストレッチ等）を「＋1回」で記録＝多いほど◎。今日/週/月の回数・時間・曜日別を集計<br>
+  ・フローの「つぎ3つ」をタップでそこへジャンプ／一覧から▲▼で並び替え・ルーティンタブへ移動<br>
+  <b>v1.26（2026-07-20）</b><br>
   ・予定・タスク・ルーティンに<b>画像メモ</b>を添付（写真/スクショ。縮小保存、タップで拡大表示）<br>
   ・メモ内に貼りつけたURLが<b>自動でリンク化</b>（後日そのままタップして開ける）<br>
   ・フローの次3つを縦並び／ヘッダーのボタンを枠付きに／前へ・次へスキップを横並び・一時停止を丸ボタンに<br>
