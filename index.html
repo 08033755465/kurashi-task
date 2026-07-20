@@ -1788,7 +1788,7 @@ function flowShow(keep){
       <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
     </div>
     <div class="fbtns3"><button onclick="flowHardSkip()">⏭ 次のタスクへスキップ</button></div>
-    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button></div>
+    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowManualDone()">⌨ 手動で完了</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
   flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
@@ -1810,13 +1810,21 @@ function flowEdit(){const it=flowList[flowIdx];const r=it.obj;editLinks=(r.links
     <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
 function applyFlowEdit(){const r=flowList[flowIdx].obj;r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;r.links=collectLinks();save();dlgEnd();flowShow(true);}
-function flowDone(){
-  const it=flowList[flowIdx];const r=it.obj;const sec=Math.round(flowElapsed()/1000);
+function completeCurrentFlow(sec){
+  const it=flowList[flowIdx];const r=it.obj;const tok=it.type+'_'+r.id;
   if(it.type==='r'){const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
-    dayLog(todayStr()).routines[r.id]={done:true,sec};r.stats={n:st.n+1,total:st.total+sec};save();
+    dayLog(todayStr()).routines[r.id]={done:true,sec};r.stats={n:st.n+1,total:st.total+sec};
     if(prevAvg!==null&&sec>0){if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
-  }else{r.status='done';r.doneAt=todayStr();save();}
-  flowAdvance();}
+  }else{r.status='done';r.doneAt=todayStr();}
+  sinkDoItem(tok);save();flowAdvance();}
+function flowDone(){completeCurrentFlow(Math.round(flowElapsed()/1000));}
+function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
+  const mins=Math.round(flowElapsed()/60000);const pre=mins>0?pad(Math.floor(mins/60))+':'+pad(mins%60):'';
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">「${esc(r.title)}」を手動で完了
+    <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">かかった時間（時:分・4桁テンキー）</label>${timeField('fmTime',pre)}</div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveManualDone()">完了にする</button></div>`;
+  $('#dlgWrap').classList.add('show');setTimeout(()=>{const v=$('#fmTime_v');if(v){v.focus();v.select();}},80);}
+function saveManualDone(){const hm=$('#fmTime').value;const sec=hm?hm2min(hm)*60:0;dlgEnd();completeCurrentFlow(sec);}
 function flowAdvance(){flowIdx++;
   if(flowIdx>=flowList.length){flowClose();return celebrateIfAll();}
   flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
@@ -1940,7 +1948,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.22（2026-07-20）</b><br>
+  <div class="mini"><b>v1.23（2026-07-20）</b><br>
+  ・フロー中に「⌨ 手動で完了」。スキップして戻ったときなど、かかった時間を4桁テンキーで入力して完了・記録できる<br>
+  <b>v1.22（2026-07-20）</b><br>
   ・ルーティンタブ：行タップで「編集／並び替え／その下に追加」を選べるように（右上以外の任意の場所から追加可）<br>
   ・上部の見出し（並び替え・追加）を固定（スクロールしても消えない）<br>
   <b>v1.21（2026-07-20）</b><br>
