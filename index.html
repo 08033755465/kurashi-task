@@ -33,7 +33,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);}
 label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-bottom:4px;}
 
 /* ===== view header ===== */
-.vhead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 16px 10px;border-bottom:1px solid var(--ink);}
+.vhead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 16px 10px;border-bottom:1px solid var(--ink);position:sticky;top:0;z-index:40;background:var(--bg);}
 .vhead h1{font-size:18px;font-weight:700;letter-spacing:.12em;}
 .vhead .sub{font-size:12px;color:var(--sub);letter-spacing:.05em;}
 
@@ -344,6 +344,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
 .rtag.opt{color:#B7902E;border-color:#E3CE93;}
 .titem.rsel{background:#EEF2FF;}
+.titem.ractive{background:#F4F6FF;}
+.ractions{display:flex;background:#F4F6FF;border-bottom:1px solid var(--line2);}
+.ractions button{flex:1;padding:11px 0;font-size:13px;color:var(--accent);border-right:1px solid #DBE1F2;}
+.ractions button:last-child{border-right:none;font-weight:700;}
 /* 長押し時の文字選択（コピペ挙動）・コールアウトを抑止 */
 .titem,.ritem,.rrow,.tl,.dtask,.cell,[data-lp]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .rrow{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line2);cursor:pointer;-webkit-user-select:none;user-select:none;}
@@ -806,7 +810,7 @@ let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v==='set')setPage='';
-  if(v!=='routine'){routineReorder=false;routineSel=new Set();}
+  if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];todayPlaceMode=false;}
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;}
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();}
@@ -1603,8 +1607,18 @@ function dupEvent(id){const e=S.events.find(v=>v.id===id);if(!e)return;
 let routineReorder=false,routineSel=new Set();
 function routineOrderedList(){const order={morning:0,day:1,night:2,any:3};
   return [...S.routines].sort((a,b)=>order[a.slot]-order[b.slot]||a.order-b.order);}
-function enterReorder(){routineReorder=true;routineSel=new Set();render();}
+let routineActiveRow=null,routineAddAfter=null;
+function enterReorder(){routineReorder=true;routineSel=new Set();routineActiveRow=null;render();}
 function exitReorder(){routineReorder=false;routineSel=new Set();render();}
+function setRoutineActive(id){routineActiveRow=(routineActiveRow===id?null:id);render();}
+function openRoutineEdit(id){routineActiveRow=null;routineModal(id);}
+function enterReorderWith(id){routineActiveRow=null;routineReorder=true;routineSel=new Set([id]);render();}
+function addRoutineAfter(id){routineActiveRow=null;routineAddAfter=id;const r=S.routines.find(x=>x.id===id);routineModal(null,r?r.slot:null);}
+function placeRoutineAfter(newId,afterId){const nw=S.routines.find(r=>r.id===newId);if(!nw)return;
+  const arr=S.routines.filter(r=>r.slot===nw.slot&&r.id!==newId).sort((a,b)=>a.order-b.order);
+  const ai=arr.findIndex(r=>r.id===afterId);
+  if(ai>=0)arr.splice(ai+1,0,nw);else arr.push(nw);
+  arr.forEach((r,i)=>r.order=i);}
 function validContig(sel,list){if(!sel.size)return true;
   const idxs=list.map((r,i)=>sel.has(r.id)?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
   const slot=list[idxs[0]].slot;
@@ -1631,27 +1645,34 @@ function renderRoutines(){
       :`<button class="act" onclick="enterReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="routineModal(null)">＋ 追加</button>`}</span></div>
   <div class="mini">${routineReorder
     ?'動かす行をタップで選択（となり合う行は複数選択できます）。右下の▲▼でまとめて移動します。'
-    :'毎週の曜日や毎月「第2水曜」などで登録（複数可）。「今日」に自動で並びます。順番を変えるときは「並び替え」。'}</div>
+    :'行をタップ →「編集／並び替え／その下に追加」を選べます。長押しで色分け。'}</div>
   ${list.map(r=>{const h=r.slot!==cur?`<div class="sec-h">${SLOTS[r.slot]}</div>`:'';cur=r.slot;
-    const st=r.stats||{n:0,total:0};const sel=routineSel.has(r.id);
-    return h+`<div class="titem ${sel?'rsel':''}" ${routineReorder?'':`data-lp="r_${r.id}"`} onclick="${routineReorder?`tglRoutineSel('${r.id}')`:`routineModal('${r.id}')`}" style="${sel?'':pastelBg(r)}">
+    const st=r.stats||{n:0,total:0};const sel=routineSel.has(r.id);const active=routineActiveRow===r.id;
+    const row=`<div class="titem ${sel?'rsel':''} ${active?'ractive':''}" ${routineReorder?'':`data-lp="r_${r.id}"`} onclick="${routineReorder?`tglRoutineSel('${r.id}')`:`setRoutineActive('${r.id}')`}" style="${sel||active?'':pastelBg(r)}">
       <div class="bar" style="background:${sel?'var(--accent)':(r.active?'var(--ink)':'var(--line)')}"></div>
       <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${routineReorder?(sel?'☑ ':'☐ '):''}${esc(r.title)}${r.optional?' <span class="rtag opt">時間があれば</span>':''}</div>
       <div class="meta"><span>${esc(scheduleText(r))}</span>${r.weekOnce?'<span class="rtag opt">週1回</span>':''}<span>目安${fmtMin(r.estMin)}</span>
       ${st.n?`<span>平均 ${fmtMin(st.total/st.n/60)}（${st.n}回）</span>`:''}${r.memo?'<span>📝</span>':''}${r.active?'':'<span>停止中</span>'}</div>
-      ${linkChips(r.links)}</div></div>`;}).join('')}
+      ${linkChips(r.links)}</div></div>`;
+    const actions=(!routineReorder&&active)?`<div class="ractions">
+      <button onclick="event.stopPropagation();openRoutineEdit('${r.id}')">✎ 編集</button>
+      <button onclick="event.stopPropagation();enterReorderWith('${r.id}')">↕ 並び替え</button>
+      <button onclick="event.stopPropagation();addRoutineAfter('${r.id}')">＋ この下に追加</button></div>`:'';
+    return h+row+actions;}).join('')}
   ${routineReorder&&routineSel.size?`<div class="reorderfab"><span>${routineSel.size}件を移動</span>
     <button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button></div>`:''}`;
 }
-function routineModal(id){
+function routineModal(id,presetSlot){
+  if(!id&&!presetSlot)routineAddAfter=null; // 右上「＋追加」など通常追加は末尾へ
   const r=id?S.routines.find(x=>x.id===id):null;
+  const slot0=r?r.slot:(presetSlot||'morning');
   editLinks=(r?.links||[]).map(l=>({...l}));
   const days=r&&r.days?[...r.days]:[0,1,2,3,4,5,6];
   window._rdays=days;window._rnths=r&&r.nths?JSON.parse(JSON.stringify(r.nths)):[];window._rnthWd=null;
   openModal(`<div class="mh"><b>${r?'ルーティン編集':'ルーティン追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
-    <div class="frow f2"><div><label>時間帯</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${r?.slot===k?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="frow f2"><div><label>時間帯</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${slot0===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div></div>
     <div class="frow"><label>繰り返し</label>
       <select id="rmFreq" onchange="rSetFreq(this.value)">
@@ -1705,7 +1726,8 @@ function saveRoutine(id){
     days:[...window._rdays].sort(),nths:JSON.parse(JSON.stringify(window._rnths)),
     active:$('#rmActive').checked,optional:$('#rmOptional').checked,weekOnce:$('#rmWeekOnce').checked,memo:$('#rmMemo').value,links:collectLinks()};
   if(id)Object.assign(S.routines.find(r=>r.id===id),data);
-  else S.routines.push({id:uid(),...data,order:Date.now(),stats:{n:0,total:0}});
+  else{const newId=uid();S.routines.push({id:newId,...data,order:Date.now(),stats:{n:0,total:0}});
+    if(routineAddAfter){placeRoutineAfter(newId,routineAddAfter);routineAddAfter=null;}}
   save();closeModal();render();}
 async function delRoutine(id){if(!await uiConfirm('このルーティンを削除しますか？','削除'))return;
   S.routines=S.routines.filter(r=>r.id!==id);save();closeModal();render();}
@@ -1918,7 +1940,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.21（2026-07-20）</b><br>
+  <div class="mini"><b>v1.22（2026-07-20）</b><br>
+  ・ルーティンタブ：行タップで「編集／並び替え／その下に追加」を選べるように（右上以外の任意の場所から追加可）<br>
+  ・上部の見出し（並び替え・追加）を固定（スクロールしても消えない）<br>
+  <b>v1.21（2026-07-20）</b><br>
   ・ルーティン実行中に「☰ 一覧」で今日の全項目をパッと確認（完了/実行中/未実行が一目、タップでその項目へジャンプ）<br>
   ・実行中の「✎」でリンクも編集でき、その場でリンクを開ける（ルーティン・タスク共通）<br>
   <b>v1.20（2026-07-20）</b><br>
