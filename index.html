@@ -321,8 +321,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .fbtns2{display:flex;gap:8px;margin-bottom:8px;}
 #flow .fbtns2 button{flex:1;padding:12px 0;font-size:12.5px;letter-spacing:.05em;border:1px solid #4A4F58;color:#fff;}
 #flow .fbtns2 button[disabled]{pointer-events:none;}
-#flow .fbtns3{margin-bottom:8px;}
-#flow .fbtns3 button{width:100%;padding:9px 0;font-size:12px;color:#9AA1AD;border:1px solid #2A2E35;}
+#flow .fbtns3{margin-bottom:8px;display:flex;gap:8px;}
+#flow .fbtns3 button{flex:1;padding:9px 0;font-size:12px;color:#9AA1AD;border:1px solid #2A2E35;}
+#dlg select,#dlg input{width:100%;}
 #flow .fh span:last-child{display:flex;gap:12px;}
 #flowbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
 #flowbar.show{display:flex;}
@@ -1723,7 +1724,7 @@ function flowShow(keep){
       <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
       <button onclick="flowDefer()">↩ 後ろへ</button>
     </div>
-    <div class="fbtns3"><button onclick="flowHardSkip()">今日はとばす</button></div>
+    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowHardSkip()">今日はとばす</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
   flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
@@ -1753,6 +1754,31 @@ function flowDefer(){if(flowList.length<=1){toast('これで最後です');retur
 function flowHardSkip(){flowAdvance();}
 function celebrateIfAll(){render();checkCelebrate();}
 function flowClose(){clearInterval(flowTimer);flowList=[];localStorage.removeItem(FLOWKEY);$('#flow').classList.remove('show');render();}
+function flowLog(){
+  const routines=[...S.routines].filter(r=>r.active);
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">別のことをした記録
+    <label style="font-size:12px;color:var(--sub);display:block;margin-top:10px;">ルーティンから選ぶ（任意）</label>
+    <select id="flName" onchange="if(this.value)$('#flFree').value=''"><option value="">— 自由入力にする —</option>${routines.map(r=>`<option value="${r.id}">${esc(r.title)}</option>`).join('')}</select>
+    <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">または名前を自由入力</label>
+    <input id="flFree" placeholder="例）電話対応">
+    <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">かかった時間（時:分・4桁テンキー）</label>
+    ${timeField('flTime','')}</div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveFlowLog()">記録する</button></div>`;
+  $('#dlgWrap').classList.add('show');setTimeout(()=>$('#flFree')?.focus(),80);}
+function saveFlowLog(){
+  const rid=$('#flName').value;const free=$('#flFree').value.trim();
+  const hm=$('#flTime').value;const sec=hm?hm2min(hm)*60:0;
+  if(!rid&&!free){toast('ルーティンを選ぶか、名前を入力してください');return;}
+  const t=todayStr();
+  if(rid){const r=S.routines.find(x=>x.id===rid);const st=r.stats||{n:0,total:0};
+    dayLog(t).routines[rid]={done:true,sec};r.stats={n:st.n+1,total:st.total+sec};
+    const i=flowList.findIndex(it=>it.type==='r'&&it.obj.id===rid);
+    if(i>=0){flowList.splice(i,1);if(i<flowIdx)flowIdx--;if(flowIdx>=flowList.length)flowIdx=Math.max(0,flowList.length-1);}
+  }else{const id=uid();
+    S.tasks.push({id,title:free,groupId:(S.groups.find(g=>g.id==='g_personal')||S.groups[0]).id,estMin:Math.round(sec/60),priority:2,quad:0,qOrder:0,status:'done',doneAt:t,today:t,snooze:null,links:[],due:'',memo:'',order:Date.now(),createdAt:t});}
+  save();dlgEnd();
+  if(flowList.length&&$('#flow').classList.contains('show'))flowShow(true);else render();
+  toast('記録しました（'+fmtMin(sec/60)+'）');}
 function updateFlowBar(){const bar=$('#flowbar');if(!bar)return;
   if(flowList.length&&!$('#flow').classList.contains('show')){const it=flowList[flowIdx];
     bar.innerHTML=`<span>⏱ 実行中：${esc(it.obj.title)}</span><button onclick="flowResume()">▶ 再開</button>`;bar.classList.add('show');}
@@ -1840,7 +1866,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.16（2026-07-20）</b><br>
+  <div class="mini"><b>v1.17（2026-07-20）</b><br>
+  ・おはようスタート中に「＋ 別のことを記録」。予定外にやったことを、ルーティン選択または自由入力＋<b>かかった時間の手入力（4桁テンキー）</b>で記録できる<br>
+  <b>v1.16（2026-07-20）</b><br>
   ・タスクを追加すると、直前に触れた行の<b>すぐ下</b>に入る（何もなければ末尾）。今日タブ・タスクタブ（手動）の両方<br>
   <b>v1.15（2026-07-20）</b><br>
   ・今日やることを<b>左スワイプ</b>でメニュー（完了／明日へ送る／今日は隠す）。右スワイプは従来どおり完了<br>
