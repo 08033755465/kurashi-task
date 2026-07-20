@@ -328,6 +328,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
 .rtag.opt{color:#B7902E;border-color:#E3CE93;}
 .titem.rsel{background:#EEF2FF;}
+.rrow{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line2);cursor:pointer;-webkit-user-select:none;user-select:none;}
+.rrow.sel{background:#EEF2FF;}
+.rnum{width:24px;height:24px;flex:0 0 24px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--accent);font-weight:700;}
+.rrow.sel .rnum{background:var(--accent);color:#fff;border-color:var(--accent);}
+.rttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;}
 .reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
 .reorderfab span{font-size:12px;letter-spacing:.05em;}
 .reorderfab button{color:#fff;border:1px solid #4A4F58;width:42px;height:42px;font-size:18px;}
@@ -781,6 +786,7 @@ function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();}
+  if(v!=='today'){todayReorder=false;todaySel=[];todayPlaceMode=false;}
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();}
 function render(){
   const el=$('#view');const sy=window.scrollY;
@@ -864,12 +870,14 @@ function renderToday(){
     <button class="act" onclick="carryAll()">すべて今日へ</button></div>
     ${carry.map(x=>taskRow(x)).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
-    <button class="act" onclick="switchView('tasks')">＋選ぶ</button></div>
+    ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
+      :`<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
+    ${todayReorder?todayReorderHtml(doList):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
       <button onclick="quickAddToday()">追加</button>
     </div>
-    ${doList.length?doList.map(it=>doItemRow(it,t)).join(''):'<div class="mini">ルーティンや、タスクタブで「☀今日」にした項目がここに並びます。▲▼で順番を入れ替えできます。</div>'}
+    ${doList.length?doList.map(it=>doItemRow(it,t)).join(''):'<div class="mini">ルーティンや、タスクタブで「☀今日」にした項目がここに並びます。左右スワイプで完了、長押しで色分け、「並び替え」で順番変更できます。</div>'}`}
   </div>`;
 }
 function linkChips(links){if(!links||!links.length)return'';
@@ -951,6 +959,40 @@ function doItemRow(it,t){
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
+/* ===== 今日やることの並び替え（選択＋▲▼／選んだ順に指定の行の下へ配置） ===== */
+let todayReorder=false,todaySel=[],todayPlaceMode=false;
+function enterTodayReorder(){todayReorder=true;todaySel=[];todayPlaceMode=false;render();}
+function exitTodayReorder(){todayReorder=false;todaySel=[];todayPlaceMode=false;render();}
+function todayTokens(){return doItems(todayStr()).map(it=>it.type+'_'+it.obj.id);}
+function tglTodaySel(tok){const i=todaySel.indexOf(tok);i>=0?todaySel.splice(i,1):todaySel.push(tok);render();}
+function todayReorderHtml(list){
+  return `<div class="mini">${todayPlaceMode
+    ?'📍 置きたい場所の行をタップ（その<b>下</b>に、選んだ順で入ります）'
+    :'動かす項目をタップで選択（選んだ順に番号が付きます）。右下の▲▼で移動、または「配置」で好きな場所へ。'}</div>
+  ${list.map(it=>{const tok=it.type+'_'+it.obj.id;const n=todaySel.indexOf(tok);const isSel=n>=0;
+    return `<div class="rrow ${isSel?'sel':''}" onclick="${todayPlaceMode?(isSel?'':`placeTodayAfter('${tok}')`):`tglTodaySel('${tok}')`}">
+      <span class="rnum">${isSel?n+1:''}</span>
+      <span class="rttl">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span></div>`;}).join('')}
+  ${todaySel.length&&!todayPlaceMode?`<div class="reorderfab">
+    <span>${todaySel.length}件</span>
+    <button onclick="moveTodayBlock(-1)">▲</button><button onclick="moveTodayBlock(1)">▼</button>
+    <button onclick="startPlaceMode()">配置</button></div>`:''}
+  ${todayPlaceMode?`<div class="reorderfab"><span>置き場所を選ぶ</span><button onclick="startPlaceTop()">先頭</button><button onclick="todayPlaceMode=false;render()">やめる</button></div>`:''}`;}
+function startPlaceMode(){if(!todaySel.length)return;todayPlaceMode=true;render();}
+function moveTodayBlock(dir){if(!todaySel.length)return;let toks=todayTokens();
+  const idx=todaySel.map(tk=>toks.indexOf(tk)).filter(i=>i>=0).sort((a,b)=>a-b);
+  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続した項目のみ。バラのときは「配置」で移動できます');return;}
+  const lo=idx[0],hi=idx[idx.length-1];const block=toks.slice(lo,hi+1);
+  if(dir<0){if(lo<=0)return;const above=toks[lo-1];toks.splice(lo-1,hi-lo+2,...block,above);}
+  else{if(hi>=toks.length-1)return;const below=toks[hi+1];toks.splice(lo,hi-lo+2,below,...block);}
+  dayLog(todayStr()).doOrder=toks;save();render();}
+function placeTodayAfter(targetTok){const sel=todaySel.slice();if(!sel.length)return;
+  let toks=todayTokens().filter(tk=>!sel.includes(tk));
+  const pos=toks.indexOf(targetTok);toks.splice(pos+1,0,...sel);
+  dayLog(todayStr()).doOrder=toks;todaySel=[];todayPlaceMode=false;save();render();}
+function startPlaceTop(){const sel=todaySel.slice();if(!sel.length)return;
+  let toks=todayTokens().filter(tk=>!sel.includes(tk));toks.unshift(...sel);
+  dayLog(todayStr()).doOrder=toks;todaySel=[];todayPlaceMode=false;save();render();}
 /* ===== 今日のルーティンを組む（パターン保存・適用） ===== */
 let _composeSel=new Set();
 function composeToday(){const t=todayStr();
@@ -1703,7 +1745,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.12（2026-07-20）</b><br>
+  <div class="mini"><b>v1.13（2026-07-20）</b><br>
+  ・今日やることに「並び替え」モードを追加：項目を<b>選んだ順に番号</b>が付き、右下の▲▼で移動、または「配置」で<b>好きな行の下</b>／先頭へまとめて移動<br>
+  <b>v1.12（2026-07-20）</b><br>
   ・今日タブで行を<b>左右スワイプ→「完了しますか？」</b>（完了・未完了に戻すの両方）<br>
   ・タスク・ルーティンを<b>長押しでパステル色分け</b>（今日/タスク/ルーティンの各タブと連動）<br>
   <b>v1.11（2026-07-20）</b><br>
