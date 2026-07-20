@@ -859,6 +859,7 @@ function switchView(v){
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];todayPlaceMode=false;}
+  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;taskActiveRow=null;}
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;}
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();}
 function render(){
@@ -1157,7 +1158,9 @@ function taskRow(x,o={}){
     :`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
   const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
-  return `<div class="titem ${x.status==='done'?'done':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')" style="${pastelBg(x)}">
+  const active=o.tabAction&&taskActiveRow===x.id;
+  const onclick=o.tabAction?`setTaskActive('${x.id}')`:`${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')`;
+  return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}" style="${active?'':pastelBg(x)}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
@@ -1172,7 +1175,10 @@ function taskRow(x,o={}){
     <div class="right">
       ${x.status!=='done'?`<button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>`:''}
       ${todayBtn}
-    </div>${arrows}</div>`;}
+    </div>${arrows}</div>${active?`<div class="ractions">
+    <button onclick="event.stopPropagation();openTaskEdit('${x.id}')">✎ 編集</button>
+    <button onclick="event.stopPropagation();enterTaskReorderWith('${x.id}')">↕ 並び替え</button>
+    <button onclick="event.stopPropagation();addTaskAfter('${x.id}')">＋ この下に追加</button></div>`:''}`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const seq=['todo','doing','wait','done'];x.status=seq[(seq.indexOf(x.status)+1)%4];
   if(x.status==='done'){x.doneAt=todayStr();sinkDoItem('t_'+id);}save();render();checkCelebrate();}
@@ -1192,20 +1198,25 @@ function groupChipsHtml(sel,fn){
       <span class="dot" style="${markCss(g.id)}"></span>${'▸'.repeat(dep)}${esc(g.name)}</button>`).join('')}</div>`;}
 function tglTaskSel(id){if(!id)taskSel.clear();else taskSel.has(id)?taskSel.delete(id):taskSel.add(id);render();}
 function tglCalSel(id){if(!id)calSel.clear();else calSel.has(id)?calSel.delete(id):calSel.add(id);render();attachCellPress();}
-function setTaskSort(s){taskSort=s;render();}
+function setTaskSort(s){taskSort=s;taskActiveRow=null;render();}
+let taskActiveRow=null,taskAddAfter=null;
+function setTaskActive(id){taskActiveRow=(taskActiveRow===id?null:id);render();}
+function openTaskEdit(id){taskActiveRow=null;taskModal(id);}
+function enterTaskReorderWith(id){taskActiveRow=null;taskSort='manual';taskReorder=true;taskRSel=[id];taskPlaceMode=false;render();}
+function addTaskAfter(id){taskActiveRow=null;taskAddAfter=id;taskModal(null);}
 function renderTasks(){
   const ids=visibleGroups(taskSel);
   let list=S.tasks.filter(x=>!ids||ids.has(x.groupId));
   const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
   const sortFn=(a,b)=>a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')||a.order-b.order;
   let body='';
-  if(taskSort==='pr'){body=open.sort(sortFn).map(x=>taskRow(x)).join('');}
+  if(taskSort==='pr'){body=open.sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join('');}
   else if(taskSort==='grp'){const gs=S.groups.filter(g=>!ids||ids.has(g.id));
     body=gs.map(g=>{const ts=open.filter(x=>x.groupId===g.id).sort(sortFn);
-      return ts.length?`<div class="sec-h"><span class="gmark" style="${markCss(g.id)}"></span>　${esc(groupPath(g.id))}（${ts.length}）</div>${ts.map(x=>taskRow(x)).join('')}`:'';}).join('');}
+      return ts.length?`<div class="sec-h"><span class="gmark" style="${markCss(g.id)}"></span>　${esc(groupPath(g.id))}（${ts.length}）</div>${ts.map(x=>taskRow(x,{tabAction:true})).join('')}`:'';}).join('');}
   else if(taskSort==='manual'){
     const mlist=manualTaskIds().map(id=>S.tasks.find(t=>t.id===id));
-    body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x)).join(''):'<div class="mini">未完了のタスクはありません</div>');}
+    body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>');}
   else{ // 4つの箱（重要×緊急マトリクス）
     const un=open.filter(x=>!x.quad);
     body=`<div class="quadwrap">
@@ -1372,7 +1383,10 @@ function saveTask(id){
   if(id){const old=S.tasks.find(t=>t.id===id);
     if(data.pin&&!old.pin)data.snooze=null;
     Object.assign(old,data);}
-  else S.tasks.push({id:uid(),...data,quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:todayStr()});
+  else{const newId=uid();S.tasks.push({id:newId,...data,quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:todayStr()});
+    if(taskAddAfter){taskSort='manual';let ids=manualTaskIds().filter(i=>i!==newId);
+      const ai=ids.indexOf(taskAddAfter);if(ai>=0)ids.splice(ai+1,0,newId);else ids.push(newId);
+      commitTaskOrder(ids);taskAddAfter=null;}}
   save();closeModal();render();}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
   S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();render();}
@@ -2091,7 +2105,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.27（2026-07-20）</b><br>
+  <div class="mini"><b>v1.28（2026-07-20）</b><br>
+  ・タスクタブもルーティンと同じ操作に：行タップで「編集／並び替え／この下に追加」を選択（並び替えは手動並びで選択＋▲▼/配置）<br>
+  <b>v1.27（2026-07-20）</b><br>
   ・「こまめ」タブを追加。スキマ時間に何度もやること（ストレッチ等）を「＋1回」で記録＝多いほど◎。今日/週/月の回数・時間・曜日別を集計<br>
   ・フローの「つぎ3つ」をタップでそこへジャンプ／一覧から▲▼で並び替え・ルーティンタブへ移動<br>
   <b>v1.26（2026-07-20）</b><br>
@@ -2364,7 +2380,7 @@ function importData(inp){const f=inp.files[0];if(!f)return;
 
 /* ========================= modal共通・ダイアログ・通知 ========================= */
 function openModal(html){$('#modal').innerHTML=html;$('#modalWrap').classList.add('show');}
-function closeModal(){$('#modalWrap').classList.remove('show');}
+function closeModal(){$('#modalWrap').classList.remove('show');taskAddAfter=null;routineAddAfter=null;}
 /* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
 let dlgResolve=null;
 function dlgEnd(v){$('#dlgWrap').classList.remove('show');const r=dlgResolve;dlgResolve=null;if(r)r(v);}
