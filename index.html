@@ -306,6 +306,15 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .fh button{color:#9AA1AD;font-size:13px;}
 #flow .fstats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:#9AA1AD;margin-top:10px;padding-top:10px;border-top:1px solid #2A2E35;}
 #flow .fstats b{color:#fff;font-weight:700;}
+#flow .fedit{color:#9AA1AD;font-size:15px;margin-left:8px;border:1px solid #4A4F58;padding:1px 8px;vertical-align:middle;}
+#flow .fmemo{font-size:13px;color:#C6CAD2;max-width:88%;white-space:pre-wrap;line-height:1.6;}
+#flow .watch.paused{color:#7A8089;}
+#flow .fpausetag{font-size:11px;letter-spacing:.2em;color:#D8B65A;margin-top:-4px;}
+#flow .fbtns2{display:flex;gap:8px;margin-bottom:10px;}
+#flow .fbtns2 button{flex:1;padding:12px 0;font-size:12.5px;letter-spacing:.05em;border:1px solid #4A4F58;color:#fff;}
+.rtag.opt{color:#B7902E;border-color:#E3CE93;}
+#toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:11px 18px;font-size:13.5px;font-weight:700;z-index:600;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #flow .fmain{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
 #flow .slot{font-size:12px;letter-spacing:.2em;color:#9AA1AD;}
 #flow .rname{font-size:26px;font-weight:700;line-height:1.4;}
@@ -512,7 +521,7 @@ function migrate(){const st=S.settings;
   if(!S.patterns)S.patterns=[];
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
-  S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];});
+  S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;});
   (S.events||[]).forEach(e=>{if(e.repeat===undefined)e.repeat='';});
   (S.birthdays||[]).forEach(b=>{if(b.honorific===undefined)b.honorific='';});
   (S.marks||[]).forEach(k=>{if(!ICONS[k.icon])k.icon='gift';});}
@@ -878,6 +887,9 @@ function checkCelebrate(){const t=todayStr();const log=dayLog(t);
   const total=rs.length+ts.length;if(!total)return;
   const done=rs.filter(r=>log.routines[r.id]?.done).length+ts.filter(x=>x.status==='done').length;
   if(done===total)celebrate();}
+let _toastT=null;
+function toast(msg,ms){let el=$('#toast');if(!el){el=document.createElement('div');el.id='toast';document.body.appendChild(el);}
+  el.textContent=msg;el.classList.add('show');clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove('show'),ms||2800);}
 function celebrate(){const em=['🎉','✨','🌸','⭐','💮','🎊'];
   for(let i=0;i<16;i++){const s=document.createElement('span');s.className='burst';
     s.textContent=em[i%em.length];s.style.left=(10+Math.random()*80)+'vw';s.style.top=(30+Math.random()*40)+'vh';
@@ -908,8 +920,8 @@ function doItemRow(it,t){
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
     return `<div class="ritem ${dn?'done':''}">
       <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
-      <div class="rb" onclick="routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span></div>
-      <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}</div>${linkChips(r.links)}</div>
+      <div class="rb" onclick="routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span>${r.optional?'<span class="rtag opt">時間があれば</span>':''}</div>
+      <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}${r.memo?'・📝メモ':''}</div>${linkChips(r.links)}</div>
       ${arrows}</div>`;}
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
@@ -1401,6 +1413,9 @@ function routineModal(id){
         </div></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmActive" style="width:auto;" ${!r||r.active?'checked':''}>
       <span style="font-size:13px;">有効（今日のリストに表示する）</span></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmOptional" style="width:auto;" ${r?.optional?'checked':''}>
+      <span style="font-size:13px;">「時間があれば」（余裕があるときだけやる。実行中に印が付きます）</span></div>
+    <div class="frow"><label>メモ（手順・コツ・注意など）</label><textarea id="rmMemo" rows="2">${esc(r?.memo||'')}</textarea></div>
     <div class="frow"><label>リンク（開くサイト・マニュアル等）</label>${linksEditorHtml()}</div>
     ${r?.stats?.n?`<div class="mini" style="padding:0;">これまで${r.stats.n}回実行・平均${fmtMin(r.stats.total/r.stats.n/60)}</div>`:''}
   </div>
@@ -1430,7 +1445,7 @@ function saveRoutine(id){
   if(freq==='monthly'&&!window._rnths.length){uiAlert('毎月の実行日（第◯曜）を1つ以上追加してください');return;}
   const data={title,slot:$('#rmSlot').value,estMin:+$('#rmEst').value||0,freq,
     days:[...window._rdays].sort(),nths:JSON.parse(JSON.stringify(window._rnths)),
-    active:$('#rmActive').checked,links:collectLinks()};
+    active:$('#rmActive').checked,optional:$('#rmOptional').checked,memo:$('#rmMemo').value,links:collectLinks()};
   if(id)Object.assign(S.routines.find(r=>r.id===id),data);
   else S.routines.push({id:uid(),...data,order:Date.now(),stats:{n:0,total:0}});
   save();closeModal();render();}
@@ -1441,46 +1456,82 @@ function dupRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r)return;
   save();closeModal();render();}
 
 /* ========================= おはようフロー ========================= */
-let flowList=[],flowIdx=0,flowStart=0,flowTimer=null;
+let flowList=[],flowIdx=0,flowTimer=null,flowBase=0,flowSince=0;
+const FLOWKEY='homehub_flow';
+function fmtWatch(ms){const s=Math.floor(ms/1000);return pad(Math.floor(s/60))+':'+pad(s%60);}
+function flowElapsed(){return flowBase+(flowSince?Date.now()-flowSince:0);}
+function flowPersist(){if(!flowList.length){localStorage.removeItem(FLOWKEY);return;}
+  localStorage.setItem(FLOWKEY,JSON.stringify({date:todayStr(),ids:flowList.map(r=>r.id),idx:flowIdx,base:flowBase,since:flowSince}));}
 function startFlow(){
   const t=todayStr();const log=dayLog(t);
   flowList=doItems(t).filter(it=>it.type==='r'&&!log.routines[it.obj.id]?.done).map(it=>it.obj);
   if(!flowList.length){uiAlert('今日のルーティンはすべて完了しています🎉');return;}
-  flowIdx=0;$('#flow').classList.add('show');flowShow();}
-function flowShow(){
-  const r=flowList[flowIdx];flowStart=Date.now();
-  const st=r.stats||{n:0,total:0};
-  const t=todayStr();
+  flowIdx=0;flowBase=0;flowSince=Date.now();$('#flow').classList.add('show');flowShow(true);}
+function flowRestore(){try{const f=JSON.parse(localStorage.getItem(FLOWKEY)||'null');
+  if(!f||f.date!==todayStr()||!f.ids||!f.ids.length)return;
+  const log=dayLog(todayStr());
+  flowList=f.ids.map(id=>S.routines.find(r=>r.id===id)).filter(r=>r&&!log.routines[r.id]?.done);
+  if(!flowList.length){localStorage.removeItem(FLOWKEY);return;}
+  flowIdx=Math.min(f.idx||0,flowList.length-1);flowBase=f.base||0;flowSince=f.since||0;
+  $('#flow').classList.add('show');flowShow(true);}catch(e){}}
+function flowShow(keep){
+  const r=flowList[flowIdx];if(!keep){flowBase=0;flowSince=Date.now();}
+  flowPersist();
+  const st=r.stats||{n:0,total:0};const t=todayStr();
   const remCount=flowList.length-flowIdx;
   const remEst=flowList.slice(flowIdx).reduce((s,x)=>s+(+x.estMin||0),0);
   const tks=todayTasks(t).filter(x=>x.status!=='done');
   const taskEst=tks.reduce((s,x)=>s+(+x.estMin||0),0);
   const now=new Date();const bed=Math.max(0,hm2min(daySleep(t))-(now.getHours()*60+now.getMinutes()));
+  const paused=!flowSince;
   $('#flow').innerHTML=`
     <div class="fh"><span>ルーティン ${flowIdx+1} / ${flowList.length}</span><button onclick="flowClose()">終了 ✕</button></div>
-    <div class="fstats"><span>残りルーティン <b>${remCount}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>タスク <b>${tks.length}</b>件・<b>${fmtMin(taskEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
+    <div class="fstats"><span>残り <b>${remCount}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>タスク <b>${tks.length}</b>件・<b>${fmtMin(taskEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
     <div class="fmain">
-      <div class="slot">${SLOTS[r.slot]}のルーティン</div>
-      <div class="rname">${esc(r.title)}</div>
-      <div class="rmeta">目安 ${fmtMin(r.estMin)}${st.n?`　／　これまでの平均 ${fmtMin(st.total/st.n/60)}`:''}</div>
-      <div class="watch" id="fwatch">00:00</div>
+      <div class="slot">${SLOTS[r.slot]}のルーティン${r.optional?' ・<span style="color:#D8B65A;">時間があれば</span>':''}</div>
+      <div class="rname" id="frname">${esc(r.title)}<button class="fedit" onclick="flowEdit()">✎</button></div>
+      <div class="rmeta" id="frmeta">目安 ${fmtMin(r.estMin)}${st.n?`　／　平均 ${fmtMin(st.total/st.n/60)}`:''}</div>
+      ${r.memo?`<div class="fmemo">${esc(r.memo)}</div>`:''}
+      <div class="watch ${paused?'paused':''}" id="fwatch">${fmtWatch(flowElapsed())}</div>
+      ${paused?'<div class="fpausetag">一時停止中</div>':''}
       ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
     </div>
-    <div class="fbtns"><button onclick="flowSkip()">スキップ</button><button class="ok" onclick="flowDone()">完了 → 次へ</button></div>`;
+    <div class="fbtns2">
+      <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
+      <button onclick="flowDefer()">↩ 後ろへ</button>
+      <button onclick="flowHardSkip()">今日はとばす</button>
+    </div>
+    <div class="fbtns"><button class="ok" onclick="flowDone()">完了 → 次へ</button></div>`;
   clearInterval(flowTimer);
-  flowTimer=setInterval(()=>{const s=Math.floor((Date.now()-flowStart)/1000);
-    const el=$('#fwatch');if(el)el.textContent=pad(Math.floor(s/60))+':'+pad(s%60);},250);}
+  flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
+function flowPause(){if(flowSince){flowBase+=Date.now()-flowSince;flowSince=0;}else{flowSince=Date.now();}flowPersist();flowShow(true);}
+function flowEdit(){const r=flowList[flowIdx];
+  $('#dlg').innerHTML=`<div class="dm">ルーティンを編集<input id="feName" value="${esc(r.title)}" placeholder="名前"><input id="feEst" type="number" inputmode="numeric" min="0" value="${r.estMin}" placeholder="目安（分）" style="margin-top:6px;"></div>
+    <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
+function applyFlowEdit(){const r=flowList[flowIdx];r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;save();dlgEnd();
+  if($('#frname'))$('#frname').innerHTML=esc(r.title)+'<button class="fedit" onclick="flowEdit()">✎</button>';
+  const st=r.stats||{n:0,total:0};if($('#frmeta'))$('#frmeta').textContent='目安 '+fmtMin(r.estMin)+(st.n?'　／　平均 '+fmtMin(st.total/st.n/60):'');}
 function flowDone(){
-  const r=flowList[flowIdx];const sec=Math.round((Date.now()-flowStart)/1000);
-  const log=dayLog(todayStr());log.routines[r.id]={done:true,sec};
-  r.stats=r.stats||{n:0,total:0};r.stats.n++;r.stats.total+=sec;
-  save();flowNext();}
-function flowSkip(){flowNext();}
-function flowNext(){flowIdx++;
-  if(flowIdx>=flowList.length){flowClose();celebrateIfAll();}
-  else flowShow();}
+  const r=flowList[flowIdx];const sec=Math.round(flowElapsed()/1000);
+  const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
+  dayLog(todayStr()).routines[r.id]={done:true,sec};
+  r.stats={n:st.n+1,total:st.total+sec};save();
+  if(prevAvg!==null&&sec>0){
+    if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');
+    else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
+  flowList.splice(flowIdx,1);flowAfterRemove();}
+function flowDefer(){if(flowList.length<=1){toast('これが最後のルーティンです');return;}
+  const r=flowList.splice(flowIdx,1)[0];flowList.push(r);
+  if(flowIdx>=flowList.length||flowList[flowIdx]===r)flowIdx=0;
+  flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
+function flowHardSkip(){flowList.splice(flowIdx,1);flowAfterRemove();}
+function flowAfterRemove(){
+  if(!flowList.length){flowClose();return celebrateIfAll();}
+  if(flowIdx>=flowList.length)flowIdx=flowList.length-1;
+  flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
 function celebrateIfAll(){render();checkCelebrate();}
-function flowClose(){clearInterval(flowTimer);$('#flow').classList.remove('show');render();}
+function flowClose(){clearInterval(flowTimer);flowList=[];localStorage.removeItem(FLOWKEY);$('#flow').classList.remove('show');render();}
 
 /* ========================= 設定 ========================= */
 let setPage='';
@@ -1564,7 +1615,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.8（2026-07-20）</b><br>
+  <div class="mini"><b>v1.9（2026-07-20）</b><br>
+  ・おはようスタート中：⏸一時停止／✎名前・時間の編集／↩後ろへ回す／今日はとばす、を追加<br>
+  ・アプリを閉じても計測・一時停止の状態を保持し、開き直すと続きから再開<br>
+  ・平均より速く終えたら褒める・伸びたら励ますトースト（タップ不要で自動で消える）<br>
+  ・ルーティンに「時間があれば」フラグとメモ欄を追加<br>
+  <b>v1.8（2026-07-20）</b><br>
   ・「今日のルーティンを組む」を追加。ルーティンを選んで1日の流れを編成、よく使う組合せは<b>パターン保存</b>して呼び出し可<br>
   ・「活動開始」時刻を今日だけ調整でき（今からボタン）、残り時間が実態に合うように<br>
   ・おはようスタート中に残りルーティン数・目安時間・タスク量・就寝までを表示<br>
@@ -1813,6 +1869,7 @@ setInterval(()=>{
 /* ========================= 起動 ========================= */
 load();save();
 switchView('today');
+flowRestore();
 if(syncReady())pullState();
 </script>
 </body>
