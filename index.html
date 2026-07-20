@@ -50,8 +50,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .chip{flex:0 0 auto;padding:5px 12px;border:1px solid var(--line);font-size:12.5px;letter-spacing:.04em;white-space:nowrap;color:var(--sub);display:flex;align-items:center;gap:6px;}
 .chip .dot{width:8px;height:8px;display:inline-block;}
 .chip.on{border-color:var(--ink);color:var(--ink);font-weight:600;}
-.seg{display:flex;border:1px solid var(--line);margin:12px 16px 0;width:fit-content;}
-.seg button{padding:6px 16px;font-size:12.5px;color:var(--sub);letter-spacing:.05em;}
+.seg{display:flex;border:1px solid var(--line);margin:12px 16px 0;width:fit-content;overflow-x:auto;}
+.seg button{padding:6px 13px;font-size:12.5px;color:var(--sub);letter-spacing:.03em;white-space:nowrap;}
 .seg button.on{background:var(--ink);color:#fff;}
 
 /* ===== sections ===== */
@@ -787,6 +787,7 @@ function switchView(v){
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();}
   if(v!=='today'){todayReorder=false;todaySel=[];todayPlaceMode=false;}
+  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;}
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();}
 function render(){
   const el=$('#view');const sy=window.scrollY;
@@ -1091,6 +1092,9 @@ function renderTasks(){
   else if(taskSort==='grp'){const gs=S.groups.filter(g=>!ids||ids.has(g.id));
     body=gs.map(g=>{const ts=open.filter(x=>x.groupId===g.id).sort(sortFn);
       return ts.length?`<div class="sec-h"><span class="gmark" style="${markCss(g.id)}"></span>　${esc(groupPath(g.id))}（${ts.length}）</div>${ts.map(x=>taskRow(x)).join('')}`:'';}).join('');}
+  else if(taskSort==='manual'){
+    const mlist=manualTaskIds().map(id=>S.tasks.find(t=>t.id===id));
+    body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x)).join(''):'<div class="mini">未完了のタスクはありません</div>');}
   else{ // 4つの箱（重要×緊急マトリクス）
     const un=open.filter(x=>!x.quad);
     body=`<div class="quadwrap">
@@ -1111,15 +1115,18 @@ function renderTasks(){
   return `
   <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
   ${groupChipsHtml(taskSel,'tglTaskSel')}
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;">
-    <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先順</button>
-    <button class="${taskSort==='grp'?'on':''}" onclick="setTaskSort('grp')">グループ別</button>
-    <button class="${taskSort==='quad'?'on':''}" onclick="setTaskSort('quad')">4つの箱 ★</button></div>
-    <button class="act" style="color:var(--accent);font-size:13px;" onclick="taskModal(null)">＋ 詳細追加</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
+    <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先</button>
+    <button class="${taskSort==='grp'?'on':''}" onclick="setTaskSort('grp')">グループ</button>
+    <button class="${taskSort==='quad'?'on':''}" onclick="setTaskSort('quad')">箱★</button>
+    <button class="${taskSort==='manual'?'on':''}" onclick="setTaskSort('manual')">手動</button></div>
+    ${taskSort==='manual'
+      ?(taskReorder?`<button class="act" onclick="exitTaskReorder()">完了</button>`:`<button class="act" onclick="enterTaskReorder()">並び替え</button>`)
+      :`<button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋詳細</button>`}
   </div>
-  <div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
+  ${taskReorder?'':`<div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
     <select id="qaGroup">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select>
-    <button onclick="quickAddTask()">追加</button></div>
+    <button onclick="quickAddTask()">追加</button></div>`}
   ${body||'<div class="mini">タスクはありません</div>'}
   ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act" onclick="clearDone()">完了を一括削除</button></div>
     ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(x=>taskRow(x)).join('')}`:''}`;
@@ -1139,6 +1146,39 @@ function moveQ(id,dir){const x=S.tasks.find(t=>t.id===id);if(!x)return;
 function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
   S.tasks.push({id:uid(),title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',order:Date.now(),createdAt:todayStr()});
   save();render();}
+/* ===== タスクタブ「手動」並び替え（選択＋▲▼／選んだ順に指定の行の下へ配置） ===== */
+let taskReorder=false,taskRSel=[],taskPlaceMode=false;
+function enterTaskReorder(){taskReorder=true;taskRSel=[];taskPlaceMode=false;render();}
+function exitTaskReorder(){taskReorder=false;taskRSel=[];taskPlaceMode=false;render();}
+function manualTaskIds(){return S.tasks.filter(x=>x.status!=='done')
+  .sort((a,b)=>(a.torder??1e9)-(b.torder??1e9)||a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')).map(x=>x.id);}
+function commitTaskOrder(ids){ids.forEach((id,i)=>{const x=S.tasks.find(t=>t.id===id);if(x)x.torder=i;});save();}
+function tglTaskRSel(id){const i=taskRSel.indexOf(id);i>=0?taskRSel.splice(i,1):taskRSel.push(id);render();}
+function taskReorderHtml(list){
+  return `<div class="mini">${taskPlaceMode
+    ?'📍 置きたい場所の行をタップ（その<b>下</b>に、選んだ順で入ります）'
+    :'動かすタスクをタップで選択（選んだ順に番号）。右下の▲▼で移動、「配置」で好きな場所へ。'}</div>
+  ${list.map(x=>{const n=taskRSel.indexOf(x.id);const isSel=n>=0;
+    return `<div class="rrow ${isSel?'sel':''}" onclick="${taskPlaceMode?(isSel?'':`placeTaskAfter('${x.id}')`):`tglTaskRSel('${x.id}')`}">
+      <span class="rnum">${isSel?n+1:''}</span><span class="rttl">${esc(x.title)}</span></div>`;}).join('')}
+  ${taskRSel.length&&!taskPlaceMode?`<div class="reorderfab"><span>${taskRSel.length}件</span>
+    <button onclick="moveTaskBlock(-1)">▲</button><button onclick="moveTaskBlock(1)">▼</button>
+    <button onclick="taskPlaceMode=true;render()">配置</button></div>`:''}
+  ${taskPlaceMode?`<div class="reorderfab"><span>置き場所を選ぶ</span><button onclick="placeTaskTop()">先頭</button><button onclick="taskPlaceMode=false;render()">やめる</button></div>`:''}`;}
+function moveTaskBlock(dir){if(!taskRSel.length)return;let ids=manualTaskIds();
+  const idx=taskRSel.map(id=>ids.indexOf(id)).filter(i=>i>=0).sort((a,b)=>a-b);
+  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続したタスクのみ。バラのときは「配置」で');return;}
+  const lo=idx[0],hi=idx[idx.length-1];const block=ids.slice(lo,hi+1);
+  if(dir<0){if(lo<=0)return;const above=ids[lo-1];ids.splice(lo-1,hi-lo+2,...block,above);}
+  else{if(hi>=ids.length-1)return;const below=ids[hi+1];ids.splice(lo,hi-lo+2,below,...block);}
+  commitTaskOrder(ids);render();}
+function placeTaskAfter(target){const sel=taskRSel.slice();if(!sel.length)return;
+  let ids=manualTaskIds().filter(id=>!sel.includes(id));
+  const pos=ids.indexOf(target);ids.splice(pos+1,0,...sel);
+  commitTaskOrder(ids);taskRSel=[];taskPlaceMode=false;render();}
+function placeTaskTop(){const sel=taskRSel.slice();if(!sel.length)return;
+  let ids=manualTaskIds().filter(id=>!sel.includes(id));ids.unshift(...sel);
+  commitTaskOrder(ids);taskRSel=[];taskPlaceMode=false;render();}
 async function clearDone(){if(!await uiConfirm('完了済みタスクをすべて削除しますか？','削除'))return;
   S.tasks=S.tasks.filter(x=>x.status!=='done');save();render();}
 
@@ -1745,7 +1785,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.13（2026-07-20）</b><br>
+  <div class="mini"><b>v1.14（2026-07-20）</b><br>
+  ・タスクタブに「手動」並び順を追加。今日タブと同じ<b>選択＋▲▼／配置</b>で自由に並び替え<br>
+  <b>v1.13（2026-07-20）</b><br>
   ・今日やることに「並び替え」モードを追加：項目を<b>選んだ順に番号</b>が付き、右下の▲▼で移動、または「配置」で<b>好きな行の下</b>／先頭へまとめて移動<br>
   <b>v1.12（2026-07-20）</b><br>
   ・今日タブで行を<b>左右スワイプ→「完了しますか？」</b>（完了・未完了に戻すの両方）<br>
