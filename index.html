@@ -920,11 +920,19 @@ function moveToday(id,dir){const t=todayStr();const list=todayTasks(t).sort(byTo
   const i=list.findIndex(x=>x.id===id),j=i+dir;
   if(i<0||j<0||j>=list.length)return;
   list[i].tOrder=j;list[j].tOrder=i;save();render();}
+let anchorTok=null;
+function setAnchor(tok){anchorTok=tok;}
 function quickAddToday(){const inp=$('#qaToday');const v=inp.value.trim();if(!v)return;
-  S.tasks.push({id:uid(),title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:todayStr(),memo:'',order:Date.now(),createdAt:todayStr()});
+  const id=uid();const tok='t_'+id;const t=todayStr();
+  S.tasks.push({id,title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:t});
+  // 挿入位置：直前に触れた行の下、なければ末尾
+  let toks=doItems(t).map(it=>it.type+'_'+it.obj.id).filter(x=>x!==tok);
+  const ai=anchorTok?toks.indexOf(anchorTok):-1;
+  if(ai>=0)toks.splice(ai+1,0,tok);else toks.push(tok);
+  dayLog(t).doOrder=toks;anchorTok=tok;
   save();render();}
 function carryAll(){const t=todayStr();S.tasks.forEach(x=>{if(x.today&&x.today<t&&x.status!=='done')x.today=t;});save();render();}
-function toggleRoutine(id){const t=todayStr();const log=dayLog(t);
+function toggleRoutine(id){const t=todayStr();const log=dayLog(t);setAnchor('r_'+id);
   const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur};
   save();render();checkCelebrate();}
 function checkCelebrate(){const t=todayStr();const log=dayLog(t);
@@ -965,7 +973,7 @@ function doItemRow(it,t){
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
     return `<div class="ritem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}">
       <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
-      <div class="rb" onclick="routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span>${r.optional?'<span class="rtag opt">時間があれば</span>':''}</div>
+      <div class="rb" onclick="setAnchor('${tok}');routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span>${r.optional?'<span class="rtag opt">時間があれば</span>':''}</div>
       <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}${r.memo?'・📝メモ':''}</div>${linkChips(r.links)}</div>
       ${arrows}</div>`;}
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
@@ -1058,7 +1066,7 @@ function taskRow(x,o={}){
     :`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
   const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
-  return `<div class="titem" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="taskModal('${x.id}')" style="${pastelBg(x)}">
+  return `<div class="titem" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')" style="${pastelBg(x)}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="body">
       <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.pin&&o.today?'<span class="pinbadge">毎日</span>':''}</div>
@@ -1154,8 +1162,14 @@ function moveQ(id,dir){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const i=list.findIndex(t=>t.id===id),j=i+dir;
   if(j<0||j>=list.length)return;
   list[i].qOrder=j;list[j].qOrder=i;save();render();}
+let taskAnchorId=null;
 function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
-  S.tasks.push({id:uid(),title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',order:Date.now(),createdAt:todayStr()});
+  const id=uid();
+  S.tasks.push({id,title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:todayStr()});
+  if(taskSort==='manual'){let ids=manualTaskIds().filter(i=>i!==id);
+    const ai=taskAnchorId?ids.indexOf(taskAnchorId):-1;
+    if(ai>=0)ids.splice(ai+1,0,id);else ids.push(id);
+    commitTaskOrder(ids);taskAnchorId=id;}
   save();render();}
 /* ===== タスクタブ「手動」並び替え（選択＋▲▼／選んだ順に指定の行の下へ配置） ===== */
 let taskReorder=false,taskRSel=[],taskPlaceMode=false;
@@ -1205,6 +1219,7 @@ function collectLinks(){return editLinks.filter(l=>l.url.trim()).map(l=>({label:
 
 /* ===== task modal ===== */
 function taskModal(id,presetDue){
+  if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
   editLinks=(x?.links||[]).map(l=>({...l}));
   openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
@@ -1368,7 +1383,7 @@ function renderCal(){
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
-function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
   if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
@@ -1825,7 +1840,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.15（2026-07-20）</b><br>
+  <div class="mini"><b>v1.16（2026-07-20）</b><br>
+  ・タスクを追加すると、直前に触れた行の<b>すぐ下</b>に入る（何もなければ末尾）。今日タブ・タスクタブ（手動）の両方<br>
+  <b>v1.15（2026-07-20）</b><br>
   ・今日やることを<b>左スワイプ</b>でメニュー（完了／明日へ送る／今日は隠す）。右スワイプは従来どおり完了<br>
   ・「今日は隠す」＝未完了でも"できなかった"としてカウントしない（下部の「隠した項目」から戻せます）<br>
   ・「明日へ送る」＝今日から外して明日の先頭（優先）に入れる<br>
