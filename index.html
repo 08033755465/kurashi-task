@@ -332,11 +332,15 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
 .rtag.opt{color:#B7902E;border-color:#E3CE93;}
 .titem.rsel{background:#EEF2FF;}
+/* 長押し時の文字選択（コピペ挙動）・コールアウトを抑止 */
+.titem,.ritem,.rrow,.tl,.dtask,.cell,[data-lp]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .rrow{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line2);cursor:pointer;-webkit-user-select:none;user-select:none;}
 .rrow.sel{background:#EEF2FF;}
 .rnum{width:24px;height:24px;flex:0 0 24px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--accent);font-weight:700;}
 .rrow.sel .rnum{background:var(--accent);color:#fff;border-color:var(--accent);}
 .rttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;}
+.rrow.done .rttl{text-decoration:line-through;color:var(--done);}
+.rdone{font-size:11px;color:var(--done);flex:0 0 auto;}
 .reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
 .reorderfab span{font-size:12px;letter-spacing:.05em;}
 .reorderfab button{color:#fff;border:1px solid #4A4F58;width:42px;height:42px;font-size:18px;}
@@ -644,15 +648,15 @@ function attachCalSwipe(){
   el.addEventListener('touchstart',e=>{
     if(e.touches.length!==1){swValid=false;return;}
     const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;},{passive:true});
+  el.addEventListener('touchcancel',()=>{swValid=false;});
   el.addEventListener('touchend',e=>{
     if(!swValid)return;swValid=false;
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
-    // 横スクロールできる要素（グループのチップ等）の上なら反応しない
-    let n=e.target;while(n&&n!==el){if(n.scrollWidth-n.clientWidth>4&&/auto|scroll/.test(getComputedStyle(n).overflowX))return;n=n.parentElement;}
+    if(e.target.closest&&e.target.closest('.chips'))return; // グループチップの横スクロールだけは邪魔しない
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
-    if(!(Date.now()-swT<500&&Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.8))return;
+    if(!(Date.now()-swT<900&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3))return;
     if(view==='cal'){calNav(dx<0?1:-1);return;}
-    if(view==='today'){let r=e.target;while(r&&r!==el){if(r.dataset&&r.dataset.do){dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do);return;}r=r.parentElement;}}});}
+    if(view==='today'){const r=e.target.closest&&e.target.closest('[data-do]');if(r)dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do);}});}
 /* 予定の繰り返し */
 const REPEAT_LABEL={weekly:'毎週',biweekly:'隔週',monthly:'毎月'};
 function eventOccursOn(e,dstr){
@@ -883,7 +887,7 @@ function renderToday(){
   <div class="addrow" style="padding:12px 16px 0;">
     <button onclick="composeToday()">🧩 今日のルーティンを組む${dayLog(t).planRoutines?'（編成中）':''}</button>
   </div>
-  <button class="startBtn" onclick="startFlow()">▶ おはようスタート（ルーティン実行）</button>
+  <button class="startBtn" onclick="startFlow()">▶ ルーティン開始</button>
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${scheduleListHtml(evs,dayWake(t))}</div>`:''}
@@ -947,8 +951,11 @@ function quickAddToday(){const inp=$('#qaToday');const v=inp.value.trim();if(!v)
   dayLog(t).doOrder=toks;anchorTok=tok;
   save();render();}
 function carryAll(){const t=todayStr();S.tasks.forEach(x=>{if(x.today&&x.today<t&&x.status!=='done')x.today=t;});save();render();}
+function sinkDoItem(tok){const t=todayStr();let toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
+  const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;}
 function toggleRoutine(id){const t=todayStr();const log=dayLog(t);setAnchor('r_'+id);
   const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur};
+  if(!cur)sinkDoItem('r_'+id);
   save();render();checkCelebrate();}
 function checkCelebrate(){const t=todayStr();const log=dayLog(t);
   const rs=todaysRoutines(t),ts=S.tasks.filter(x=>x.today===t);
@@ -973,6 +980,7 @@ function doItems(t){
   order.forEach(k=>{if(pool.has(k)){res.push(pool.get(k));seen.add(k);}});
   const rank=it=>it.type==='r'?({morning:0,day:1,night:2,any:3}[it.obj.slot]||0):10+(it.obj.priority||2);
   [...pool.keys()].filter(k=>!seen.has(k)).map(k=>pool.get(k)).sort((a,b)=>rank(a)-rank(b)).forEach(it=>res.push(it));
+  res.sort((a,b)=>(flowItemDone(a)?1:0)-(flowItemDone(b)?1:0)); // 完了は一番下へ（安定ソート）
   return res;}
 function moveDoItem(tok,dir){const t=todayStr();
   const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
@@ -1004,10 +1012,10 @@ function todayReorderHtml(list){
   return `<div class="mini">${todayPlaceMode
     ?'📍 置きたい場所の行をタップ（その<b>下</b>に、選んだ順で入ります）'
     :'動かす項目をタップで選択（選んだ順に番号が付きます）。右下の▲▼で移動、または「配置」で好きな場所へ。'}</div>
-  ${list.map(it=>{const tok=it.type+'_'+it.obj.id;const n=todaySel.indexOf(tok);const isSel=n>=0;
-    return `<div class="rrow ${isSel?'sel':''}" onclick="${todayPlaceMode?(isSel?'':`placeTodayAfter('${tok}')`):`tglTodaySel('${tok}')`}">
+  ${list.map(it=>{const tok=it.type+'_'+it.obj.id;const n=todaySel.indexOf(tok);const isSel=n>=0;const done=flowItemDone(it);
+    return `<div class="rrow ${isSel?'sel':''} ${done?'done':''}" onclick="${todayPlaceMode?(isSel?'':`placeTodayAfter('${tok}')`):`tglTodaySel('${tok}')`}">
       <span class="rnum">${isSel?n+1:''}</span>
-      <span class="rttl">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span></div>`;}).join('')}
+      <span class="rttl">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span>${done?'<span class="rdone">✓完了</span>':''}</div>`;}).join('')}
   ${todaySel.length&&!todayPlaceMode?`<div class="reorderfab">
     <span>${todaySel.length}件</span>
     <button onclick="moveTodayBlock(-1)">▲</button><button onclick="moveTodayBlock(1)">▼</button>
@@ -1103,7 +1111,7 @@ function taskRow(x,o={}){
     </div>${arrows}</div>`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const seq=['todo','doing','wait','done'];x.status=seq[(seq.indexOf(x.status)+1)%4];
-  if(x.status==='done'){x.doneAt=todayStr();}save();render();checkCelebrate();}
+  if(x.status==='done'){x.doneAt=todayStr();sinkDoItem('t_'+id);}save();render();checkCelebrate();}
 function toggleToday(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   x.today=x.today===todayStr()?null:todayStr();save();render();}
 function visibleGroups(sel){ // 選択グループ＋その子孫
@@ -1404,7 +1412,7 @@ function renderCal(){
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();}
+  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();sinkDoItem('t_'+id);}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
@@ -1496,10 +1504,10 @@ function restoreAllHidden(){const t=todayStr();dayLog(t).hiddenR=[];
 async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
   if(type==='r'){const r=S.routines.find(x=>x.id===id);if(!r)return;const log=dayLog(t);const done=!!log.routines[id]?.done;
     if(!await uiConfirm(`「${r.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    log.routines[id]={...(log.routines[id]||{}),done:!done};save();render();if(!done)checkCelebrate();}
+    log.routines[id]={...(log.routines[id]||{}),done:!done};if(!done)sinkDoItem(tok);save();render();if(!done)checkCelebrate();}
   else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    x.status=done?'todo':'done';if(!done)x.doneAt=t;save();render();if(!done)checkCelebrate();}}
+    x.status=done?'todo':'done';if(!done){x.doneAt=t;sinkDoItem(tok);}save();render();if(!done)checkCelebrate();}}
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
@@ -1887,7 +1895,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.19（2026-07-20）</b><br>
+  <div class="mini"><b>v1.20（2026-07-20）</b><br>
+  ・「おはようスタート」→「ルーティン開始」に名称変更／フローの「後ろへ」→「次のタスクへスキップ」<br>
+  ・完了した項目は自動で一番下へ。並び替え画面でも完了が分かるように表示<br>
+  ・長押し色分け時の文字選択（コピペ挙動）を無効化<br>
+  ・日表示の左右スワイプを実機で拾いやすく調整（判定を緩和）<br>
+  <b>v1.19（2026-07-20）</b><br>
   ・フローの「後ろへ」を「⏭ 次へスキップ」に変更（分かりやすく）<br>
   ・タスクもルーティンと同じ<b>チェックボックス</b>で完了できるように（進行中・相手待ちはバッジ表示）<br>
   <b>v1.18（2026-07-20）</b><br>
