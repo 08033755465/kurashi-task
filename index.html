@@ -110,9 +110,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 
 /* routine check row */
 .ritem{display:flex;align-items:center;border-bottom:1px solid var(--line2);padding:9px 16px;gap:11px;}
-.ritem .chk{width:22px;height:22px;border:1.5px solid var(--ink);flex:0 0 22px;display:flex;align-items:center;justify-content:center;}
-.ritem.done .chk{background:var(--ink);}
-.ritem .chk svg{width:14px;height:14px;stroke:#fff;stroke-width:2.5;fill:none;}
+.chk{width:22px;height:22px;border:1.5px solid var(--ink);flex:0 0 22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.titem>.chk{align-self:center;margin-left:8px;}
+.ritem.done .chk,.titem.done .chk{background:var(--ink);}
+.chk svg{width:14px;height:14px;stroke:#fff;stroke-width:2.5;fill:none;}
 .ritem .rb{flex:1;min-width:0;}
 .ritem .rt{font-size:14.5px;}
 .ritem.done .rt{color:var(--done);text-decoration:line-through;}
@@ -1084,8 +1085,9 @@ function taskRow(x,o={}){
     :`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
   const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
-  return `<div class="titem" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')" style="${pastelBg(x)}">
+  return `<div class="titem ${x.status==='done'?'done':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')" style="${pastelBg(x)}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
+    <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
       <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.pin&&o.today?'<span class="pinbadge">毎日</span>':''}</div>
       <div class="meta"><span class="gmark" style="${markCss(x.groupId)}"></span><span>${esc(groupPath(x.groupId))}</span>
@@ -1096,7 +1098,7 @@ function taskRow(x,o={}){
       ${linkChips(x.links)}
     </div>
     <div class="right">
-      <button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>
+      ${x.status!=='done'?`<button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>`:''}
       ${todayBtn}
     </div>${arrows}</div>`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -1741,9 +1743,9 @@ function flowShow(keep){
     <div class="fbtns2">
       <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 戻る</button>
       <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
-      <button onclick="flowDefer()">↩ 後ろへ</button>
+      <button onclick="flowHardSkip()">⏭ 次へスキップ</button>
     </div>
-    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowHardSkip()">今日はとばす</button></div>
+    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
   flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
@@ -1885,7 +1887,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.18（2026-07-20）</b><br>
+  <div class="mini"><b>v1.19（2026-07-20）</b><br>
+  ・フローの「後ろへ」を「⏭ 次へスキップ」に変更（分かりやすく）<br>
+  ・タスクもルーティンと同じ<b>チェックボックス</b>で完了できるように（進行中・相手待ちはバッジ表示）<br>
+  <b>v1.18（2026-07-20）</b><br>
   ・パターンに「自動適用」（平日/土日/祝日/毎日）を設定でき、その日の種類でルーティンが自動で切り替わる（手動で組んだ日はそちら優先）<br>
   ・ルーティンに「週1回でOK」。土・日など複数曜日のどこかで完了したら、その週は表示しない<br>
   <b>v1.17（2026-07-20）</b><br>
