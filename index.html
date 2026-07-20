@@ -312,7 +312,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow{position:fixed;inset:0;background:var(--ink);color:#fff;z-index:200;display:none;flex-direction:column;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));}
 #flow.show{display:flex;}
 #flow .fh{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.15em;color:#9AA1AD;}
-#flow .fh button{color:#9AA1AD;font-size:13px;}
+#flow .fh button{color:#C6CAD2;font-size:12px;border:1px solid #565B64;padding:5px 10px;}
+#flow .fh button:active{background:#20242B;}
 #flow .fstats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:#9AA1AD;margin-top:10px;padding-top:10px;border-top:1px solid #2A2E35;}
 #flow .fstats b{color:#fff;font-weight:700;}
 #flow .fedit{color:#9AA1AD;font-size:15px;margin-left:8px;border:1px solid #4A4F58;padding:1px 8px;vertical-align:middle;}
@@ -339,7 +340,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .flic{width:20px;flex:0 0 20px;text-align:center;font-size:14px;}
 #flow .flit{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;}
 #flow .flie{font-size:11px;color:#8A909A;flex:0 0 auto;}
-#flow .fh span:last-child{display:flex;gap:12px;}
+#flow .fh span:last-child{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 #flowbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
 #flowbar.show{display:flex;}
 #flowbar span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -362,8 +363,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
 .reorderfab span{font-size:12px;letter-spacing:.05em;}
 .reorderfab button{color:#fff;border:1px solid #4A4F58;width:42px;height:42px;font-size:18px;}
-#flow .fnext{font-size:12px;color:#8A909A;margin-top:16px;max-width:88%;line-height:1.7;}
-#flow .fnext b{color:#C6CAD2;font-weight:600;}
+#flow .fnext{font-size:13px;color:#9AA1AD;margin-top:18px;width:100%;max-width:340px;text-align:left;}
+#flow .fnexth{font-size:11px;letter-spacing:.15em;color:#7A8089;margin-bottom:4px;}
+#flow .fnexti{padding:7px 2px;border-top:1px solid #24282F;color:#C6CAD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:11px 18px;font-size:13.5px;font-weight:700;z-index:600;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #flow .fmain{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
@@ -1783,8 +1785,8 @@ function flowShow(keep){
       ${paused?'<div class="fpausetag">一時停止中</div>':''}
       ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
       ${(()=>{const up=flowList.slice(flowIdx+1,flowIdx+4);return up.length
-        ?`<div class="fnext">次：${up.map(x=>`<b>${esc(x.obj.title)}</b>${x.type==='r'&&x.obj.optional?'（時間があれば）':''}`).join(' ／ ')}</div>`
-        :'<div class="fnext">これで最後です</div>';})()}`}
+        ?`<div class="fnext"><div class="fnexth">つぎ</div>${up.map(x=>`<div class="fnexti">${x.type==='r'?'🔁':'📋'} ${esc(x.obj.title)}${x.type==='r'&&x.obj.optional?' <span style="color:#D8B65A;">（時間があれば）</span>':''}</div>`).join('')}</div>`
+        :'<div class="fnext"><div class="fnexth">これで最後です</div></div>';})()}`}
     </div>
     <div class="fbtns2">
       <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 前へ</button>
