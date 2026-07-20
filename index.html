@@ -24,6 +24,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
   color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
+  touch-action:manipulation; /* ダブルタップ拡大を無効化（ピンチ・スクロールは可） */
 }
 #app{max-width:960px;margin:0 auto;min-height:100%;padding-bottom:76px;padding-top:max(env(safe-area-inset-top),6px);}
 button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -191,6 +192,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .addlink{font-size:12.5px;color:var(--accent);padding:2px 0;}
 .tmplchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .tmplchips .chip{cursor:pointer;}
+.quadsel{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.quadsel button{border:1px solid var(--line);padding:9px 8px;font-size:13px;text-align:left;line-height:1.35;font-weight:600;}
+.quadsel button small{display:block;font-size:10px;font-weight:400;opacity:.8;}
+.quadsel button.on{background:var(--bg2);border-width:2px;}
+.quadsel .none{grid-column:1 / -1;text-align:center;color:var(--sub);border-color:var(--line);font-weight:400;}
 .colorsel{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}
 .colorsel.c6{grid-template-columns:repeat(6,1fr);}
 .colorsel button{height:30px;border:2px solid transparent;}
@@ -310,8 +316,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .fmemo{font-size:13px;color:#C6CAD2;max-width:88%;white-space:pre-wrap;line-height:1.6;}
 #flow .watch.paused{color:#7A8089;}
 #flow .fpausetag{font-size:11px;letter-spacing:.2em;color:#D8B65A;margin-top:-4px;}
-#flow .fbtns2{display:flex;gap:8px;margin-bottom:10px;}
+#flow .fbtns2{display:flex;gap:8px;margin-bottom:8px;}
 #flow .fbtns2 button{flex:1;padding:12px 0;font-size:12.5px;letter-spacing:.05em;border:1px solid #4A4F58;color:#fff;}
+#flow .fbtns2 button[disabled]{pointer-events:none;}
+#flow .fbtns3{margin-bottom:8px;}
+#flow .fbtns3 button{width:100%;padding:9px 0;font-size:12px;color:#9AA1AD;border:1px solid #2A2E35;}
+#flow .fh span:last-child{display:flex;gap:12px;}
+#flowbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
+#flowbar.show{display:flex;}
+#flowbar span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
 .rtag.opt{color:#B7902E;border-color:#E3CE93;}
 .titem.rsel{background:#EEF2FF;}
 .reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
@@ -386,6 +400,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 <div id="modalWrap" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
 <div id="dlgWrap"><div id="dlg"></div></div>
 <div id="colorSheet"></div>
+<div id="flowbar"></div>
 <div id="flow"></div>
 
 <script>
@@ -773,6 +788,7 @@ function render(){
   else if(view==='routine')el.innerHTML=renderRoutines();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,sy); // 再描画でスクロール位置を保つ（チェック操作で上に飛ばない）
+  updateFlowBar();
 }
 function toTop(){window.scrollTo(0,0);}
 
@@ -1101,9 +1117,11 @@ function taskModal(id,presetDue){
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
     <div class="frow f2"><div><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
       <div><label>所要時間（分）</label><input id="tmEst" type="number" inputmode="numeric" min="0" value="${x?.estMin??15}"></div></div>
-    <div class="frow f2"><div><label>優先度</label><select id="tmPr">
-      <option value="1" ${x?.priority===1?'selected':''}>高</option><option value="2" ${!x||x.priority===2?'selected':''}>中</option><option value="3" ${x?.priority===3?'selected':''}>低</option></select></div>
-      <div><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div></div>
+    <div class="frow"><label>重要度・緊急度（4つの箱）</label>
+      <div class="quadsel" id="tmQuad">
+        ${QUADS.map((q,i)=>`<button type="button" data-q="${i+1}" class="${(x?.quad||0)===i+1?'on':''}" style="border-color:${q.c};color:${q.c};" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${q.t}<small>${q.s}</small></button>`).join('')}
+        <button type="button" data-q="0" class="none ${!x?.quad?'on':''}" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">未分類（あとで箱に入れる）</button></div></div>
+    <div class="frow"><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
     <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
       ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
@@ -1119,7 +1137,9 @@ function taskModal(id,presetDue){
   </div>`);}
 function saveTask(id){
   const title=$('#tmTitle').value.trim();if(!title){uiAlert('タスク名を入力してください');return;}
-  const data={title,groupId:$('#tmGroup').value,estMin:+$('#tmEst').value||0,priority:+$('#tmPr').value,
+  const quad=+($('#tmQuad button.on')?.dataset.q||0);
+  const priority=quad===1?1:quad===4?3:2; // 4つの箱→並び用の優先度に変換
+  const data={title,groupId:$('#tmGroup').value,estMin:+$('#tmEst').value||0,quad,priority,
     due:$('#tmDue').value,status:$('#tmSt').value,waitNote:$('#tmWait').value.trim(),
     today:$('#tmToday').value?todayStr():null,memo:$('#tmMemo').value,links:collectLinks(),
     pin:$('#tmPin').checked};
@@ -1493,81 +1513,87 @@ let flowList=[],flowIdx=0,flowTimer=null,flowBase=0,flowSince=0;
 const FLOWKEY='homehub_flow';
 function fmtWatch(ms){const s=Math.floor(ms/1000);return pad(Math.floor(s/60))+':'+pad(s%60);}
 function flowElapsed(){return flowBase+(flowSince?Date.now()-flowSince:0);}
+function flowItemDone(it){return it.type==='r'?!!dayLog(todayStr()).routines[it.obj.id]?.done:it.obj.status==='done';}
 function flowPersist(){if(!flowList.length){localStorage.removeItem(FLOWKEY);return;}
-  localStorage.setItem(FLOWKEY,JSON.stringify({date:todayStr(),ids:flowList.map(r=>r.id),idx:flowIdx,base:flowBase,since:flowSince}));}
+  localStorage.setItem(FLOWKEY,JSON.stringify({date:todayStr(),items:flowList.map(it=>({type:it.type,id:it.obj.id})),idx:flowIdx,base:flowBase,since:flowSince}));}
+function flowResolve(list){return list.map(o=>{const obj=o.type==='r'?S.routines.find(r=>r.id===o.id):S.tasks.find(x=>x.id===o.id);return obj?{type:o.type,obj}:null;}).filter(Boolean);}
 function startFlow(){
-  const t=todayStr();const log=dayLog(t);
-  flowList=doItems(t).filter(it=>it.type==='r'&&!log.routines[it.obj.id]?.done).map(it=>it.obj);
-  if(!flowList.length){uiAlert('今日のルーティンはすべて完了しています🎉');return;}
+  const t=todayStr();
+  flowList=doItems(t).filter(it=>!flowItemDone(it)).map(it=>({type:it.type,obj:it.obj}));
+  if(!flowList.length){uiAlert('今日やることはすべて完了しています🎉');return;}
   flowIdx=0;flowBase=0;flowSince=Date.now();$('#flow').classList.add('show');flowShow(true);}
 function flowRestore(){try{const f=JSON.parse(localStorage.getItem(FLOWKEY)||'null');
-  if(!f||f.date!==todayStr()||!f.ids||!f.ids.length)return;
-  const log=dayLog(todayStr());
-  flowList=f.ids.map(id=>S.routines.find(r=>r.id===id)).filter(r=>r&&!log.routines[r.id]?.done);
+  if(!f||f.date!==todayStr())return;
+  const items=f.items||(f.ids?f.ids.map(id=>({type:'r',id})):[]);
+  flowList=flowResolve(items);
   if(!flowList.length){localStorage.removeItem(FLOWKEY);return;}
   flowIdx=Math.min(f.idx||0,flowList.length-1);flowBase=f.base||0;flowSince=f.since||0;
   $('#flow').classList.add('show');flowShow(true);}catch(e){}}
 function flowShow(keep){
-  const r=flowList[flowIdx];if(!keep){flowBase=0;flowSince=Date.now();}
+  const it=flowList[flowIdx];const r=it.obj;const isR=it.type==='r';if(!keep){flowBase=0;flowSince=Date.now();}
   flowPersist();
   const st=r.stats||{n:0,total:0};const t=todayStr();
-  const remCount=flowList.length-flowIdx;
-  const remEst=flowList.slice(flowIdx).reduce((s,x)=>s+(+x.estMin||0),0);
-  const tks=todayTasks(t).filter(x=>x.status!=='done');
-  const taskEst=tks.reduce((s,x)=>s+(+x.estMin||0),0);
+  const rem=flowList.slice(flowIdx).filter(x=>!flowItemDone(x));
+  const remEst=rem.reduce((s,x)=>s+(+x.obj.estMin||0),0);
   const now=new Date();const bed=Math.max(0,hm2min(daySleep(t))-(now.getHours()*60+now.getMinutes()));
-  const paused=!flowSince;
+  const paused=!flowSince;const doneNow=flowItemDone(it);
+  const label=isR?`${SLOTS[r.slot]}のルーティン${r.optional?' ・<span style="color:#D8B65A;">時間があれば</span>':''}`:`タスク ・${esc(groupPath(r.groupId))}`;
+  const meta=isR?`目安 ${fmtMin(r.estMin)}${st.n?`　／　平均 ${fmtMin(st.total/st.n/60)}`:''}`:`目安 ${fmtMin(r.estMin)}${r.due?`　／　期限 ${fmtDateJa(r.due)}`:''}`;
   $('#flow').innerHTML=`
-    <div class="fh"><span>ルーティン ${flowIdx+1} / ${flowList.length}</span><button onclick="flowClose()">終了 ✕</button></div>
-    <div class="fstats"><span>残り <b>${remCount}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>タスク <b>${tks.length}</b>件・<b>${fmtMin(taskEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
+    <div class="fh"><span>${flowIdx+1} / ${flowList.length}${doneNow?' ・完了済み':''}</span>
+      <span><button onclick="flowMinimize()">最小化 ⌄</button><button onclick="flowClose()">終了 ✕</button></span></div>
+    <div class="fstats"><span>残り <b>${rem.length}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
     <div class="fmain">
-      <div class="slot">${SLOTS[r.slot]}のルーティン${r.optional?' ・<span style="color:#D8B65A;">時間があれば</span>':''}</div>
+      <div class="slot">${label}</div>
       <div class="rname" id="frname">${esc(r.title)}<button class="fedit" onclick="flowEdit()">✎</button></div>
-      <div class="rmeta" id="frmeta">目安 ${fmtMin(r.estMin)}${st.n?`　／　平均 ${fmtMin(st.total/st.n/60)}`:''}</div>
-      ${r.memo?`<div class="fmemo">${esc(r.memo)}</div>`:''}
+      <div class="rmeta" id="frmeta">${meta}</div>
+      ${isR&&r.memo?`<div class="fmemo">${esc(r.memo)}</div>`:''}
       <div class="watch ${paused?'paused':''}" id="fwatch">${fmtWatch(flowElapsed())}</div>
       ${paused?'<div class="fpausetag">一時停止中</div>':''}
       ${r.links?.length?`<div class="flinks">${r.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
       ${(()=>{const up=flowList.slice(flowIdx+1,flowIdx+4);return up.length
-        ?`<div class="fnext">次：${up.map(x=>`<b>${esc(x.title)}</b>${x.optional?'（時間があれば）':''}`).join(' ／ ')}</div>`
-        :'<div class="fnext">これが最後のルーティンです</div>';})()}
+        ?`<div class="fnext">次：${up.map(x=>`<b>${esc(x.obj.title)}</b>${x.type==='r'&&x.obj.optional?'（時間があれば）':''}`).join(' ／ ')}</div>`
+        :'<div class="fnext">これで最後です</div>';})()}
     </div>
     <div class="fbtns2">
+      <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 戻る</button>
       <button onclick="flowPause()">${paused?'▶ 再開':'⏸ 一時停止'}</button>
       <button onclick="flowDefer()">↩ 後ろへ</button>
-      <button onclick="flowHardSkip()">今日はとばす</button>
     </div>
-    <div class="fbtns"><button class="ok" onclick="flowDone()">完了 → 次へ</button></div>`;
+    <div class="fbtns3"><button onclick="flowHardSkip()">今日はとばす</button></div>
+    <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
   flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
 function flowPause(){if(flowSince){flowBase+=Date.now()-flowSince;flowSince=0;}else{flowSince=Date.now();}flowPersist();flowShow(true);}
-function flowEdit(){const r=flowList[flowIdx];
-  $('#dlg').innerHTML=`<div class="dm">ルーティンを編集<input id="feName" value="${esc(r.title)}" placeholder="名前"><input id="feEst" type="number" inputmode="numeric" min="0" value="${r.estMin}" placeholder="目安（分）" style="margin-top:6px;"></div>
+function flowMinimize(){clearInterval(flowTimer);$('#flow').classList.remove('show');flowPersist();render();}
+function flowResume(){if(!flowList.length)return;$('#flow').classList.add('show');flowShow(true);}
+function flowEdit(){const it=flowList[flowIdx];const r=it.obj;
+  $('#dlg').innerHTML=`<div class="dm">${it.type==='r'?'ルーティン':'タスク'}を編集<input id="feName" value="${esc(r.title)}" placeholder="名前"><input id="feEst" type="number" inputmode="numeric" min="0" value="${r.estMin}" placeholder="目安（分）" style="margin-top:6px;"></div>
     <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
-function applyFlowEdit(){const r=flowList[flowIdx];r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;save();dlgEnd();
-  if($('#frname'))$('#frname').innerHTML=esc(r.title)+'<button class="fedit" onclick="flowEdit()">✎</button>';
-  const st=r.stats||{n:0,total:0};if($('#frmeta'))$('#frmeta').textContent='目安 '+fmtMin(r.estMin)+(st.n?'　／　平均 '+fmtMin(st.total/st.n/60):'');}
+function applyFlowEdit(){const r=flowList[flowIdx].obj;r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;save();dlgEnd();flowShow(true);}
 function flowDone(){
-  const r=flowList[flowIdx];const sec=Math.round(flowElapsed()/1000);
-  const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
-  dayLog(todayStr()).routines[r.id]={done:true,sec};
-  r.stats={n:st.n+1,total:st.total+sec};save();
-  if(prevAvg!==null&&sec>0){
-    if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');
-    else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
-  flowList.splice(flowIdx,1);flowAfterRemove();}
-function flowDefer(){if(flowList.length<=1){toast('これが最後のルーティンです');return;}
-  const r=flowList.splice(flowIdx,1)[0];flowList.push(r);
-  if(flowIdx>=flowList.length||flowList[flowIdx]===r)flowIdx=0;
+  const it=flowList[flowIdx];const r=it.obj;const sec=Math.round(flowElapsed()/1000);
+  if(it.type==='r'){const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
+    dayLog(todayStr()).routines[r.id]={done:true,sec};r.stats={n:st.n+1,total:st.total+sec};save();
+    if(prevAvg!==null&&sec>0){if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
+  }else{r.status='done';r.doneAt=todayStr();save();}
+  flowAdvance();}
+function flowAdvance(){flowIdx++;
+  if(flowIdx>=flowList.length){flowClose();return celebrateIfAll();}
   flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
-function flowHardSkip(){flowList.splice(flowIdx,1);flowAfterRemove();}
-function flowAfterRemove(){
-  if(!flowList.length){flowClose();return celebrateIfAll();}
-  if(flowIdx>=flowList.length)flowIdx=flowList.length-1;
+function flowPrev(){if(flowIdx<=0)return;flowIdx--;flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
+function flowDefer(){if(flowList.length<=1){toast('これで最後です');return;}
+  const it=flowList.splice(flowIdx,1)[0];flowList.push(it);
+  if(flowIdx>=flowList.length)flowIdx=0;
   flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
+function flowHardSkip(){flowAdvance();}
 function celebrateIfAll(){render();checkCelebrate();}
 function flowClose(){clearInterval(flowTimer);flowList=[];localStorage.removeItem(FLOWKEY);$('#flow').classList.remove('show');render();}
+function updateFlowBar(){const bar=$('#flowbar');if(!bar)return;
+  if(flowList.length&&!$('#flow').classList.contains('show')){const it=flowList[flowIdx];
+    bar.innerHTML=`<span>⏱ 実行中：${esc(it.obj.title)}</span><button onclick="flowResume()">▶ 再開</button>`;bar.classList.add('show');}
+  else bar.classList.remove('show');}
 
 /* ========================= 設定 ========================= */
 let setPage='';
@@ -1651,7 +1677,13 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.10（2026-07-20）</b><br>
+  <div class="mini"><b>v1.11（2026-07-20）</b><br>
+  ・おはようスタートに<b>タスクも一緒に</b>含めて計測（ルーティン＋タスク）<br>
+  ・フロー中に「◀戻る（前へ）」を追加。タップするまで自動で進まず計測を継続<br>
+  ・フローを「最小化」して別画面（タスク追加・並び替え・予定編集）に行き来→下の帯から再開<br>
+  ・タスク詳細で優先度を「4つの箱」の選択に置き換え<br>
+  ・アプリ内のダブルタップ拡大を無効化<br>
+  <b>v1.10（2026-07-20）</b><br>
   ・ルーティンの並び替えを「選択→右下の▲▼でまとめて移動」に刷新（となり合う複数選択に対応）。並び替えで画面が上に戻らないよう修正<br>
   ・おはようスタート中に「次以降のルーティン（3つ）」を表示<br>
   <b>v1.9（2026-07-20）</b><br>
