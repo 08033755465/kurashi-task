@@ -118,8 +118,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* 縦タイムライン（#6・B案：左＝配置済み／右＝未配置プール） */
 .tlwrap{display:flex;gap:8px;margin:8px 12px 4px;align-items:flex-start;}
 .tl{position:relative;flex:1;min-width:0;}
-.tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #EDEFF2;}
-.tl .tlhr.m{border-top:1px dashed #F1F2F4;}
+.tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
+.tl .tlhr.m{border-top:1px dashed #D8DCE2;}
+.tl .tltask.shifted{border-left-style:dashed;}
 .tl .tlhrlab{position:absolute;left:0;width:40px;font-size:10px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums;}
 .tl .tlzone{position:absolute;left:44px;right:0;opacity:.55;}
 .tl .tlzlab{position:absolute;left:48px;font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.85;}
@@ -1179,7 +1180,7 @@ function doItemRow(it,t){
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
 /* ===== 時間ヘルパー & 朝昼夜の配分（#5）／縦タイムライン（#6） ===== */
-const TL_PX=1.6; // タイムラインの1分あたりの高さ(px)
+const TL_PX=2.0; // タイムラインの1分あたりの高さ(px)
 const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
 const curMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes();};
 function dayBounds(t){let w=hm2min(dayWake(t)),s=hm2min(daySleep(t));if(s<=w)s+=1440;return {w,s};}
@@ -1217,7 +1218,11 @@ function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
   const pool=live.filter(it=>at[tokOf(it)]==null);
   const nowM=curMin();
   const blocks=[];
-  placed.forEach(p=>{const vis=Math.max(p.est,MINMIN);blocks.push({it:p.it,est:p.est,top:p.at,h:vis*PX,over:p.at+p.est>s,pinned:true});});
+  // 重ならないよう、配置済みを時刻順に「後ろへずらして」表示（かぶって消えるのを防ぐ）
+  let prevEnd=-Infinity;
+  placed.forEach(p=>{const vis=Math.max(p.est,MINMIN);const top=Math.max(p.at,prevEnd);
+    blocks.push({it:p.it,est:p.est,top,h:vis*PX,over:top+p.est>s,pinned:true,shifted:top>p.at+0.5});
+    prevEnd=top+vis;});
   all.filter(it=>flowItemDone(it)).forEach(it=>{const dm=doneMinOf(it,t);if(dm==null)return;
     const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
     blocks.push({it,est,top:dm,h:vis*PX,done:true});});
@@ -1232,8 +1237,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
   const placing=!!(placeToks&&placeToks.length);
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}`;
-    return `<div class="${cls}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="todayItemMenu('${tk}')"`}>
-      <span class="tltt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="todayItemMenu('${tk}')"`}>
+      <span class="tltt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const nowLine=(t===todayStr()&&nowM>w&&nowM<bottom)?`<div class="tlnow" style="top:${y(nowM)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(s)}</span></div>`;
   const overAny=placed.some(p=>p.at+p.est>s);
@@ -2354,7 +2359,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.36（2026-07-21）</b><br>
+  <div class="mini"><b>v1.37（2026-07-21）</b><br>
+  ・タイムラインの<b>10分の目盛り線をはっきり</b>表示<br>
+  ・タイムラインの<b>縦を広げて</b>見やすく（タスクの高さに余裕）<br>
+  ・配置したタスクが<b>重なって消えないよう自動で後ろへずらして</b>表示（ずれたものは「↓」と点線で表示）<br>
+  <b>v1.36（2026-07-21）</b><br>
   ・iPhone（ダイナミックアイランド/時計）に画面上部が隠れないよう調整。上部に不透明の余白を設け、スクロール中もコンテンツが時計側に潜り込まないようにしました<br>
   <b>v1.35（2026-07-21）</b><br>
   ・タイムラインを<b>「組み立て式」</b>に刷新：右の<b>未配置</b>から選び、左のタイムラインで時間をタップして置く（<b>10分刻み</b>）。置いたものが左に並びます。複数選んで「まとめて置く」も可<br>
