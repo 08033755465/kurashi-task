@@ -389,6 +389,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
 .reorderfab span{font-size:12px;letter-spacing:.05em;}
 .reorderfab button{color:#fff;border:1px solid #4A4F58;width:42px;height:42px;font-size:18px;}
+.reorderfab button.decide{width:auto;padding:0 16px;font-size:14px;font-weight:700;background:var(--accent);border-color:var(--accent);}
 #flow .fnext{font-size:13px;color:#9AA1AD;margin-top:18px;width:100%;max-width:340px;text-align:left;}
 #flow .fnexth{font-size:11px;letter-spacing:.15em;color:#7A8089;margin-bottom:4px;}
 #flow .fnexti{padding:7px 2px;border-top:1px solid #24282F;color:#C6CAD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -887,9 +888,8 @@ function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
-  if(v!=='today'){todayReorder=false;todaySel=[];todayPlaceMode=false;}
-  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;taskActiveRow=null;}
-  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskPlaceMode=false;}
+  if(v!=='today'){todayReorder=false;todaySel=[];}
+  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;}
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();}
 function render(){
   const el=$('#view');const sy=window.scrollY;
@@ -1111,40 +1111,34 @@ function doItemRow(it,t){
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
-/* ===== 今日やることの並び替え（選択＋▲▼／選んだ順に指定の行の下へ配置） ===== */
-let todayReorder=false,todaySel=[],todayPlaceMode=false;
-function enterTodayReorder(){todayReorder=true;todaySel=[];todayPlaceMode=false;render();}
-function exitTodayReorder(){todayReorder=false;todaySel=[];todayPlaceMode=false;render();}
+/* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
+let todayReorder=false,todaySel=[];
+function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
+function exitTodayReorder(){todayReorder=false;todaySel=[];render();}
 function todayTokens(){return doItems(todayStr()).map(it=>it.type+'_'+it.obj.id);}
 function tglTodaySel(tok){const i=todaySel.indexOf(tok);i>=0?todaySel.splice(i,1):todaySel.push(tok);render();}
 function todayReorderHtml(list){
-  return `<div class="mini">${todayPlaceMode
-    ?'📍 置きたい場所の行をタップ（その<b>下</b>に、選んだ順で入ります）'
-    :'動かす項目をタップで選択（選んだ順に番号が付きます）。右下の▲▼で移動、または「配置」で好きな場所へ。'}</div>
+  return `<div class="mini">動かす項目をタップ（選んだ順に番号）。<b>「決定」</b>で先頭の番号の下にまとめて並びます。▲▼は微調整用。</div>
   ${list.map(it=>{const tok=it.type+'_'+it.obj.id;const n=todaySel.indexOf(tok);const isSel=n>=0;const done=flowItemDone(it);
-    return `<div class="rrow ${isSel?'sel':''} ${done?'done':''}" onclick="${todayPlaceMode?(isSel?'':`placeTodayAfter('${tok}')`):`tglTodaySel('${tok}')`}">
+    return `<div class="rrow ${isSel?'sel':''} ${done?'done':''}" onclick="tglTodaySel('${tok}')">
       <span class="rnum">${isSel?n+1:''}</span>
       <span class="rttl">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span>${done?'<span class="rdone">✓完了</span>':''}</div>`;}).join('')}
-  ${todaySel.length&&!todayPlaceMode?`<div class="reorderfab">
+  ${todaySel.length?`<div class="reorderfab">
     <span>${todaySel.length}件</span>
     <button onclick="moveTodayBlock(-1)">▲</button><button onclick="moveTodayBlock(1)">▼</button>
-    <button onclick="startPlaceMode()">配置</button></div>`:''}
-  ${todayPlaceMode?`<div class="reorderfab"><span>置き場所を選ぶ</span><button onclick="startPlaceTop()">先頭</button><button onclick="todayPlaceMode=false;render()">やめる</button></div>`:''}`;}
-function startPlaceMode(){if(!todaySel.length)return;todayPlaceMode=true;render();}
+    <button class="decide" onclick="decideToday()">決定</button></div>`:''}`;}
 function moveTodayBlock(dir){if(!todaySel.length)return;let toks=todayTokens();
   const idx=todaySel.map(tk=>toks.indexOf(tk)).filter(i=>i>=0).sort((a,b)=>a-b);
-  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続した項目のみ。バラのときは「配置」で移動できます');return;}
+  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続した項目のみ。バラバラのときは「決定」でまとめられます');return;}
   const lo=idx[0],hi=idx[idx.length-1];const block=toks.slice(lo,hi+1);
   if(dir<0){if(lo<=0)return;const above=toks[lo-1];toks.splice(lo-1,hi-lo+2,...block,above);}
   else{if(hi>=toks.length-1)return;const below=toks[hi+1];toks.splice(lo,hi-lo+2,below,...block);}
   dayLog(todayStr()).doOrder=toks;save();render();}
-function placeTodayAfter(targetTok){const sel=todaySel.slice();if(!sel.length)return;
-  let toks=todayTokens().filter(tk=>!sel.includes(tk));
-  const pos=toks.indexOf(targetTok);toks.splice(pos+1,0,...sel);
-  dayLog(todayStr()).doOrder=toks;todaySel=[];todayPlaceMode=false;save();render();}
-function startPlaceTop(){const sel=todaySel.slice();if(!sel.length)return;
-  let toks=todayTokens().filter(tk=>!sel.includes(tk));toks.unshift(...sel);
-  dayLog(todayStr()).doOrder=toks;todaySel=[];todayPlaceMode=false;save();render();}
+function decideToday(){const sel=todaySel.slice();if(!sel.length)return;
+  const orig=todayTokens();const anchorIdx=orig.indexOf(sel[0]);
+  const before=orig.slice(0,anchorIdx).filter(tk=>!sel.includes(tk)).length;
+  const rest=orig.filter(tk=>!sel.includes(tk));rest.splice(before,0,...sel);
+  dayLog(todayStr()).doOrder=rest;todaySel=[];save();render();}
 /* ===== 今日のルーティンを組む（パターン保存・適用） ===== */
 let _composeSel=new Set();
 function composeToday(){const t=todayStr();
@@ -1318,39 +1312,34 @@ function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
     if(ai>=0)ids.splice(ai+1,0,id);else ids.push(id);
     commitTaskOrder(ids);taskAnchorId=id;}
   save();render();}
-/* ===== タスクタブ「手動」並び替え（選択＋▲▼／選んだ順に指定の行の下へ配置） ===== */
-let taskReorder=false,taskRSel=[],taskPlaceMode=false;
-function enterTaskReorder(){taskReorder=true;taskRSel=[];taskPlaceMode=false;render();}
-function exitTaskReorder(){taskReorder=false;taskRSel=[];taskPlaceMode=false;render();}
+/* ===== タスクタブ「手動」並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
+let taskReorder=false,taskRSel=[];
+function enterTaskReorder(){taskReorder=true;taskRSel=[];render();}
+function exitTaskReorder(){taskReorder=false;taskRSel=[];render();}
 function manualTaskIds(){return S.tasks.filter(x=>x.status!=='done')
   .sort((a,b)=>(a.torder??1e9)-(b.torder??1e9)||a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')).map(x=>x.id);}
 function commitTaskOrder(ids){ids.forEach((id,i)=>{const x=S.tasks.find(t=>t.id===id);if(x)x.torder=i;});save();}
 function tglTaskRSel(id){const i=taskRSel.indexOf(id);i>=0?taskRSel.splice(i,1):taskRSel.push(id);render();}
 function taskReorderHtml(list){
-  return `<div class="mini">${taskPlaceMode
-    ?'📍 置きたい場所の行をタップ（その<b>下</b>に、選んだ順で入ります）'
-    :'動かすタスクをタップで選択（選んだ順に番号）。右下の▲▼で移動、「配置」で好きな場所へ。'}</div>
+  return `<div class="mini">動かすタスクをタップ（選んだ順に番号）。<b>「決定」</b>で先頭の番号の下にまとめて並びます。▲▼は微調整用。</div>
   ${list.map(x=>{const n=taskRSel.indexOf(x.id);const isSel=n>=0;
-    return `<div class="rrow ${isSel?'sel':''}" onclick="${taskPlaceMode?(isSel?'':`placeTaskAfter('${x.id}')`):`tglTaskRSel('${x.id}')`}">
+    return `<div class="rrow ${isSel?'sel':''}" onclick="tglTaskRSel('${x.id}')">
       <span class="rnum">${isSel?n+1:''}</span><span class="rttl">${esc(x.title)}</span></div>`;}).join('')}
-  ${taskRSel.length&&!taskPlaceMode?`<div class="reorderfab"><span>${taskRSel.length}件</span>
+  ${taskRSel.length?`<div class="reorderfab"><span>${taskRSel.length}件</span>
     <button onclick="moveTaskBlock(-1)">▲</button><button onclick="moveTaskBlock(1)">▼</button>
-    <button onclick="taskPlaceMode=true;render()">配置</button></div>`:''}
-  ${taskPlaceMode?`<div class="reorderfab"><span>置き場所を選ぶ</span><button onclick="placeTaskTop()">先頭</button><button onclick="taskPlaceMode=false;render()">やめる</button></div>`:''}`;}
+    <button class="decide" onclick="decideTask()">決定</button></div>`:''}`;}
 function moveTaskBlock(dir){if(!taskRSel.length)return;let ids=manualTaskIds();
   const idx=taskRSel.map(id=>ids.indexOf(id)).filter(i=>i>=0).sort((a,b)=>a-b);
-  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続したタスクのみ。バラのときは「配置」で');return;}
+  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続したタスクのみ。バラバラのときは「決定」でまとめられます');return;}
   const lo=idx[0],hi=idx[idx.length-1];const block=ids.slice(lo,hi+1);
   if(dir<0){if(lo<=0)return;const above=ids[lo-1];ids.splice(lo-1,hi-lo+2,...block,above);}
   else{if(hi>=ids.length-1)return;const below=ids[hi+1];ids.splice(lo,hi-lo+2,below,...block);}
   commitTaskOrder(ids);render();}
-function placeTaskAfter(target){const sel=taskRSel.slice();if(!sel.length)return;
-  let ids=manualTaskIds().filter(id=>!sel.includes(id));
-  const pos=ids.indexOf(target);ids.splice(pos+1,0,...sel);
-  commitTaskOrder(ids);taskRSel=[];taskPlaceMode=false;render();}
-function placeTaskTop(){const sel=taskRSel.slice();if(!sel.length)return;
-  let ids=manualTaskIds().filter(id=>!sel.includes(id));ids.unshift(...sel);
-  commitTaskOrder(ids);taskRSel=[];taskPlaceMode=false;render();}
+function decideTask(){const sel=taskRSel.slice();if(!sel.length)return;
+  const orig=manualTaskIds();const anchorIdx=orig.indexOf(sel[0]);
+  const before=orig.slice(0,anchorIdx).filter(id=>!sel.includes(id)).length;
+  const rest=orig.filter(id=>!sel.includes(id));rest.splice(before,0,...sel);
+  commitTaskOrder(rest);taskRSel=[];render();}
 async function clearDone(){if(!await uiConfirm('完了済みタスクをすべて削除しますか？','削除'))return;
   S.tasks=S.tasks.filter(x=>x.status!=='done');save();render();}
 
@@ -2160,7 +2149,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.31（2026-07-21）</b><br>
+  <div class="mini"><b>v1.32（2026-07-21）</b><br>
+  ・並び替えを分かりやすく刷新：「配置」を廃止し<b>「決定」</b>ボタンに一本化。動かしたい項目をタップ（選んだ順に番号）→「決定」で<b>先頭の番号の下にまとめて整列</b>。今日タブ・タスクタブで共通の操作に<br>
+  ・並び替え中に画面が上に戻らないよう改善<br>
+  <b>v1.31（2026-07-21）</b><br>
   ・今日の画面：<b>朝・昼・夜</b>を左端の細い色線で表示（金＝朝／橙＝昼／紫＝夜）。1日のどの時間帯のタスクか一目で分かる<br>
   ・<b>昨日までの繰り越し</b>を今日のタスクと合体表示。繰り越し分は「昨日」タグで区別<br>
   ・各行に<b>ルーティン／タスク</b>の種別タグを追加<br>
