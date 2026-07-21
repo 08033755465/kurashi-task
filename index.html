@@ -131,6 +131,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tltask .tltm{font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums;}
 .tl .tltask.over{background:#FCECEA;border-left-color:var(--danger)!important;}
 .tl .tltask.over .tltm{color:var(--danger);}
+.tl .tltask.tlsel{outline:2.5px solid var(--accent);outline-offset:-1px;z-index:3;font-weight:700;}
+.tl .tlev.tlsel{outline:2.5px solid var(--ink);outline-offset:-1px;z-index:3;}
+.poolitem.sel{outline:2.5px solid var(--accent);}
+/* タイムライン下部の一括操作バー */
+.tlbar{position:sticky;bottom:calc(env(safe-area-inset-bottom) + 4px);z-index:60;margin:8px 12px;background:var(--ink);color:#fff;padding:9px 12px;border-radius:12px !important;box-shadow:0 6px 20px rgba(0,0,0,.28);}
+.tlbar.ev{background:#3A3D42;}
+.tlbar .tlbn{font-size:12px;font-weight:700;display:block;margin-bottom:7px;opacity:.9;}
+.tlbar .tlbtns{display:flex;gap:6px;flex-wrap:wrap;}
+.tlbar .tlbtns button{flex:1 1 auto;min-width:62px;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px !important;padding:9px 6px;font-size:12.5px;font-weight:600;background:rgba(255,255,255,.06);}
+.tlbar .tlbtns button.cl{flex:0 0 auto;min-width:40px;}
 .tl .tltask.done{opacity:.42;background:#F4F5F7;box-shadow:none;z-index:1;}
 .tl .tltask.done .tltt{text-decoration:line-through;}
 .tl.placing{cursor:pointer;outline:2px dashed var(--accent);outline-offset:-2px;}
@@ -1014,7 +1024,7 @@ function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
-  if(v!=='today'){todayReorder=false;todaySel=[];}
+  if(v!=='today'){todayReorder=false;todaySel=[];tlSel=[];tlEvSel=null;placeToks=null;}
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;}
   const toNow=(v==='today'&&S.settings.timeline); // 今日タブ(タイムライン)は「今」へ寄せる
   if(toNow)_tlPendingScroll=true;
@@ -1119,7 +1129,7 @@ function renderToday(){
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>`}　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="addTodayItem()">＋追加</button>`}</div>
+      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>　<button class="act" onclick="enterTodayReorder()">並び替え</button>`}　<button class="act" style="color:var(--accent);" onclick="addTodayItem()">＋追加</button>`}</div>
     ${todayReorder?todayReorderHtml(doList):(S.settings.timeline?todayTimelineHtml(t):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
@@ -1350,14 +1360,14 @@ function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
   const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=hm2min(e.start),b=e.end?hm2min(e.end):a+30;const top=y(a),h=Math.max(18,(Math.min(b,s)-a)*PX);
     const bg=evColor(e),tc=evTextColor(bg);
-    return `<div class="tlev" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left-color:${bg};" onclick="eventTap('${e.id}')"><b>${min2hm(a)}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
+    return `<div class="tlev${tlEvSel===e.id?' tlsel':''}" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left-color:${bg};" ${placing?'':`onclick="tlTapEv('${e.id}')"`}><b>${min2hm(a)}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
   const logH=logs.slice().sort((a,b)=>a.at-b.at).map(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;const top=y(l.at);const h=Math.max(20,(l.dur||0)*PX);
     return `<div class="tllog" style="top:${top}px;min-height:${h-2}px;border-left-color:${k.c};" onclick="logEditor('${l.id}')"><span class="lgi">${k.i}</span><span class="lgx">${esc(l.text)}</span>${l.dur?`<span class="lgd">${fmtMin(l.dur)}</span>`:''}</div>`;}).join('');
   const placing=!!(placeToks&&placeToks.length);
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
-    const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}`;
-    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="todayItemMenu('${tk}')"`}>
-      <span class="tltt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+    const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}`;
+    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing||bl.done?'':`onclick="tlTapTask('${tk}')"`}>
+      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const nowLine=(t===todayStr()&&nowM>w&&nowM<bottom)?`<div class="tlnow" style="top:${y(nowM)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(s)}</span></div>`;
   const overAny=placed.some(p=>p.at+p.est>s);
@@ -1365,19 +1375,35 @@ function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
   // 右：未配置プール
   const poolHtml=`<div class="tlpool">
     <div class="tlpoolh">未配置 ${pool.length}件${poolMin?'・'+fmtMin(poolMin):''}</div>
-    ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing&&placeToks.includes(tk);
-      return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" onclick="tapPool('${tk}')">
-        <span class="pt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
+    ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing?placeToks.includes(tk):tlSel.includes(tk);
+      return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
+        <span class="pt">${sel?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
       :'<div class="poolempty">すべて配置済み🎉</div>'}
-    ${pool.length>1?`<button class="poolall" onclick="startPlace(${JSON.stringify(pool.map(tokOf)).replace(/"/g,'&quot;')})">まとめて置く</button>`:''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・10分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
+  const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
+  const actionBar=selCount?`<div class="tlbar">
+    <span class="tlbn">${selCount}件選択</span>
+    <div class="tlbtns">
+      <button onclick="tlDoComplete()">✓ 完了</button>
+      <button onclick="tlDoPlace()">🕐 時間</button>
+      <button onclick="tlDoTomorrow()">→ 明日</button>
+      <button onclick="tlDoHide()">🗂 隠す</button>
+      ${one?`<button onclick="tlDoEdit()">✎ 編集</button>${dayLog(t).at&&dayLog(t).at[one]!=null?`<button onclick="tlDoUnpin()">⟲ 未配置</button>`:''}`:''}
+      <button class="cl" onclick="tlClearSel()">✕</button>
+    </div></div>`:'';
+  const evBar=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
+    return `<div class="tlbar ev"><span class="tlbn">${esc(evTitle(e))}</span><div class="tlbtns">
+      <button onclick="eventModal('${e.id}');tlEvSel=null;">✎ 編集</button>
+      <button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button>
+      <button onclick="delEvent('${e.id}');tlEvSel=null;">🗑 削除</button>
+      <button class="cl" onclick="tlEvSel=null;render();">✕</button></div></div>`;})():'';
   return `${hint}<div class="tlwrap">
     <div class="tl${placing?' placing':''}" style="height:${H}px" ${placing?'onclick="placeAtClick(event)"':''}>${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
-    ${poolHtml}</div>
+    ${poolHtml}</div>${actionBar}${evBar}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
-      :(pool.length?`<div class="mini" style="padding:2px 16px 8px;">右の「未配置」をタップ →左のタイムラインで時間をタップすると、その時間に置けます（10分刻み）。</div>`
-        :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>')}`;}
+      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作（完了・時間指定・明日など）。予定はタップでメニュー。</div>`
+        :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
@@ -1392,6 +1418,21 @@ function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayS
     dl.at[tk]=mn;mn+=Math.max(est,10);}); // 複数は続けて配置
   placeToks=null;save();render();toast('配置しました');}
 function unpinItem(tok){const dl=dayLog(todayStr());if(dl.at){delete dl.at[tok];save();render();toast('未配置に戻しました');}}
+/* ===== タイムラインのタップ＝複数選択→下のバーで一括操作（⑥⑦⑧⑨） ===== */
+let tlSel=[],tlEvSel=null;
+function tlTapTask(tk){tlEvSel=null;const i=tlSel.indexOf(tk);i>=0?tlSel.splice(i,1):tlSel.push(tk);render();}
+function tlTapEv(id){tlSel=[];tlEvSel=(tlEvSel===id?null:id);render();}
+function tlClearSel(){tlSel=[];tlEvSel=null;render();}
+function tlDoComplete(){const t=todayStr();tlSel.forEach(tk=>{const type=tk[0],id=tk.slice(2);
+  if(type==='r'){const log=dayLog(t);if(!log.routines[id]?.done){log.routines[id]={...(log.routines[id]||{}),done:true,doneMin:curMin()};sinkDoItem(tk);}}
+  else{const x=S.tasks.find(v=>v.id===id);if(x&&x.status!=='done'){x.status='done';x.doneAt=t;x.doneMin=curMin();sinkDoItem(tk);advanceRepeatTask(x);}}});
+  const n=tlSel.length;tlSel=[];save();render();checkCelebrate();toast(n+'件を完了にしました');}
+function tlDoPlace(){if(!tlSel.length)return;const s=tlSel.slice();tlSel=[];startPlace(s);}
+function tlDoTomorrow(){const n=tlSel.length;tlSel.forEach(applyTomorrow);tlSel=[];save();render();toast(n+'件を明日へ送りました');}
+function tlDoHide(){const n=tlSel.length;tlSel.forEach(applyHideToday);tlSel=[];save();render();toast(n+'件を今日は隠しました');}
+function tlDoEdit(){if(tlSel.length!==1)return;const tk=tlSel[0],type=tk[0],id=tk.slice(2);tlSel=[];
+  type==='r'?routineModal(id):taskModal(id);}
+function tlDoUnpin(){if(tlSel.length!==1)return;const tk=tlSel[0];tlSel=[];unpinItem(tk);}
 /* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let todayReorder=false,todaySel=[];
 function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
@@ -1941,17 +1982,18 @@ function todayItemMenu(tok){const type=tok.slice(0,1),id=tok.slice(2);
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
-function actHideToday(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
+function applyHideToday(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
   if(type==='t'){const x=S.tasks.find(v=>v.id===id);if(x)x.snooze=t;}
-  else{const dl=dayLog(t);dl.hiddenR=[...new Set([...(dl.hiddenR||[]),id])];}
-  save();closeSheet();render();toast('今日は隠しました（未完了に数えません）');}
-function actTomorrow(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr(),tm=tomorrowStr();
+  else{const dl=dayLog(t);dl.hiddenR=[...new Set([...(dl.hiddenR||[]),id])];}}
+function applyTomorrow(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr(),tm=tomorrowStr();
+  const at=dayLog(t).at;if(at)delete at[tok];
   if(type==='t'){const x=S.tasks.find(v=>v.id===id);if(x){x.today=tm;x.snooze=null;
     const dl=dayLog(tm);const k='t_'+id;dl.doOrder=[k,...(dl.doOrder||[]).filter(o=>o!==k)];}}
   else{const dl0=dayLog(t);dl0.hiddenR=[...new Set([...(dl0.hiddenR||[]),id])];
     const dl=dayLog(tm);dl.extraR=[...new Set([...(dl.extraR||[]),id])];
-    const k='r_'+id;dl.doOrder=[k,...(dl.doOrder||[]).filter(o=>o!==k)];}
-  save();closeSheet();render();toast('明日へ送りました');}
+    const k='r_'+id;dl.doOrder=[k,...(dl.doOrder||[]).filter(o=>o!==k)];}}
+function actHideToday(tok){applyHideToday(tok);save();closeSheet();render();toast('今日は隠しました（未完了に数えません）');}
+function actTomorrow(tok){applyTomorrow(tok);save();closeSheet();render();toast('明日へ送りました');}
 function restoreHidden(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
   if(type==='t'){const x=S.tasks.find(v=>v.id===id);if(x&&x.snooze===t)x.snooze=null;}
   else{const dl=dayLog(t);dl.hiddenR=(dl.hiddenR||[]).filter(x=>x!==id);}
