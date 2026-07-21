@@ -151,6 +151,19 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tlsleep{position:absolute;left:44px;right:0;border-top:2px dashed #7B5EC7;z-index:3;}
 .tl .tlsleep span{position:absolute;left:-44px;top:-8px;font-size:9.5px;color:#7B5EC7;font-weight:700;background:#fff;padding:0 2px;}
 .tlwarn{margin:2px 16px 10px;padding:8px 11px;background:#FCECEA;border-left:3px solid var(--danger);font-size:12px;color:#8A2A24;line-height:1.5;}
+/* 配色パレット選択 */
+.palgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:2px 16px 6px;}
+.palcard{border:1px solid var(--line);padding:8px;text-align:left;display:flex;flex-direction:column;gap:6px;}
+.palcard.on{border-color:var(--ink);border-width:2px;padding:7px;}
+.palsw{display:flex;gap:0;height:20px;overflow:hidden;}
+.palsw span{flex:1;}
+.palsw span.hi{flex:1.3;}
+.palname{font-size:11.5px;color:var(--ink);}
+/* カレンダーの色付き予定ブロック（週ビュー等） */
+.cev{padding:4px 7px;margin-bottom:3px;display:flex;flex-direction:column;gap:1px;}
+.cev.imp{font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.14);}
+.cev .cevt{font-size:11.5px;line-height:1.25;word-break:break-word;}
+.cev .cevm{font-size:9.5px;font-variant-numeric:tabular-nums;}
 .rfilter{display:flex;gap:5px;padding:2px 16px 8px;overflow-x:auto;}
 .rfilter button{flex:0 0 auto;min-width:30px;padding:5px 9px;font-size:12px;border:1px solid var(--line);color:var(--sub);background:var(--card,#fff);}
 .rfilter button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
@@ -590,6 +603,22 @@ const QUADS=[
  {t:'サッと片付ける',s:'緊急×重要でない',c:'#D98324'},
  {t:'スキマにやる',s:'どちらでもない',c:'#7A7F8C'}];
 const PASTELS=[{c:'#FBE3E8',n:'もも'},{c:'#FCEFD9',n:'あんず'},{c:'#FBF6D3',n:'れもん'},{c:'#E1F1DC',n:'わかば'},{c:'#DDEBF9',n:'そら'},{c:'#E8E2F5',n:'ふじ'}];
+/* 予定の配色パレット（設定で選択・重要はhi＝彩度高め） */
+const PALETTES={
+  earth:{name:'アース（緑×テラコッタ）',light:['#B7BF96','#C6C09C','#EBDEC0','#E6B5A6','#FCC88A','#9FB0A0'],hi:'#E25439'},
+  lover:{name:'ラバー（青×ピンク）',light:['#8DB6D8','#AEC1E0','#D9B9DC','#EFCBE1','#F0D0C5','#E6A5C1'],hi:'#8B4162'},
+  candy:{name:'キャンディブルー',light:['#94C2DA','#F7ACC6','#C4E87D','#B7D8E8','#F9C6D6','#D6E9A6'],hi:'#EB4797'},
+  ponyo:{name:'ポニョ（海と空）',light:['#99BFD5','#AFC7DA','#ECCCA6','#F7A088','#C9DDE9','#F4B6A6'],hi:'#E95C6C'},
+  notting:{name:'ノッティングヒル',light:['#D6B1BB','#CFDBE7','#9EBDB8','#E0DABA','#C6C5DD','#9CABC8'],hi:'#8DA0C0'},
+  fruit:{name:'フルーツ（明るめ）',light:['#E7E3C4','#BDD07A','#EFD59A','#E7A9BE','#F0DCC0','#D5C48A'],hi:'#C4306B'},
+};
+function curPalette(){return PALETTES[S.settings.palette]||PALETTES.earth;}
+function hashStr(s){let h=0;s=s||'';for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
+function evColor(e){const p=curPalette();if(e&&e.important)return p.hi;
+  const key=(e&&(e.colorKey||e.groupId||e.id))||'';return p.light[hashStr(key)%p.light.length];}
+function isLight(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return true;const n=parseInt(m[1],16);
+  const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>150;}
+function evTextColor(bg){return isLight(bg)?'#3A3D42':'#fff';}
 const SLOTS={morning:'朝',day:'昼',night:'夜',any:'いつでも'};
 const STATUS={todo:'未着手',doing:'進行中',wait:'相手待ち',done:'完了'};
 /* 線画マーク: 5カテゴリ×10種 */
@@ -697,6 +726,7 @@ function migrate(){const st=S.settings;
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(st.dense===undefined)st.dense=true;
   if(st.timeline===undefined)st.timeline=true;
+  if(!st.palette||!PALETTES[st.palette])st.palette='earth';
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
@@ -1050,10 +1080,9 @@ function renderToday(){
   </div>
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
-  ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${scheduleListHtml(evs,dayWake(t))}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>`}　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
+      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>`}　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="addTodayItem()">＋追加</button>`}</div>
     ${todayReorder?todayReorderHtml(doList):(S.settings.timeline?todayTimelineHtml(t):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
@@ -1068,6 +1097,15 @@ function renderToday(){
       <div class="body"><div class="tt" style="color:var(--sub);">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</div></div>
       <div class="right"><button class="todayBtn" onclick="restoreHidden('${it.type}_${it.obj.id}')">戻す</button></div></div>`).join('')}</div>`:'';})()}`;
 }
+function addTodayItem(){const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">今日に追加</div><div class="actsheet">
+    <button onclick="closeSheet();taskModal(null,'',true)">✔ タスクを追加（今日）</button>
+    <button onclick="closeSheet();routineModal(null)">🔁 ルーティンを追加</button>
+    <button onclick="closeSheet();eventModal(null,todayStr())">📅 予定を追加</button>
+    <button onclick="closeSheet();switchView('tasks')">＋ 既存のタスクから選ぶ</button></div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function linkChips(links){if(!links||!links.length)return'';
   return `<div class="linkchips">${links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${esc(l.label||l.url)}</a>`).join('')}</div>`;}
 function editDayTimes(){const t=todayStr();const now=new Date();const nowHm=pad(now.getHours())+':'+pad(now.getMinutes());
@@ -1233,7 +1271,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
     ticks+=`<div class="tlhr${hr?'':' m'}" style="top:${y(h)}px"></div>${hr?`<div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`:''}`;}
   const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=hm2min(e.start),b=e.end?hm2min(e.end):a+30;const top=y(a),h=Math.max(18,(Math.min(b,s)-a)*PX);
-    return `<div class="tlev" style="top:${top}px;height:${h}px" onclick="eventTap('${e.id}')"><b>${min2hm(a)}</b> ${esc(evTitle(e))}</div>`;}).join('');
+    const bg=evColor(e),tc=evTextColor(bg);
+    return `<div class="tlev" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left-color:${bg};" onclick="eventTap('${e.id}')"><b>${min2hm(a)}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
   const placing=!!(placeToks&&placeToks.length);
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}`;
@@ -1542,7 +1581,7 @@ function openLightbox(src){$('#lightbox').innerHTML=`<button class="lbclose" onc
 function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightbox').innerHTML='';}
 
 /* ===== task modal ===== */
-function taskModal(id,presetDue){
+function taskModal(id,presetDue,presetToday){
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
   editLinks=(x?.links||[]).map(l=>({...l}));editImages=(x?.images||[]).slice();
@@ -1558,7 +1597,7 @@ function taskModal(id,presetDue){
     <div class="frow"><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
     <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
       ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
+      <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()||(!x&&presetToday)?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
     <div class="frow" id="tmWaitRow" style="display:${x?.status==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(x?.waitNote||'')}" placeholder="例）B様の返信待ち"></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="tmPin" style="width:auto;" ${x?.pin?'checked':''}>
       <span style="font-size:13px;">終わるまで毎日「今日」に表示（なるはや・期限なしタスク向け）</span></div>
@@ -1619,11 +1658,11 @@ function scheduleListHtml(evs,wake){
   let cur=null,html='';
   sorted.forEach(e=>{const b=bandOf(e.start,wake);
     if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
-    const dn=dnColor(e)||group(e.groupId).color;
-    html+=`<div class="tl" onclick="eventModal('${e.id}')">
+    const bg=evColor(e);
+    html+=`<div class="tl" onclick="eventTap('${e.id}')">
       <div class="tlt">${e.start||'終日'}${e.end?`<small>〜${e.end}</small>`:''}</div>
-      <div class="tlbar" style="background:${dn}"></div>
-      <div class="tlb"><div class="tlname">${esc(evTitle(e))} ${repTag(e)}</div>
+      <div class="tlbar" style="background:${bg};width:6px;flex:0 0 6px;"></div>
+      <div class="tlb"><div class="tlname">${e.important?'★ ':''}${esc(evTitle(e))} ${repTag(e)}</div>
       <div class="tlg"><span class="gmark" style="${markCss(e.groupId)}"></span> ${esc(group(e.groupId).name)}</div>${e.memo?`<div class="memoline">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div></div>`;});
   return html;}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
@@ -1658,8 +1697,8 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:evTitle(e),c:group(e.groupId).color,due:0,time:e.start||'',dn:dnColor(e)})),
-                   ...dues.map(x=>({t:x.title,c:'',due:1,time:'',dn:''}))];
+      const items=[...evs.map(e=>({t:evTitle(e),c:evColor(e),imp:e.important,due:0,time:e.start||''})),
+                   ...dues.map(x=>({t:x.title,c:'',due:1,time:'',imp:0}))];
       const max=S.settings.monthMax||4;const shown=calMonthAll?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
       cells+=`<div class="cell ${out?'out':''} ${out&&S.settings.showAdjShade?'shade':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
@@ -1668,7 +1707,7 @@ function renderCal(){
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(calMonthAll&&it.time)?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:'';
-          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};${it.dn?`border-left:3px solid ${it.dn}`:''}"`}>${tf}${esc(it.t)}</div>`;}).join('')}
+          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};"`}>${tf}${it.imp?'★':''}${esc(it.t)}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
     body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -1689,7 +1728,7 @@ function renderCal(){
           ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>{const dn=dnColor(e);return `<div class="wev"><span class="c" style="${markCss(e.groupId)}"></span><span class="t">${e.start||'終日'}</span><span ${dn?`style="border-left:3px solid ${dn};padding-left:5px;"`:''}>${esc(evTitle(e))}</span>${repTag(e)}</div>`;}).join('')}
+          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};" onclick="event.stopPropagation();eventTap('${e.id}')"><div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}${repTag(e)}</div><div class="cevm" style="color:${tc};opacity:.8;">${e.start||'終日'}${e.end?'〜'+e.end:''}</div></div>`;}).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -1847,6 +1886,8 @@ function eventModal(id,presetDate){
     <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||'',{clear:true,next:'emEnd'})}</div>
       <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
     <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
+      <span style="font-size:13px;">★ 重要な予定（彩度の高い色で目立たせる）</span></div>
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     <div class="frow"><label>画像メモ（写真・スクショ）</label>${imagesEditorHtml()}</div>
@@ -1882,7 +1923,7 @@ async function delTmpl(id){if(!await uiConfirm('このテンプレを削除し�
 function saveEvent(id){
   const date=$('#emDate').value;if(!date){uiAlert('日付を選んでください');return;}
   const data={title:$('#emTitle').value.trim(),date,groupId:$('#emGroup').value,repeat:$('#emRepeat').value,
-    start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,links:collectLinks(),images:editImages.slice()};
+    start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,important:$('#emImp').checked,links:collectLinks(),images:editImages.slice()};
   if(id)Object.assign(S.events.find(e=>e.id===id),data);
   else S.events.push({id:uid(),...data});
   if($('#emTmpl').checked)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
@@ -1959,6 +2000,7 @@ let routineFilter=null; // null=すべて / 0-6=曜日 / 'daily'=毎日
 function routineOnWeekday(r,w){if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
   return (r.nths||[]).some(o=>o.d===w);}
 function setRoutineFilter(v){routineFilter=(routineFilter===v?null:v);render();}
+function setPalette(k){if(PALETTES[k]){S.settings.palette=k;save();render();toast('配色を「'+PALETTES[k].name+'」にしました');}}
 function renderRoutines(){
   let list=routineOrderedList();let cur='';
   if(routineFilter==='daily')list=list.filter(r=>(r.freq||'weekly')==='weekly'&&(r.days||[]).length===7);
@@ -2328,6 +2370,11 @@ function renderSettings(){
       ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
     <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>`;
   if(P==='event')return back+`<div class="vhead"><h1>予定・カテゴリ設定</h1></div>
+    <div class="sec-h">予定の配色パレット</div>
+    <div class="palgrid">${Object.entries(PALETTES).map(([k,p])=>`<button class="palcard ${S.settings.palette===k?'on':''}" onclick="setPalette('${k}')">
+      <div class="palsw">${p.light.slice(0,5).map(c=>`<span style="background:${c}"></span>`).join('')}<span class="hi" style="background:${p.hi}"></span></div>
+      <div class="palname">${S.settings.palette===k?'✓ ':''}${p.name}</div></button>`).join('')}</div>
+    <div class="mini">カレンダー・今日の予定の色に反映。右端の濃い色は「★重要な予定」に使われます。</div>
     <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）</div><div class="sd">${S.groups.length}件・階層と色系統</div></div><span style="color:var(--sub);">▸</span></div>
@@ -2359,7 +2406,13 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.37（2026-07-21）</b><br>
+  <div class="mini"><b>v1.38（2026-07-21）</b><br>
+  ・<b>予定の配色パレット</b>を6種類から選べるように（設定→予定・カテゴリ設定）。カレンダー・今日の予定の色に反映<br>
+  ・予定に<b>「★重要」</b>を追加。重要な予定は<b>彩度の高い色</b>で目立ちます<br>
+  ・カレンダー（週）を<b>色付きブロック</b>表示に（予定名＋時間）<br>
+  ・今日タブの右上「＋追加」から<b>タスク・ルーティン・予定</b>をその場で追加できるように<br>
+  ・今日タブの「今日の予定」欄は廃止（予定はタイムライン上でタップして詳細確認）<br>
+  <b>v1.37（2026-07-21）</b><br>
   ・タイムラインの<b>10分の目盛り線をはっきり</b>表示<br>
   ・タイムラインの<b>縦を広げて</b>見やすく（タスクの高さに余裕）<br>
   ・配置したタスクが<b>重なって消えないよう自動で後ろへずらして</b>表示（ずれたものは「↓」と点線で表示）<br>
