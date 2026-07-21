@@ -641,7 +641,8 @@ const HUES12=[
 ];
 function hashStr(s){let h=0;s=s||'';for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
 function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
-  const key=(e&&(e.groupId||e.id))||'';return hashStr(key)%HUES12.length;}
+  if(e&&e.groupId)return groupHue(e.groupId);
+  return hashStr((e&&e.id)||'')%HUES12.length;}
 function evColor(e){const h=HUES12[hueOf(e)];return (e&&e.important)?h.v:h.p;}
 function isLight(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return true;const n=parseInt(m[1],16);
   const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>150;}
@@ -758,6 +759,8 @@ function migrate(){const st=S.settings;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
+  S.groups.forEach((g,i)=>{if(g.hue==null)g.hue=i%HUES12.length;}); // 旧colorから12色パレットへ移行
+  S.tasks.forEach(x=>{if(x.repeat===undefined)x.repeat='';});
   (S.patterns||[]).forEach(p=>{if(!p.auto)p.auto='none';});
   (S.events||[]).forEach(e=>{if(e.repeat===undefined)e.repeat='';if(!e.images)e.images=[];});
   S.tasks.forEach(x=>{if(!x.images)x.images=[];});
@@ -770,9 +773,14 @@ function save(){S.updatedAt=Date.now();localStorage.setItem(LSKEY,JSON.stringify
 function group(id){return S.groups.find(g=>g.id===id)||{name:'—',color:'#B5BAC4'};}
 function groupPath(id){const g=S.groups.find(x=>x.id===id);if(!g)return'—';return g.parentId?groupPath(g.parentId)+' ▸ '+g.name:g.name;}
 function dayLog(d){if(!S.dayLog[d])S.dayLog[d]={routines:{}};return S.dayLog[d];}
+/* グループの色は12色パレット(HUES12)に統合。group.hue(0-11)、無ければidから自動 */
+function groupHue(id){const g=S.groups.find(x=>x.id===id);
+  if(g&&g.hue!=null&&HUES12[g.hue])return g.hue;
+  return hashStr(id||'')%HUES12.length;}
+function groupColor(id){return HUES12[groupHue(id)].p;}
 /* 親子の色を合体したグループマーク */
 function gchain(id){const out=[];let g=S.groups.find(x=>x.id===id);
-  while(g){out.unshift(g.color);g=S.groups.find(x=>x.id===g.parentId);}return out;}
+  while(g){out.unshift(HUES12[groupHue(g.id)].p);g=S.groups.find(x=>x.id===g.parentId);}return out;}
 function markCss(id,deg){const c=gchain(id);deg=deg||135;
   if(c.length===0)return 'background:#B5BAC4';
   if(c.length===1)return `background:${c[0]}`;
@@ -869,6 +877,7 @@ function attachCalSwipe(){
     if(view==='today'){const r=e.target.closest&&e.target.closest('[data-do]');if(r)dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do);}});}
 /* 予定の繰り返し */
 const REPEAT_LABEL={weekly:'毎週',biweekly:'隔週',monthly:'毎月'};
+const REPEAT_LABEL_T={daily:'毎日',weekly:'毎週',monthly:'毎月'};
 function eventOccursOn(e,dstr){
   if(!e.date)return false;
   if(!e.repeat)return e.date===dstr;
@@ -884,9 +893,9 @@ function repTag(e){return e.repeat?`<span class="rep">🔁${REPEAT_LABEL[e.repea
 async function addGroupInline(selId){
   const name=await uiPrompt('新しいカテゴリ名');if(name===null)return;
   const nm=name.trim();if(!nm)return;
-  const used=new Set(S.groups.map(g=>g.color));
-  const color=PALETTE.find(c=>!used.has(c))||PALETTE[Math.floor(S.groups.length%PALETTE.length)];
-  const g={id:uid(),name:nm,parentId:null,color};S.groups.push(g);save();
+  const used=new Set(S.groups.map(g=>g.hue));
+  let hue=0;for(let i=0;i<HUES12.length;i++){if(!used.has(i)){hue=i;break;}hue=S.groups.length%HUES12.length;}
+  const g={id:uid(),name:nm,parentId:null,hue};S.groups.push(g);save();
   const sel=$('#'+selId);if(sel){sel.innerHTML=S.groups.map(x=>`<option value="${x.id}">${esc(groupPath(x.id))}</option>`).join('');sel.value=g.id;}}
 
 /* ========================= Supabase同期（オフラインファースト） ========================= */
@@ -1476,7 +1485,7 @@ function taskRow(x,o={}){
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
-      <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${o.today&&isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.pin&&o.today?'<span class="pinbadge">毎日</span>':''}</div>
+      <div class="tt ${x.status==='done'?'done':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${o.today&&isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.pin&&o.today?'<span class="pinbadge">毎日</span>':''}${x.repeat?`<span class="pinbadge">🔁${REPEAT_LABEL_T[x.repeat]||''}</span>`:''}</div>
       <div class="meta"><span class="gmark" style="${markCss(x.groupId)}"></span><span>${esc(groupPath(x.groupId))}</span>
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
         ${x.due?`<span>期限 ${fmtDateJa(x.due)}</span>`:''}
@@ -1493,7 +1502,7 @@ function taskRow(x,o={}){
     <button onclick="event.stopPropagation();addTaskAfter('${x.id}')">＋ この下に追加</button></div>`:''}`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const seq=['todo','doing','wait','done'];x.status=seq[(seq.indexOf(x.status)+1)%4];
-  if(x.status==='done'){x.doneAt=todayStr();sinkDoItem('t_'+id);}save();render();checkCelebrate();}
+  if(x.status==='done'){x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}save();render();checkCelebrate();}
 function toggleToday(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   x.today=x.today===todayStr()?null:todayStr();save();render();}
 function visibleGroups(sel){ // 選択グループ＋その子孫
@@ -1665,10 +1674,14 @@ function taskModal(id,presetDue,presetToday){
       <div class="quadsel" id="tmQuad">
         ${QUADS.map((q,i)=>`<button type="button" data-q="${i+1}" class="${(x?.quad||0)===i+1?'on':''}" style="border-color:${q.c};color:${q.c};" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${q.t}<small>${q.s}</small></button>`).join('')}
         <button type="button" data-q="0" class="none ${!x?.quad?'on':''}" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">未分類（あとで箱に入れる）</button></div></div>
-    <div class="frow"><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
+    <div class="frow f2"><div><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
+      <div><label>繰り返し</label><select id="tmRepeat">
+        ${[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']].map(([v,l])=>`<option value="${v}" ${(x?.repeat||'')===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
     <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
       ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div><label>今日やる</label><select id="tmToday"><option value="">—</option><option value="1" ${x?.today===todayStr()||(!x&&presetToday)?'selected':''}>☀ 今日のリストに入れる</option></select></div></div>
+      <div><label>いつやる</label><select id="tmToday"><option value="">—</option>
+        <option value="today" ${x?.today===todayStr()||(!x&&presetToday)?'selected':''}>☀ 今日やる</option>
+        <option value="tomorrow" ${x?.today===tomorrowStr()?'selected':''}>➡ 明日やる</option></select></div></div>
     <div class="frow" id="tmWaitRow" style="display:${x?.status==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(x?.waitNote||'')}" placeholder="例）B様の返信待ち"></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="tmPin" style="width:auto;" ${x?.pin?'checked':''}>
       <span style="font-size:13px;">終わるまで毎日「今日」に表示（なるはや・期限なしタスク向け）</span></div>
@@ -1684,9 +1697,10 @@ function saveTask(id){
   const title=$('#tmTitle').value.trim();if(!title){uiAlert('タスク名を入力してください');return;}
   const quad=+($('#tmQuad button.on')?.dataset.q||0);
   const priority=quad===1?1:quad===4?3:2; // 4つの箱→並び用の優先度に変換
+  const tv=$('#tmToday').value;const today=tv==='today'?todayStr():tv==='tomorrow'?tomorrowStr():null;
   const data={title,groupId:$('#tmGroup').value,estMin:+$('#tmEst').value||0,quad,priority,
-    due:$('#tmDue').value,status:$('#tmSt').value,waitNote:$('#tmWait').value.trim(),
-    today:$('#tmToday').value?todayStr():null,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
+    due:$('#tmDue').value,repeat:$('#tmRepeat').value,status:$('#tmSt').value,waitNote:$('#tmWait').value.trim(),
+    today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
     pin:$('#tmPin').checked};
   if(id){const old=S.tasks.find(t=>t.id===id);
     if(data.pin&&!old.pin)data.snooze=null;
@@ -1821,8 +1835,21 @@ function renderCal(){
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
+/* タスクの繰り返し：完了したら次回の日付へ送る（今日の記録に完了を残す） */
+function nextTaskDate(fromDs,repeat){const d=parseDs(fromDs);
+  if(repeat==='daily')d.setDate(d.getDate()+1);
+  else if(repeat==='weekly')d.setDate(d.getDate()+7);
+  else if(repeat==='monthly')d.setMonth(d.getMonth()+1);
+  else return null;
+  return dsOf(d);}
+function advanceRepeatTask(x){if(!x.repeat)return false;
+  const base=x.today||x.due||todayStr();const nd=nextTaskDate(base,x.repeat);if(!nd)return false;
+  dayLogs(todayStr()).push({id:uid(),kind:'done',text:x.title,at:curMin(),dur:0});
+  x.status='todo';x.today=nd;if(x.due)x.due=nd;delete x.doneAt;delete x.doneMin;
+  const at=dayLog(todayStr()).at;if(at)delete at['t_'+x.id];
+  toast('完了！次回は '+fmtDateJa(nd)+' に繰り返します🔁');return true;}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);}
+  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
@@ -1937,7 +1964,7 @@ async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);cons
     log.routines[id]={...(log.routines[id]||{}),done:!done,doneMin:!done?curMin():undefined};if(!done)sinkDoItem(tok);save();render();if(!done)checkCelebrate();}
   else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);}save();render();if(!done)checkCelebrate();}}
+    x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);advanceRepeatTask(x);}save();render();if(!done)checkCelebrate();}}
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
@@ -2500,7 +2527,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.41（2026-07-21）</b><br>
+  <div class="mini"><b>v1.42（2026-07-21）</b><br>
+  ・タスクに<b>繰り返し</b>（毎日／毎週／毎月）を追加。完了すると次回の日付に自動で繰り返します（その日の記録に完了が残ります）<br>
+  ・タスク編集の「いつやる」に<b>「明日やる」</b>を追加（今日／明日を選べます）<br>
+  ・グループ（カテゴリ）の色を、<b>予定と共通の12色パレット</b>に統合（予定の色もカテゴリの色に揃います）<br>
+  <b>v1.41（2026-07-21）</b><br>
   ・「ルーティン開始」を<b>タイムラインに置いた順番</b>で実行するように（配置は時刻順→未配置は並び順）<br>
   ・日付が変わったとき、その日のタイムラインでルーティンを並べ替えていたら<b>「ルーティンタブの標準の並びに反映しますか？」</b>と確認するように<br>
   <b>v1.40（2026-07-21）</b><br>
@@ -2791,8 +2822,8 @@ function groupModal(id){
     <div class="frow"><label>親グループ（階層）</label><select id="gmParent">
       <option value="">なし（最上位）</option>
       ${S.groups.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${g?.parentId===x.id?'selected':''}>${esc(groupPath(x.id))}</option>`).join('')}</select></div>
-    <div class="frow"><label>色（列＝色系統、上から濃→淡。親と系統を揃えると階層がわかりやすい）</label><div class="colorsel" id="gmColor">
-      ${PALETTE.map(c=>`<button data-c="${c}" class="${(g?.color||PALETTE[0])===c?'on':''}" style="background:${c}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+    <div class="frow"><label>色（予定と共通の12色パレット）</label><div class="huepick" id="gmColor">
+      ${HUES12.map((h,i)=>`<button type="button" data-h="${i}" class="${(g?.hue??groupHue(g?.id))===i?'on':''}" style="background:${h.p}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`).join('')}</div></div>
     ${g&&g.parentId?`<div class="mini" style="padding:0 0 8px;">マークの見え方：<span class="gmark" style="width:14px;height:14px;${markCss(g.id)}"></span>（親の色＋自分の色）</div>`:''}
   </div>
   <div class="mbtns">${g?`<button class="del" onclick="delGroup('${g.id}')">削除</button>`:''}
@@ -2801,9 +2832,9 @@ function saveGroup(id){
   const name=$('#gmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
   const parentId=$('#gmParent').value||null;
   if(id&&parentId){let p=parentId;while(p){if(p===id){uiAlert('自分自身の下には移動できません');return;}p=S.groups.find(x=>x.id===p)?.parentId;}}
-  const color=$('#gmColor button.on')?.dataset.c||PALETTE[0];
-  if(id)Object.assign(S.groups.find(x=>x.id===id),{name,parentId,color});
-  else S.groups.push({id:uid(),name,parentId,color});
+  const hueBtn=$('#gmColor button.on');const hue=hueBtn?+hueBtn.dataset.h:0;
+  if(id)Object.assign(S.groups.find(x=>x.id===id),{name,parentId,hue});
+  else S.groups.push({id:uid(),name,parentId,hue});
   save();groupList();render();}
 async function delGroup(id){
   const kids=S.groups.some(g=>g.parentId===id);
