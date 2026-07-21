@@ -479,7 +479,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h16M4 18h9"/><path d="M18 5l2 2 3-3" /></svg>タスク</button>
   <button data-v="cal" onclick="switchView('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
-  <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>こまめ</button>
+  <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>習慣</button>
   <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
 </nav>
 
@@ -628,6 +628,7 @@ function migrate(){const st=S.settings;
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
+  S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(st.dense===undefined)st.dense=true;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
@@ -1859,14 +1860,15 @@ function habitStats(h){const t=todayStr();
     month:h.logs.filter(l=>l.d.slice(0,7)===t.slice(0,7)).length,
     total:h.logs.length,totalSec:h.logs.reduce((s,l)=>s+(l.sec||0),0)};}
 function renderHabits(){
-  return `<div class="vhead"><h1>こまめ</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
-  <div class="mini">スキマ時間にこまめにやること（ストレッチ等）。やるたびに「＋1回」。<b>多いほど◎</b>。回数と時間を記録します。</div>
+  return `<div class="vhead"><h1>習慣</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
+  <div class="mini">スキマ時間にこまめに積み上げる習慣（ストレッチ等）。やるたびに「＋1回」。<b>多いほど◎</b>。回数・時間を記録。リンクからすぐ動画へ飛べます。</div>
   ${S.habits.length?S.habits.map(h=>habitCard(h)).join(''):'<div class="mini" style="padding:16px;">「＋追加」で、こまめにやりたいことを登録しましょう（例：ストレッチ、スクワット、水を飲む、深呼吸…）</div>'}`;}
 function habitCard(h){const s=habitStats(h);
   return `<div class="hcard" style="${h.color!=null?`background:${PASTELS[h.color].c}`:''}">
     <div class="hc-top" onclick="habitDetail('${h.id}')">
       <div class="hc-title">${esc(h.title)}</div>
       <div class="hc-stat">今日 <b>${s.today}</b> ・ 週 ${s.week} ・ 月 ${s.month}${s.totalSec?` ・ 累計${fmtMin(s.totalSec/60)}`:''}</div></div>
+    ${linkChips(h.links)}
     <div class="hc-btns">
       <button class="hc-plus" onclick="habitLog('${h.id}',0)">＋ 1回</button>
       <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div></div>`;}
@@ -1889,6 +1891,7 @@ function habitDetail(id){const h=S.habits.find(x=>x.id===id);if(!h)return;const 
     ${s.totalSec?`<div class="mini" style="padding:8px 0;">累計時間 ${fmtMin(s.totalSec/60)}${s.total?`（平均 ${fmtMin(s.totalSec/60/s.total)}／回）`:''}</div>`:''}
     <label style="margin-top:6px;">曜日ごとの回数</label>
     <div class="wdbars">${byWd.map((c,i)=>`<div class="wdbar"><small>${c}</small><div class="wdb" style="height:${Math.round(c/maxWd*56)+2}px"></div><span style="color:${i===0?'var(--sun)':i===6?'var(--sat)':''}">${WD[i]}</span></div>`).join('')}</div>
+    ${h.links&&h.links.length?`<div style="margin-top:8px;">${linkChips(h.links)}</div>`:''}
     <div class="hc-btns" style="padding:12px 0 0;">
       <button class="hc-plus" onclick="habitLog('${h.id}',0);habitDetail('${h.id}')">＋ 1回</button>
       <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div>
@@ -1897,18 +1900,20 @@ function habitDetail(id){const h=S.habits.find(x=>x.id===id);if(!h)return;const 
   <div class="mbtns"><button class="del" onclick="delHabit('${h.id}')">削除</button><button onclick="habitModal('${h.id}')">編集</button></div>`);}
 function habitUndo(id){const h=S.habits.find(x=>x.id===id);if(!h||!h.logs.length)return;h.logs.pop();save();habitDetail(id);}
 function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
-  openModal(`<div class="mh"><b>${h?'こまめ習慣を編集':'こまめ習慣を追加'}</b><button onclick="closeModal()">✕</button></div>
+  editLinks=(h?.links||[]).map(l=>({...l}));
+  openModal(`<div class="mh"><b>${h?'習慣を編集':'習慣を追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="hmName" value="${esc(h?.title||'')}" placeholder="例）ストレッチ"></div>
     <div class="frow"><label>色</label><div class="colorsel c6" id="hmColor">
       ${PASTELS.map((p,i)=>`<button data-c="${i}" class="${h?.color===i?'on':''}" style="background:${p.c}" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')"></button>`).join('')}
       <button data-c="" class="none ${h?.color==null?'on':''}" style="grid-column:auto;" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">なし</button></div></div>
+    <div class="frow"><label>リンク（動画・サイトなど。カードからすぐ開けます）</label>${linksEditorHtml()}</div>
   </div>
   <div class="mbtns">${h?`<button class="del" onclick="delHabit('${h.id}')">削除</button>`:''}<button class="save" onclick="saveHabit('${h?.id||''}')">保存</button></div>`);}
 function saveHabit(id){const name=$('#hmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
   const csel=$('#hmColor button.on');const color=(csel&&csel.dataset.c!=='')?+csel.dataset.c:null;
-  if(id){const h=S.habits.find(x=>x.id===id);h.title=name;h.color=color;}
-  else S.habits.push({id:uid(),title:name,color,logs:[]});
+  if(id){const h=S.habits.find(x=>x.id===id);h.title=name;h.color=color;h.links=collectLinks();}
+  else S.habits.push({id:uid(),title:name,color,logs:[],links:collectLinks()});
   save();closeModal();render();}
 async function delHabit(id){if(!await uiConfirm('この習慣を削除しますか？（記録も消えます）','削除'))return;
   S.habits=S.habits.filter(h=>h.id!==id);save();closeModal();render();}
@@ -2134,7 +2139,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.29（2026-07-20）</b><br>
+  <div class="mini"><b>v1.30（2026-07-20）</b><br>
+  ・「こまめ」タブを「習慣」に改名<br>
+  ・習慣に<b>リンク</b>を登録できるように。カードから動画・サイトへワンタップ（ダイエット動画等）<br>
+  <b>v1.29（2026-07-20）</b><br>
   ・今日の画面を見やすく：<b>省スペース表示（1行1タスク）</b>を既定に。開くだけで全体像が見える。見出しの「詳しく／省スペース」で切替<br>
   ・「ルーティン開始」と「組む」を1行に集約して上部を圧縮<br>
   <b>v1.28（2026-07-20）</b><br>
