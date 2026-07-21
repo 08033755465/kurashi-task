@@ -2272,9 +2272,15 @@ function flowItemDone(it){return it.type==='r'?!!dayLog(todayStr()).routines[it.
 function flowPersist(){if(!flowList.length){localStorage.removeItem(FLOWKEY);return;}
   localStorage.setItem(FLOWKEY,JSON.stringify({date:todayStr(),items:flowList.map(it=>({type:it.type,id:it.obj.id})),idx:flowIdx,base:flowBase,since:flowSince}));}
 function flowResolve(list){return list.map(o=>{const obj=o.type==='r'?S.routines.find(r=>r.id===o.id):S.tasks.find(x=>x.id===o.id);return obj?{type:o.type,obj}:null;}).filter(Boolean);}
+/* タイムラインの順番＝配置済み(時刻順)→未配置(並び順)。フローもこの順で回す */
+function timelineOrder(t){const at=(dayLog(t).at)||{};const tokOf=it=>it.type+'_'+it.obj.id;
+  const live=doItems(t).filter(it=>!flowItemDone(it));
+  const placed=live.filter(it=>at[tokOf(it)]!=null).sort((a,b)=>at[tokOf(a)]-at[tokOf(b)]);
+  const rest=live.filter(it=>at[tokOf(it)]==null);
+  return [...placed,...rest];}
 function startFlow(){
   const t=todayStr();
-  flowList=doItems(t).filter(it=>!flowItemDone(it)).map(it=>({type:it.type,obj:it.obj}));
+  flowList=timelineOrder(t).map(it=>({type:it.type,obj:it.obj}));
   if(!flowList.length){uiAlert('今日やることはすべて完了しています🎉');return;}
   flowIdx=0;flowBase=0;flowSince=Date.now();flowListOpen=false;$('#flow').classList.add('show');flowShow(true);}
 function flowRestore(){try{const f=JSON.parse(localStorage.getItem(FLOWKEY)||'null');
@@ -2494,7 +2500,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.40（2026-07-21）</b><br>
+  <div class="mini"><b>v1.41（2026-07-21）</b><br>
+  ・「ルーティン開始」を<b>タイムラインに置いた順番</b>で実行するように（配置は時刻順→未配置は並び順）<br>
+  ・日付が変わったとき、その日のタイムラインでルーティンを並べ替えていたら<b>「ルーティンタブの標準の並びに反映しますか？」</b>と確認するように<br>
+  <b>v1.40（2026-07-21）</b><br>
   ・予定の配色を<b>12色 × 2トーン</b>（パステル／ポップ）に刷新。予定ごとに12色から選べ、<b>★重要</b>は同じ色のポップ（彩度高め）で表示<br>
   ・数日かかるタスクの<b>稼働時間をタイムラインに記録</b>（メニュー「⏱稼働を記録」）<br>
   ・タスクを<b>「今日はここまで→明日へ繰り越し」</b>（今日の稼働を記録して残りを明日へ）<br>
@@ -2847,11 +2856,37 @@ setInterval(()=>{
       save();new Notification('くらしタスク',{body:msg});}});
 },20000);
 
+/* ===== 日付の切り替わり：昨日のタイムライン並びをルーティンに反映するか確認 ===== */
+function routineSeqOf(dstr){const at=(dayLog(dstr).at)||{};const tokOf=it=>'r_'+it.obj.id;
+  const items=doItems(dstr).filter(it=>it.type==='r');
+  const placed=items.filter(it=>at[tokOf(it)]!=null).sort((a,b)=>at[tokOf(a)]-at[tokOf(b)]);
+  const rest=items.filter(it=>at[tokOf(it)]==null);
+  return [...placed,...rest].map(it=>it.obj.id);}
+function routineArrangeChanged(dstr){const dl=dayLog(dstr);if(!dl)return false;
+  const seq=routineSeqOf(dstr).filter(id=>S.routines.some(r=>r.id===id));if(seq.length<2)return false;
+  const bySlot={};seq.forEach(id=>{const r=S.routines.find(x=>x.id===id);if(!r)return;(bySlot[r.slot]=bySlot[r.slot]||[]).push(id);});
+  for(const slot in bySlot){const cur=S.routines.filter(r=>r.slot===slot).sort((a,b)=>a.order-b.order).map(r=>r.id).filter(id=>bySlot[slot].includes(id));
+    if(cur.join(',')!==bySlot[slot].join(','))return true;}
+  return false;}
+function applyDayOrderToRoutines(dstr){const seq=routineSeqOf(dstr);
+  ['morning','day','night','any'].forEach(slot=>{
+    const inSlot=S.routines.filter(r=>r.slot===slot);
+    inSlot.sort((a,b)=>{const ia=seq.indexOf(a.id),ib=seq.indexOf(b.id);return (ia<0?9e9:ia)-(ib<0?9e9:ib);});
+    inSlot.forEach((r,i)=>r.order=i);});
+  save();}
+async function checkDayRollover(){const today=todayStr();const last=S.lastActiveDay;S.lastActiveDay=today;save();
+  if(!last||last>=today)return;
+  if(!routineArrangeChanged(last))return;
+  const md=parseDs(last);
+  if(await uiConfirm(`${md.getMonth()+1}/${md.getDate()}のタイムラインで、ルーティンの順番を並べ替えました。\nこの並び順を「ルーティン」タブの標準の並びにも反映しますか？`,'反映する')){
+    applyDayOrderToRoutines(last);render();toast('ルーティンの並びを更新しました');}}
 /* ========================= 起動 ========================= */
 load();save();
 switchView('today');
 flowRestore();
+checkDayRollover();
 if(syncReady())pullState();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkDayRollover();});
 </script>
 </body>
 </html>
