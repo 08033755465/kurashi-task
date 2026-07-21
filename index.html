@@ -126,6 +126,14 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tltask .tltm{font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto;}
 .tl .tltask.over{background:#FCECEA;border-left-color:var(--danger)!important;}
 .tl .tltask.over .tltm{color:var(--danger);}
+.tl .tltask.done{opacity:.42;background:#F4F5F7;box-shadow:none;}
+.tl .tltask.done .tltt{text-decoration:line-through;}
+.tl .tltask.pinned{box-shadow:0 1px 4px rgba(0,0,0,.16);}
+.tl.placing{cursor:pointer;}
+.tl.placing .tltask,.tl.placing .tlev{pointer-events:none;opacity:.55;}
+.tl.placing .tltask.picking{opacity:1;outline:2px solid var(--accent);}
+.tlplacehint{position:sticky;top:0;z-index:20;margin:0 16px 6px;padding:8px 12px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.tlplacehint button{color:#fff;border:1px solid rgba(255,255,255,.6);font-size:12px;padding:3px 10px;}
 .tl .tlnow{position:absolute;left:44px;right:0;border-top:2px solid #E5484D;z-index:4;}
 .tl .tlnow span{position:absolute;left:-44px;top:-8px;font-size:9.5px;color:#E5484D;font-weight:700;background:#fff;padding:0 2px;}
 .tl .tlsleep{position:absolute;left:44px;right:0;border-top:2px dashed #7B5EC7;z-index:4;}
@@ -665,6 +673,7 @@ function migrate(){const st=S.settings;
   if(!S.habits)S.habits=[];
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(st.dense===undefined)st.dense=true;
+  if(st.timeline===undefined)st.timeline=true;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
@@ -1072,7 +1081,7 @@ function carryAll(){const t=todayStr();S.tasks.forEach(x=>{if(x.today&&x.today<t
 function sinkDoItem(tok){const t=todayStr();let toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;}
 function toggleRoutine(id){const t=todayStr();const log=dayLog(t);setAnchor('r_'+id);
-  const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur};
+  const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur,doneMin:!cur?curMin():undefined};
   if(!cur)sinkDoItem('r_'+id);
   save();render();checkCelebrate();}
 function checkCelebrate(){const t=todayStr();const log=dayLog(t);
@@ -1110,8 +1119,9 @@ function todayArrows(tok){return `<div class="arrows">
   <button onclick="event.stopPropagation();moveDoItemBottom('${tok}')" title="後回し">⤓</button></div>`;}
 function toggleDense(){S.settings.dense=!S.settings.dense;save();render();}
 const CHK='<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>';
-const SLOT_COLOR={morning:'#D9A521',day:'#D9791C',night:'#7B5EC7',any:'#B5BAC4'};
-function bandColorOf(it){return it.type==='r'?(SLOT_COLOR[it.obj.slot]||'#B5BAC4'):'#C9CED6';}
+const SLOT_COLOR={morning:'#E0A94A',day:'#E08A5E',night:'#8E7BC8',any:'#B5BAC4'};
+const BAND_Z={morning:'#F7E6C2',day:'#F8DCCB',night:'#E7DEF6'};
+function bandColorOf(it){return it.type==='r'?(SLOT_COLOR[it.obj.slot]||'#B5BAC4'):'#C4B7A6';}
 function doItemRowDense(it,t,tok){
   const bc=bandColorOf(it);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;
@@ -1140,13 +1150,17 @@ function doItemRow(it,t){
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
 /* ===== 時間ヘルパー & 朝昼夜の配分（#5）／縦タイムライン（#6） ===== */
+const TL_PX=1.6; // タイムラインの1分あたりの高さ(px)
 const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
+const curMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes();};
 function dayBounds(t){let w=hm2min(dayWake(t)),s=hm2min(daySleep(t));if(s<=w)s+=1440;return {w,s};}
 function bandsOf(t){const {w,s}=dayBounds(t);const pm=hm2min(S.settings.pmStart),ns=hm2min(S.settings.nightStart);
   const cl=v=>Math.min(Math.max(v,w),s);
-  return [{k:'morning',lab:'朝',c:'#D9A521',a:w,b:cl(pm)},
-          {k:'day',lab:'昼',c:'#D9791C',a:cl(pm),b:cl(ns)},
-          {k:'night',lab:'夜',c:'#7B5EC7',a:cl(ns),b:s}];}
+  return [{k:'morning',lab:'朝',c:SLOT_COLOR.morning,z:BAND_Z.morning,a:w,b:cl(pm)},
+          {k:'day',lab:'昼',c:SLOT_COLOR.day,z:BAND_Z.day,a:cl(pm),b:cl(ns)},
+          {k:'night',lab:'夜',c:SLOT_COLOR.night,z:BAND_Z.night,a:cl(ns),b:s}];}
+function doneMinOf(it,t){if(it.type==='r')return dayLog(t).routines[it.obj.id]?.doneMin ?? null;
+  return (it.obj.doneAt===t?(it.obj.doneMin??null):null);}
 function bandPanelHtml(t){const log=dayLog(t);const bands=bandsOf(t);
   const load={morning:0,day:0,night:0};
   todaysRoutines(t).forEach(r=>{if(log.routines[r.id]?.done)return;const sl=r.slot==='any'?'day':r.slot;if(load[sl]!=null)load[sl]+=(+r.estMin||0);});
@@ -1161,34 +1175,62 @@ function bandPanelHtml(t){const log=dayLog(t);const bands=bandsOf(t);
   return `<div class="bandpanel">${rows}
     ${taskLoad?`<div class="bprow"><span class="bplab" style="color:#8A909A">他</span><span class="bptime">時間指定なしのタスク</span>
       <div class="bpgauge"><i style="width:${tpv}%;background:#C9CED6"></i></div><span class="bpnum">${fmtMin(taskLoad)}</span></div>`:''}</div>`;}
+let placeToks=null; // 「時間を指定して配置」中の対象トークン配列
 function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
-  const PX=1.0,MINH=24;const MINMIN=MINH/PX;const y=mn=>(mn-w)*PX;
+  const PX=TL_PX,MINH=22;const MINMIN=MINH/PX;const y=mn=>(mn-w)*PX;
+  const at=log.at||{};const tokOf=it=>it.type+'_'+it.obj.id;
   const zones=bandsOf(t).filter(z=>z.b>z.a);
   const evs=S.events.filter(e=>eventOccursOn(e,t)&&e.start).sort((a,b)=>a.start.localeCompare(b.start));
   const hasEv=evs.length>0;
-  const items=doItems(t).filter(it=>!flowItemDone(it));
-  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  const all=doItems(t);
+  const live=all.filter(it=>!flowItemDone(it));
+  const pinned=live.filter(it=>at[tokOf(it)]!=null).map(it=>({it,at:at[tokOf(it)],est:Math.max(5,(+it.obj.estMin)||10)})).sort((a,b)=>a.at-b.at);
+  const unpinned=live.filter(it=>at[tokOf(it)]==null);
+  const occ=pinned.map(p=>[p.at,p.at+Math.max(p.est,MINMIN)]);
+  const nowM=curMin();
   const startCur=(t===todayStr())?Math.max(w,Math.min(nowM,s)):w;
-  // タスクを開始時刻から順に積む（最小の高さを確保して重なりを防ぐ）
-  let cur=startCur,realEnd=startCur;const blocks=[];
-  items.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
-    blocks.push({it,est,top:cur,h:vis*PX,over:realEnd+est>s});cur+=vis;realEnd+=est;});
-  const H=Math.max(360,(Math.max(cur,s)-w)*PX+8);
-  let ticks='';for(let h=Math.ceil(w/60)*60;h<Math.max(cur,s);h+=60){ticks+=`<div class="tlhr" style="top:${y(h)}px"></div><div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`;}
-  const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.c}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
+  const nextFree=(c,dur)=>{let moved=true;while(moved){moved=false;for(const [a,b] of occ){if(c<b&&c+dur>a){c=b;moved=true;}}}return c;};
+  let cur=startCur;const blocks=[];
+  unpinned.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
+    const top=nextFree(cur,vis);blocks.push({it,est,top,h:vis*PX,over:top+est>s,pinned:false});cur=top+vis;});
+  const flowEnd=cur;
+  pinned.forEach(p=>{const vis=Math.max(p.est,MINMIN);blocks.push({it:p.it,est:p.est,top:p.at,h:vis*PX,over:p.at+p.est>s,pinned:true});});
+  // 完了ぶんを薄く（押した時刻に）
+  all.filter(it=>flowItemDone(it)).forEach(it=>{const dm=doneMinOf(it,t);if(dm==null)return;
+    const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
+    blocks.push({it,est,top:dm,h:vis*PX,done:true});});
+  const bottom=blocks.reduce((mx,b)=>Math.max(mx,b.top+b.h/PX),Math.max(flowEnd,s));
+  const H=Math.max(360,(bottom-w)*PX+8);
+  let ticks='';for(let h=Math.ceil(w/60)*60;h<bottom;h+=60){ticks+=`<div class="tlhr" style="top:${y(h)}px"></div><div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`;}
+  const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=hm2min(e.start),b=e.end?hm2min(e.end):a+30;const top=y(a),h=Math.max(18,(Math.min(b,s)-a)*PX);
     return `<div class="tlev" style="top:${top}px;height:${h}px" onclick="eventModal('${e.id}')"><b>${min2hm(a)}</b> ${esc(evTitle(e))}</div>`;}).join('');
   const taskW=hasEv?'width:calc(50% - 4px);':'width:calc(100% - 52px);';
-  const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it);
-    return `<div class="tltask ${bl.over?'over':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;${taskW}border-left-color:${bc}" onclick="${it.type==='r'?`routineModal('${it.obj.id}')`:`taskModal('${it.obj.id}')`}">
-      <span class="tltt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${fmtMin(bl.est)}</span></div>`;}).join('');
-  const overMin=realEnd-s;
-  const nowLine=(t===todayStr()&&nowM>w&&nowM<Math.max(cur,s))?`<div class="tlnow" style="top:${y(nowM)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
+  const placing=!!(placeToks&&placeToks.length);
+  const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
+    const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${placing&&placeToks.includes(tk)?' picking':''}`;
+    return `<div class="${cls}" style="top:${y(bl.top)}px;height:${bl.h-3}px;${taskW}border-left-color:${bc}" ${placing?'':`onclick="todayItemMenu('${tk}')"`}>
+      <span class="tltt">${bl.pinned?'📌 ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${fmtMin(bl.est)}</span></div>`;}).join('');
+  const overMin=flowEnd-s;
+  const nowLine=(t===todayStr()&&nowM>w&&nowM<bottom)?`<div class="tlnow" style="top:${y(nowM)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(s)}</span></div>`;
-  return `<div class="tl" style="height:${H}px">${zoneH}${ticks}${sleepLine}${evH}${taskH}${nowLine}</div>
-    ${items.length?(overMin>0?`<div class="tlwarn">⚠ 今の順番だと就寝（${min2hm(s)}）までに終わらず <b>${fmtMin(overMin)}</b> はみ出します。並び替えで調整するか、いくつか明日へ回しましょう。</div>`
-      :`<div class="mini" style="padding:2px 16px 8px;">今の順番なら <b>${min2hm(realEnd)}</b> ごろ全部終わる見込みです（就寝まで余裕あり）。</div>`):'<div class="mini" style="padding:2px 16px 8px;">今日やることがありません。</div>'}`;}
+  const hint=placing?`<div class="tlplacehint">🕐 置きたい時間をタップ（${placeToks.length}件・5分単位） <button onclick="cancelPlace()">やめる</button></div>`:'';
+  return `${hint}<div class="tl${placing?' placing':''}" style="height:${H}px" ${placing?'onclick="placeAtClick(event)"':''}>${zoneH}${ticks}${sleepLine}${evH}${taskH}${nowLine}</div>
+    ${live.length?(overMin>0?`<div class="tlwarn">⚠ 今の順番だと就寝（${min2hm(s)}）までに終わらず <b>${fmtMin(overMin)}</b> はみ出します。並び替えや「時間を指定」で調整するか、いくつか明日へ回しましょう。</div>`
+      :`<div class="mini" style="padding:2px 16px 8px;">流し込んだぶんは <b>${min2hm(flowEnd)}</b> ごろ終わる見込みです（就寝まで余裕あり）。タスクをタップ→「時間を指定」で好きな時間に置けます。</div>`):'<div class="mini" style="padding:2px 16px 8px;">今日やることがありません。</div>'}`;}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;save();render();}
+/* タスク/ルーティンを時間帯へ配置（タップで置く・5分刻み・複数可） */
+function startPlace(toks){placeToks=Array.isArray(toks)?toks:[toks];S.settings.timeline=true;save();render();
+  const el=document.querySelector('.tl');if(el)el.scrollIntoView({block:'center'});}
+function cancelPlace(){placeToks=null;render();}
+function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayStr();const {w,s}=dayBounds(t);
+  const r=ev.currentTarget.getBoundingClientRect();let mn=w+(ev.clientY-r.top)/TL_PX;
+  mn=Math.round(mn/5)*5;mn=Math.max(w,Math.min(mn,s-5));
+  const dl=dayLog(t);dl.at=dl.at||{};
+  placeToks.forEach((tk,i)=>{const it=doItems(t).find(x=>x.type+'_'+x.obj.id===tk);const est=it?Math.max(5,(+it.obj.estMin)||10):15;
+    dl.at[tk]=mn;mn+=Math.max(est,5);}); // 複数は続けて配置
+  placeToks=null;save();render();toast('時間を指定して配置しました');}
+function unpinItem(tok){const dl=dayLog(todayStr());if(dl.at){delete dl.at[tok];save();render();toast('自動配置に戻しました');}}
 /* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let todayReorder=false,todaySel=[];
 function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
@@ -1204,6 +1246,7 @@ function todayReorderHtml(list){
   ${todaySel.length?`<div class="reorderfab">
     <span>${todaySel.length}件</span>
     <button onclick="moveTodayBlock(-1)">▲</button><button onclick="moveTodayBlock(1)">▼</button>
+    <button class="decide" onclick="exitTodayReorder();startPlace(${JSON.stringify(todaySel).replace(/"/g,'&quot;')})">🕐時間</button>
     <button class="decide" onclick="decideToday()">決定</button></div>`:''}`;}
 function moveTodayBlock(dir){if(!todaySel.length)return;let toks=todayTokens();
   const idx=todaySel.map(tk=>toks.indexOf(tk)).filter(i=>i>=0).sort((a,b)=>a-b);
@@ -1625,7 +1668,7 @@ function renderCal(){
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();sinkDoItem('t_'+id);}
+  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
@@ -1690,10 +1733,15 @@ function todayItemMenu(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
   const done=type==='r'?!!dayLog(todayStr()).routines[id]?.done:obj.status==='done';
   const sheet=$('#colorSheet');
+  const pinned=dayLog(todayStr()).at&&dayLog(todayStr()).at[tok]!=null;
   sheet.innerHTML=`<div class="t">${esc(obj.title)}</div><div class="actsheet">
     <button onclick="closeSheet();swipeComplete('${tok}')">${done?'↩ 未完了に戻す':'✓ 完了にする'}</button>
+    <button onclick="closeSheet();${type==='r'?`routineModal('${id}')`:`taskModal('${id}')`}">✎ 編集</button>
+    <button onclick="closeSheet();startPlace('${tok}')">🕐 時間を指定して配置</button>
+    ${pinned?`<button onclick="closeSheet();unpinItem('${tok}')">⟲ 自動配置に戻す</button>`:''}
+    <button onclick="closeSheet();enterTodayReorder()">↕ 並び替え</button>
     <button onclick="actTomorrow('${tok}')">➡ 明日へ送る${type==='t'?'（明日の先頭へ）':''}</button>
-    <button onclick="actHideToday('${tok}')">🗂 今日は隠す（未完了に数えない）</button></div>`;
+    <button onclick="actHideToday('${tok}')">🗂 今日は隠す（アーカイブ）</button></div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
@@ -1717,10 +1765,10 @@ function restoreAllHidden(){const t=todayStr();dayLog(t).hiddenR=[];
 async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
   if(type==='r'){const r=S.routines.find(x=>x.id===id);if(!r)return;const log=dayLog(t);const done=!!log.routines[id]?.done;
     if(!await uiConfirm(`「${r.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    log.routines[id]={...(log.routines[id]||{}),done:!done};if(!done)sinkDoItem(tok);save();render();if(!done)checkCelebrate();}
+    log.routines[id]={...(log.routines[id]||{}),done:!done,doneMin:!done?curMin():undefined};if(!done)sinkDoItem(tok);save();render();if(!done)checkCelebrate();}
   else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    x.status=done?'todo':'done';if(!done){x.doneAt=t;sinkDoItem(tok);}save();render();if(!done)checkCelebrate();}}
+    x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);}save();render();if(!done)checkCelebrate();}}
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
@@ -2227,7 +2275,13 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.33（2026-07-21）</b><br>
+  <div class="mini"><b>v1.34（2026-07-21）</b><br>
+  ・タイムラインを<b>既定表示</b>に。配色を全体にやわらかいパステルへ調整<br>
+  ・目盛りを広げて、タスクが所要時間ぴったりの高さで並ぶように（終了時刻とのズレを解消）<br>
+  ・完了したタスクは<b>押した時刻の位置に薄く</b>残るように（1日の実績が見えます）<br>
+  ・タスク／ルーティンを<b>タップ→メニュー</b>（完了・編集・時間を指定・並び替え・明日へ・今日は隠す）<br>
+  ・<b>「時間を指定して配置」</b>を追加：タップした時間（5分刻み）にそのタスクを📌固定。並び替えで複数選んで「🕐時間」からまとめて配置も可能。固定していないタスクは今までどおり「今」から自動で流し込み<br>
+  <b>v1.33（2026-07-21）</b><br>
   ・今日タブに<b>タイムライン表示</b>を追加（「今日やること」の右上ボタンで切替）。朝→夜まで1日を縦に並べ、いまの順番でタスクを所要時間ぶんの高さで積み、<b>就寝までに終わるか／はみ出すか</b>をひと目で確認できます（はみ出すタスクは赤、見込みの終了時刻も表示）<br>
   ・ヘッダーに<b>朝・昼・夜の時間配分</b>を縦に表示。各時間帯の作業量と、詰め込みすぎ（超過）が色バーで分かります<br>
   <b>v1.32（2026-07-21）</b><br>
