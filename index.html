@@ -107,6 +107,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .timebar .neg{color:var(--danger);font-weight:700;}
 .availEdit{font-size:12.5px;color:var(--accent);}
 /* 朝昼夜の配分パネル（#5） */
+.huechips{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);}
+.huechip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
+.huechip .d{width:11px;height:11px;border-radius:50% !important;}
+.tasksearch{display:flex;align-items:center;gap:6px;padding:8px 16px 4px;}
+.tasksearch input{flex:1;font-size:14px;padding:9px 12px;}
+.tasksearch button{flex:0 0 auto;font-size:16px;color:var(--sub);padding:4px 8px;}
 .bandpanel{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px;}
 .bprow{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);}
 .bprow .bplab{width:16px;font-weight:700;text-align:center;flex:0 0 16px;}
@@ -116,7 +122,21 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .bprow .bpnum{width:70px;flex:0 0 70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;}
 .bprow .bpnum.neg{color:var(--danger);font-weight:700;}
 /* 縦タイムライン（#6・B案：左＝配置済み／右＝未配置プール） */
-.tlwrap{display:flex;gap:8px;margin:8px 12px 4px;align-items:flex-start;}
+.tlwrap{display:flex;gap:8px;margin:8px 12px 4px;align-items:flex-start;position:relative;}
+/* 予定タップ→右側にピヨっと出る詳細ポップ */
+.evpop{position:absolute;right:0;width:60%;max-width:230px;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.22);z-index:45;overflow:hidden;transform-origin:right top;animation:evpopin .18s cubic-bezier(.34,1.56,.64,1);}
+@keyframes evpopin{from{opacity:0;transform:scale(.8) translateX(8px);}to{opacity:1;transform:scale(1) translateX(0);}}
+.evpoph{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;font-size:12.5px;line-height:1.3;}
+.evpoph b{font-weight:700;}
+.evpoph button{font-size:15px;flex:0 0 auto;}
+.evpopb{padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;}
+.evpopt{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;}
+.evpopcat{font-size:11.5px;display:flex;align-items:center;gap:6px;}
+.evpopcat .dot{width:11px;height:11px;flex:0 0 11px;border-radius:50% !important;}
+.evpopmemo{font-size:12px;line-height:1.5;color:var(--ink);word-break:break-word;}
+.evpopacts{display:flex;gap:6px;margin-top:2px;}
+.evpopacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:7px 4px;font-size:11.5px;}
+.tlnowbtn{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));float:right;margin:0 14px;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:58;}
 .tl{position:relative;flex:1;min-width:0;}
 .tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
 .tl .tlhr.m{border-top:1px dashed #D8DCE2;}
@@ -173,10 +193,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #undobar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
 #undobar button{color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:16px !important;padding:6px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
 /* 配色パレット選択 */
-.huelegend{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;padding:2px 16px 6px;}
-.huepair{display:flex;align-items:center;gap:6px;}
-.huepair .hs{width:18px;height:18px;flex:0 0 18px;border-radius:5px !important;}
-.huepair .hn{font-size:11.5px;color:var(--ink);}
+.huelegend{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding:2px 16px 6px;}
+.huepair{display:flex;align-items:center;gap:5px;}
+.huepair .hs{width:16px;height:16px;flex:0 0 16px;border-radius:5px !important;}
+.huepair .hlab{flex:1;min-width:0;font-size:12px;padding:5px 7px;}
 /* 予定編集の色ピッカー */
 .huepick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
 .huepick button{height:30px;border-radius:6px !important;border:2px solid transparent;position:relative;overflow:hidden;}
@@ -661,6 +681,12 @@ function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
 function evColor(e){const h=HUES12[hueOf(e)];return (e&&e.important)?h.v:h.p;}
+function hueLabel(i){return (S.settings.hueLabels||[])[i]||'';}
+function hueLegendChips(){const items=HUES12.map((h,i)=>({h,i,lab:hueLabel(i)})).filter(x=>x.lab);
+  if(!items.length)return '';
+  return `<div class="huechips">${items.map(x=>`<span class="huechip"><span class="d" style="background:${x.h.p}"></span>${esc(x.lab)}</span>`).join('')}</div>`;}
+function colorLabelOf(e){return hueLabel(hueOf(e));}
+function setHueLabel(i,v){const a=(S.settings.hueLabels||[]).slice();a[i]=v.trim();S.settings.hueLabels=a;save();}
 function isLight(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return true;const n=parseInt(m[1],16);
   const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>150;}
 function evTextColor(bg){return isLight(bg)?'#3A3D42':'#fff';}
@@ -778,6 +804,8 @@ function migrate(){const st=S.settings;
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
   S.groups.forEach((g,i)=>{if(g.hue==null)g.hue=i%HUES12.length;}); // 旧colorから12色パレットへ移行
   S.tasks.forEach(x=>{if(x.repeat===undefined)x.repeat='';});
+  if(!Array.isArray(st.hueLabels))st.hueLabels=[]; // 色カテゴリの任意ラベル（TimeTree式）
+  if(st.showDoneTL===undefined)st.showDoneTL=true;
   (S.patterns||[]).forEach(p=>{if(!p.auto)p.auto='none';});
   (S.events||[]).forEach(e=>{if(e.repeat===undefined)e.repeat='';if(!e.images)e.images=[];});
   S.tasks.forEach(x=>{if(!x.images)x.images=[];});
@@ -1032,11 +1060,11 @@ function switchView(v){
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];tlSel=[];tlEvSel=null;placeToks=null;}
-  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;}
+  if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;taskQuery='';}
   const toNow=(v==='today'&&S.settings.timeline); // 今日タブ(タイムライン)は「今」へ寄せる
   if(toNow)_tlPendingScroll=true;
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();if(!toNow)toTop();}
-let _tlPendingScroll=false,_reorderFollow=null;
+let _tlPendingScroll=false,_reorderFollow=null,_focusSearch=false;
 function render(){
   const el=$('#view');const sy=window.scrollY;
   if(view==='today')el.innerHTML=renderToday();
@@ -1051,6 +1079,7 @@ function render(){
     const n=$('.tlnow')||$('.tl');if(n){const r=n.getBoundingClientRect();window.scrollBy(0,r.top-140);}}
   if(_reorderFollow){const row=document.querySelector(_reorderFollow);_reorderFollow=null;
     if(row){const r=row.getBoundingClientRect();if(r.top<90||r.bottom>window.innerHeight-90)window.scrollBy(0,r.top-160);}}
+  if(_focusSearch){_focusSearch=false;const el=$('#taskSearch');if(el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
 }
 function toTop(){window.scrollTo(0,0);}
 
@@ -1127,6 +1156,7 @@ function renderToday(){
     <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
       ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
     ${bandPanelHtml(t)}
+    ${hueLegendChips()}
   </div>
   <div class="startrow">
     <button class="startBtn2" onclick="startFlow()">▶ ルーティン開始</button>
@@ -1372,7 +1402,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   placed.forEach(p=>{const vis=Math.max(p.est,MINMIN);const top=Math.max(p.ax,prevEnd);
     blocks.push({it:p.it,est:p.est,top,h:vis*PX,over:top+p.est>end,pinned:true,shifted:top>p.ax+0.5});
     prevEnd=top+vis;});
-  all.filter(it=>flowItemDone(it)).forEach(it=>{const dm=doneMinOf(it,t);if(dm==null)return;
+  if(S.settings.showDoneTL!==false)all.filter(it=>flowItemDone(it)).forEach(it=>{const dm=doneMinOf(it,t);if(dm==null)return;
     const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
     blocks.push({it,est,top:A(dm),h:vis*PX,done:true});});
   const bottom=end;
@@ -1401,6 +1431,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
         <span class="pt">${sel?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
       :'<div class="poolempty">すべて配置済み🎉</div>'}
+    ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>`:''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・10分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
@@ -1414,18 +1445,26 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       ${one?`<button onclick="tlDoEdit()">✎ 編集</button>${dayLog(t).at&&dayLog(t).at[one]!=null?`<button onclick="tlDoUnpin()">⟲ 未配置</button>`:''}`:''}
       <button class="cl" onclick="tlClearSel()">✕</button>
     </div></div>`:'';
-  const evBar=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
-    return `<div class="tlbar ev"><span class="tlbn">${esc(evTitle(e))}</span><div class="tlbtns">
-      <button onclick="eventModal('${e.id}');tlEvSel=null;">✎ 編集</button>
-      <button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button>
-      <button onclick="delEvent('${e.id}');tlEvSel=null;">🗑 削除</button>
-      <button class="cl" onclick="tlEvSel=null;render();">✕</button></div></div>`;})():'';
+  const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
+    const top=y(A(hm2min(e.start)));const bg=evColor(e),tc=evTextColor(bg);const lab=colorLabelOf(e);
+    return `<div class="evpop" style="top:${Math.max(0,top-6)}px;">
+      <div class="evpoph" style="background:${bg};color:${tc};"><b>${e.important?'★ ':''}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
+      <div class="evpopb">
+        <div class="evpopt">${CLOCKI}${evTimeText(e)}${e.repeat?' ・'+(REPEAT_LABEL[e.repeat]||''):''}</div>
+        <div class="evpopcat"><span class="dot" style="background:${bg}"></span>${lab?esc(lab):esc(group(e.groupId).name)}</div>
+        ${e.memo?`<div class="evpopmemo">${linkify(e.memo)}</div>`:''}
+        ${e.links&&e.links.length?linkChips(e.links):''}
+        ${rowImgs(e.images)}
+        <div class="evpopacts"><button onclick="eventModal('${e.id}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}');tlEvSel=null;">🗑</button></div>
+      </div></div>`;})():'';
   return `${hint}<div class="tlwrap">
     <div class="tl${placing?' placing':''}" style="height:${H}px" ${placing?'onclick="placeAtClick(event)"':''}>${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
-    ${poolHtml}</div>${actionBar}${evBar}
+    ${poolHtml}${evPop}</div>${actionBar}
+    ${t===todayStr()?`<button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button>`:''}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
-      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作（完了・時間指定・明日など）。予定はタップでメニュー。</div>`
+      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
+function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
@@ -1440,6 +1479,14 @@ function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayS
     dl.at[tk]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);}); // 複数は続けて配置（起床基準の軸で連続）
   placeToks=null;save();render();flashUndo('配置しました');}
 function unpinItem(tok){const dl=dayLog(todayStr());if(dl.at){snapUndo();delete dl.at[tok];save();render();flashUndo('未配置に戻しました');}}
+/* 未配置を「今」から順に自動配置（10分刻み・24時間軸） */
+function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;const at=(dayLog(t).at)||{};
+  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
+  if(!pool.length)return;snapUndo();
+  let ax=Math.max(w,Math.min(toAxis(curMin(),w),end-10));ax=Math.round(ax/10)*10;
+  const dl=dayLog(t);dl.at=dl.at||{};
+  pool.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);dl.at[it.type+'_'+it.obj.id]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);});
+  save();render();flashUndo(pool.length+'件を今から順に配置しました');}
 /* ===== タイムラインのタップ＝複数選択→下のバーで一括操作（⑥⑦⑧⑨） ===== */
 let tlSel=[],tlEvSel=null;
 function tlTapTask(tk){tlEvSel=null;const i=tlSel.indexOf(tk);i>=0?tlSel.splice(i,1):tlSel.push(tk);render();}
@@ -1588,9 +1635,13 @@ function setTaskActive(id){taskActiveRow=(taskActiveRow===id?null:id);render();}
 function openTaskEdit(id){taskActiveRow=null;taskModal(id);}
 function enterTaskReorderWith(id){taskActiveRow=null;taskSort='manual';taskReorder=true;taskRSel=[id];taskPlaceMode=false;render();}
 function addTaskAfter(id){taskActiveRow=null;taskAddAfter=id;taskModal(null);}
+let taskQuery='';
+function onTaskSearch(v){taskQuery=v;_focusSearch=true;render();}
 function renderTasks(){
   const ids=visibleGroups(taskSel);
   let list=S.tasks.filter(x=>!ids||ids.has(x.groupId));
+  if(taskQuery.trim()){const q=taskQuery.trim().toLowerCase();
+    list=list.filter(x=>(x.title||'').toLowerCase().includes(q)||(x.memo||'').toLowerCase().includes(q));}
   const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
   const sortFn=(a,b)=>a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')||a.order-b.order;
   let body='';
@@ -1620,6 +1671,7 @@ function renderTasks(){
         </div>`;}).join('')}</div></div>`;}
   return `
   <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
+  <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   ${groupChipsHtml(taskSel,'tglTaskSel')}
   <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
     <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先</button>
@@ -2541,7 +2593,8 @@ function renderSettings(){
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
     <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
     <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
-    <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>`;
+    <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>
+    <div class="setrow"><div><div class="sl">タイムラインに完了を薄く残す</div><div class="sd">その日にやったことの実績を時刻の位置に表示</div></div>${tgl('showDoneTL')}</div>`;
   if(P==='time')return back+`<div class="vhead"><h1>時間関連設定</h1></div>
     <div class="setrow"><div><div class="sl">起床時刻（既定）</div><div class="sd">「使える時間」を起床〜就寝から自動計算</div></div>
       ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
@@ -2559,9 +2612,10 @@ function renderSettings(){
       ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
     <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>`;
   if(P==='event')return back+`<div class="vhead"><h1>予定・カテゴリ設定</h1></div>
-    <div class="sec-h">予定の配色（12色 × 2トーン）</div>
-    <div class="huelegend">${HUES12.map(h=>`<div class="huepair"><span class="hs" style="background:${h.p}"></span><span class="hs" style="background:${h.v}"></span><span class="hn">${h.n}</span></div>`).join('')}</div>
-    <div class="mini">各予定は12色から選べます（予定の編集画面）。ふだんは<b>パステル</b>、<b>★重要</b>にすると同じ色の<b>ポップ（彩度高め）</b>で表示されます。</div>
+    <div class="sec-h">色カテゴリ（12色 × 2トーン）</div>
+    <div class="huelegend">${HUES12.map((h,i)=>`<div class="huepair"><span class="hs" style="background:${h.p}"></span><span class="hs" style="background:${h.v}"></span>
+      <input class="hlab" value="${esc(hueLabel(i))}" placeholder="${h.n}（用途を入力）" onchange="setHueLabel(${i},this.value)"></div>`).join('')}</div>
+    <div class="mini">TimeTree式の<b>色のラベル</b>です。「この色は仕事」「この色は家族」など<b>任意で</b>名前を付けられます（実際のグループ分けとは別の、色の目印）。ふだんは<b>パステル</b>、<b>★重要</b>で同じ色の<b>ポップ</b>表示。</div>
     <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）</div><div class="sd">${S.groups.length}件・階層と色系統</div></div><span style="color:var(--sub);">▸</span></div>
@@ -2593,7 +2647,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.43（2026-07-22）</b><br>
+  <div class="mini"><b>v1.44（2026-07-22）</b><br>
+  ・タイムラインの<b>予定をタップ→右に詳細ポップ</b>（時間・色カテゴリ・メモ・リンク・編集/複製/削除）<br>
+  ・<b>色カテゴリのラベル</b>を設定可能に（TimeTree式）。設定→予定・カテゴリ設定で「この色は仕事／家族」など任意に命名。今日画面上部に凡例を表示<br>
+  ・改善: <b>「今へ」ジャンプ</b>ボタン／未配置を<b>今から順に自動配置</b>／<b>タスク検索</b>／完了の薄い表示を<b>ON/OFF</b>（設定）<br>
+  <b>v1.43（2026-07-22）</b><br>
   ・タイムラインを<b>24時間表記</b>に（起床＝朝の起点／就寝後の深夜帯にも予定・タスクを置けます）<br>
   ・タイムラインのタスクを<b>タップで複数選択→下のバーで一括操作</b>（完了・時間指定・明日・隠す・編集）。もう一度タップで解除。予定はタップでメニュー（並び替え画面へは移動しません）<br>
   ・<b>元に戻す</b>を追加（配置・編集・削除の直後に「↶元に戻す」）<br>
