@@ -104,6 +104,33 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .timebar .gauge i.over{background:var(--danger);}
 .timebar .neg{color:var(--danger);font-weight:700;}
 .availEdit{font-size:12.5px;color:var(--accent);}
+/* 朝昼夜の配分パネル（#5） */
+.bandpanel{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px;}
+.bprow{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);}
+.bprow .bplab{width:16px;font-weight:700;text-align:center;flex:0 0 16px;}
+.bprow .bptime{width:96px;flex:0 0 96px;font-variant-numeric:tabular-nums;}
+.bprow .bpgauge{flex:1;height:7px;background:var(--bg2);position:relative;}
+.bprow .bpgauge i{position:absolute;top:0;bottom:0;left:0;}
+.bprow .bpnum{width:70px;flex:0 0 70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;}
+.bprow .bpnum.neg{color:var(--danger);font-weight:700;}
+/* 縦タイムライン（#6） */
+.tl{position:relative;margin:8px 16px 4px;}
+.tl .tlhr{position:absolute;left:44px;right:0;border-top:1px dashed #EDEFF2;}
+.tl .tlhrlab{position:absolute;left:0;width:40px;font-size:10px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums;}
+.tl .tlzone{position:absolute;left:44px;right:0;opacity:.09;}
+.tl .tlzlab{position:absolute;left:48px;font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.85;}
+.tl .tlev{position:absolute;left:46px;width:calc(50% - 50px);background:#EEF1F6;border-left:3px solid #9AA6B8;font-size:10.5px;line-height:1.25;padding:2px 5px;overflow:hidden;color:var(--ink);}
+.tl .tlev b{font-variant-numeric:tabular-nums;}
+.tl .tltask{position:absolute;right:0;background:#fff;border-left:3px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.10);font-size:11.5px;line-height:1.2;padding:0 8px;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:6px;z-index:2;}
+.tl .tltask .tltt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+.tl .tltask .tltm{font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto;}
+.tl .tltask.over{background:#FCECEA;border-left-color:var(--danger)!important;}
+.tl .tltask.over .tltm{color:var(--danger);}
+.tl .tlnow{position:absolute;left:44px;right:0;border-top:2px solid #E5484D;z-index:4;}
+.tl .tlnow span{position:absolute;left:-44px;top:-8px;font-size:9.5px;color:#E5484D;font-weight:700;background:#fff;padding:0 2px;}
+.tl .tlsleep{position:absolute;left:44px;right:0;border-top:2px dashed #7B5EC7;z-index:4;}
+.tl .tlsleep span{position:absolute;left:-44px;top:-8px;font-size:9.5px;color:#7B5EC7;font-weight:700;background:#fff;padding:0 2px;}
+.tlwarn{margin:2px 16px 10px;padding:8px 11px;background:#FCECEA;border-left:3px solid var(--danger);font-size:12px;color:#8A2A24;line-height:1.5;}
 .startBtn{display:block;width:calc(100% - 32px);margin:14px 16px 4px;background:var(--ink);color:#fff;padding:13px 0;font-size:15px;font-weight:700;letter-spacing:.2em;}
 .startBtn:active{opacity:.8;}
 .startrow{display:flex;gap:8px;padding:12px 16px 0;}
@@ -976,6 +1003,7 @@ function renderToday(){
     <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
     <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
       ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
+    ${bandPanelHtml(t)}
   </div>
   <div class="startrow">
     <button class="startBtn2" onclick="startFlow()">▶ ルーティン開始</button>
@@ -986,13 +1014,13 @@ function renderToday(){
   ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${scheduleListHtml(evs,dayWake(t))}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
-    ${todayReorder?todayReorderHtml(doList):`
+      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>`}　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
+    ${todayReorder?todayReorderHtml(doList):(S.settings.timeline?todayTimelineHtml(t):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
       <button onclick="quickAddToday()">追加</button>
     </div>
-    ${doList.length?doList.map(it=>doItemRow(it,t)).join(''):'<div class="mini">ルーティンや、タスクタブで「☀今日」にした項目がここに並びます。右スワイプで完了・左スワイプで明日/隠すメニュー、長押しで色分け、「並び替え」で順番変更。</div>'}`}
+    ${doList.length?doList.map(it=>doItemRow(it,t)).join(''):'<div class="mini">ルーティンや、タスクタブで「☀今日」にした項目がここに並びます。右スワイプで完了・左スワイプで明日/隠すメニュー、長押しで色分け、「並び替え」で順番変更。</div>'}`)}
   </div>
   ${(()=>{const hr=(dayLog(t).hiddenR||[]).map(id=>S.routines.find(r=>r.id===id)).filter(Boolean).map(r=>({type:'r',obj:r}));
     const ht=S.tasks.filter(x=>x.today===t&&x.snooze===t).map(x=>({type:'t',obj:x}));
@@ -1111,6 +1139,56 @@ function doItemRow(it,t){
   return taskRow(it.obj,{today:true,arrowsTok:tok});}
 function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>it.type+'_'+it.obj.id);
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
+/* ===== 時間ヘルパー & 朝昼夜の配分（#5）／縦タイムライン（#6） ===== */
+const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
+function dayBounds(t){let w=hm2min(dayWake(t)),s=hm2min(daySleep(t));if(s<=w)s+=1440;return {w,s};}
+function bandsOf(t){const {w,s}=dayBounds(t);const pm=hm2min(S.settings.pmStart),ns=hm2min(S.settings.nightStart);
+  const cl=v=>Math.min(Math.max(v,w),s);
+  return [{k:'morning',lab:'朝',c:'#D9A521',a:w,b:cl(pm)},
+          {k:'day',lab:'昼',c:'#D9791C',a:cl(pm),b:cl(ns)},
+          {k:'night',lab:'夜',c:'#7B5EC7',a:cl(ns),b:s}];}
+function bandPanelHtml(t){const log=dayLog(t);const bands=bandsOf(t);
+  const load={morning:0,day:0,night:0};
+  todaysRoutines(t).forEach(r=>{if(log.routines[r.id]?.done)return;const sl=r.slot==='any'?'day':r.slot;if(load[sl]!=null)load[sl]+=(+r.estMin||0);});
+  const taskLoad=todayTasks(t).filter(x=>x.status!=='done').reduce((n,x)=>n+(+x.estMin||0),0);
+  const rows=bands.map(bd=>{const dur=Math.max(0,bd.b-bd.a);const ld=load[bd.k]||0;
+    const pv=dur?Math.min(100,ld/dur*100):0;const over=ld>dur&&dur>0;
+    return `<div class="bprow"><span class="bplab" style="color:${bd.c}">${bd.lab}</span>
+      <span class="bptime">${min2hm(bd.a)}–${min2hm(bd.b)}</span>
+      <div class="bpgauge"><i class="${over?'over':''}" style="width:${over?100:pv}%;background:${over?'var(--danger)':bd.c}"></i></div>
+      <span class="bpnum ${over?'neg':''}">${over?'▲'+fmtMin(ld-dur)+'超':(ld?fmtMin(ld):'—')}</span></div>`;}).join('');
+  const av=availOf(t);const tpv=av?Math.min(100,taskLoad/av*100):0;
+  return `<div class="bandpanel">${rows}
+    ${taskLoad?`<div class="bprow"><span class="bplab" style="color:#8A909A">他</span><span class="bptime">時間指定なしのタスク</span>
+      <div class="bpgauge"><i style="width:${tpv}%;background:#C9CED6"></i></div><span class="bpnum">${fmtMin(taskLoad)}</span></div>`:''}</div>`;}
+function todayTimelineHtml(t){const log=dayLog(t);const {w,s}=dayBounds(t);
+  const PX=1.0,MINH=24;const MINMIN=MINH/PX;const y=mn=>(mn-w)*PX;
+  const zones=bandsOf(t).filter(z=>z.b>z.a);
+  const evs=S.events.filter(e=>eventOccursOn(e,t)&&e.start).sort((a,b)=>a.start.localeCompare(b.start));
+  const hasEv=evs.length>0;
+  const items=doItems(t).filter(it=>!flowItemDone(it));
+  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  const startCur=(t===todayStr())?Math.max(w,Math.min(nowM,s)):w;
+  // タスクを開始時刻から順に積む（最小の高さを確保して重なりを防ぐ）
+  let cur=startCur,realEnd=startCur;const blocks=[];
+  items.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
+    blocks.push({it,est,top:cur,h:vis*PX,over:realEnd+est>s});cur+=vis;realEnd+=est;});
+  const H=Math.max(360,(Math.max(cur,s)-w)*PX+8);
+  let ticks='';for(let h=Math.ceil(w/60)*60;h<Math.max(cur,s);h+=60){ticks+=`<div class="tlhr" style="top:${y(h)}px"></div><div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`;}
+  const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.c}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
+  const evH=evs.map(e=>{const a=hm2min(e.start),b=e.end?hm2min(e.end):a+30;const top=y(a),h=Math.max(18,(Math.min(b,s)-a)*PX);
+    return `<div class="tlev" style="top:${top}px;height:${h}px" onclick="eventModal('${e.id}')"><b>${min2hm(a)}</b> ${esc(evTitle(e))}</div>`;}).join('');
+  const taskW=hasEv?'width:calc(50% - 4px);':'width:calc(100% - 52px);';
+  const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it);
+    return `<div class="tltask ${bl.over?'over':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;${taskW}border-left-color:${bc}" onclick="${it.type==='r'?`routineModal('${it.obj.id}')`:`taskModal('${it.obj.id}')`}">
+      <span class="tltt">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${fmtMin(bl.est)}</span></div>`;}).join('');
+  const overMin=realEnd-s;
+  const nowLine=(t===todayStr()&&nowM>w&&nowM<Math.max(cur,s))?`<div class="tlnow" style="top:${y(nowM)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
+  const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(s)}</span></div>`;
+  return `<div class="tl" style="height:${H}px">${zoneH}${ticks}${sleepLine}${evH}${taskH}${nowLine}</div>
+    ${items.length?(overMin>0?`<div class="tlwarn">⚠ 今の順番だと就寝（${min2hm(s)}）までに終わらず <b>${fmtMin(overMin)}</b> はみ出します。並び替えで調整するか、いくつか明日へ回しましょう。</div>`
+      :`<div class="mini" style="padding:2px 16px 8px;">今の順番なら <b>${min2hm(realEnd)}</b> ごろ全部終わる見込みです（就寝まで余裕あり）。</div>`):'<div class="mini" style="padding:2px 16px 8px;">今日やることがありません。</div>'}`;}
+function toggleTimeline(){S.settings.timeline=!S.settings.timeline;save();render();}
 /* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let todayReorder=false,todaySel=[];
 function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
@@ -2149,7 +2227,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.32（2026-07-21）</b><br>
+  <div class="mini"><b>v1.33（2026-07-21）</b><br>
+  ・今日タブに<b>タイムライン表示</b>を追加（「今日やること」の右上ボタンで切替）。朝→夜まで1日を縦に並べ、いまの順番でタスクを所要時間ぶんの高さで積み、<b>就寝までに終わるか／はみ出すか</b>をひと目で確認できます（はみ出すタスクは赤、見込みの終了時刻も表示）<br>
+  ・ヘッダーに<b>朝・昼・夜の時間配分</b>を縦に表示。各時間帯の作業量と、詰め込みすぎ（超過）が色バーで分かります<br>
+  <b>v1.32（2026-07-21）</b><br>
   ・並び替えを分かりやすく刷新：「配置」を廃止し<b>「決定」</b>ボタンに一本化。動かしたい項目をタップ（選んだ順に番号）→「決定」で<b>先頭の番号の下にまとめて整列</b>。今日タブ・タスクタブで共通の操作に<br>
   ・並び替え中に画面が上に戻らないよう改善<br>
   <b>v1.31（2026-07-21）</b><br>
