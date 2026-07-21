@@ -106,6 +106,20 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .availEdit{font-size:12.5px;color:var(--accent);}
 .startBtn{display:block;width:calc(100% - 32px);margin:14px 16px 4px;background:var(--ink);color:#fff;padding:13px 0;font-size:15px;font-weight:700;letter-spacing:.2em;}
 .startBtn:active{opacity:.8;}
+.startrow{display:flex;gap:8px;padding:12px 16px 0;}
+.startBtn2{flex:1;background:var(--ink);color:#fff;padding:12px 0;font-size:15px;font-weight:700;letter-spacing:.15em;}
+.startBtn2:active{opacity:.85;}
+.composeBtn{flex:0 0 auto;border:1px solid var(--line);color:var(--ink);padding:12px 14px;font-size:13px;white-space:nowrap;}
+.composeBtn.on{border-color:var(--ink);font-weight:700;}
+/* 省スペース（コンパクト）行 */
+.ditem{display:flex;align-items:center;gap:9px;padding:7px 16px;border-bottom:1px solid var(--line2);}
+.ditem .chk{width:20px;height:20px;flex:0 0 20px;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.ditem.done .chk{background:var(--ink);}
+.ditem .chk svg{width:13px;height:13px;stroke:#fff;stroke-width:2.5;fill:none;}
+.ditem .dt{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.ditem.done .dt{text-decoration:line-through;color:var(--done);}
+.ditem .dtime{font-size:11px;color:var(--sub);flex:0 0 auto;white-space:nowrap;}
+.wtag{font-size:9.5px;color:var(--wait);border:1px solid var(--wait);padding:0 4px;margin-left:5px;}
 .gmsg{padding:10px 16px 2px;font-size:13px;color:var(--sub);}
 
 /* routine check row */
@@ -614,6 +628,7 @@ function migrate(){const st=S.settings;
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
+  if(st.dense===undefined)st.dense=true;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;});
@@ -949,10 +964,10 @@ function renderToday(){
     <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
       ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
   </div>
-  <div class="addrow" style="padding:12px 16px 0;">
-    <button onclick="composeToday()">🧩 今日のルーティンを組む${dayLog(t).planRoutines?'（編成中）':''}</button>
+  <div class="startrow">
+    <button class="startBtn2" onclick="startFlow()">▶ ルーティン開始</button>
+    <button class="composeBtn ${dayLog(t).planRoutines?'on':''}" onclick="composeToday()">🧩 組む</button>
   </div>
-  <button class="startBtn" onclick="startFlow()">▶ ルーティン開始</button>
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   ${evs.length?`<div class="sec"><div class="sec-h">今日の予定</div>${scheduleListHtml(evs,dayWake(t))}</div>`:''}
@@ -961,7 +976,7 @@ function renderToday(){
     ${carry.map(x=>taskRow(x)).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
+      :`<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>　<button class="act" onclick="enterTodayReorder()">並び替え</button>　<button class="act" onclick="switchView('tasks')">＋選ぶ</button>`}</div>
     ${todayReorder?todayReorderHtml(doList):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
@@ -1055,8 +1070,22 @@ function todayArrows(tok){return `<div class="arrows">
   <button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button>
   <button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button>
   <button onclick="event.stopPropagation();moveDoItemBottom('${tok}')" title="後回し">⤓</button></div>`;}
+function toggleDense(){S.settings.dense=!S.settings.dense;save();render();}
+const CHK='<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>';
+function doItemRowDense(it,t,tok){
+  if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;
+    return `<div class="ditem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}">
+      <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?CHK:''}</div>
+      <div class="dt" onclick="setAnchor('${tok}');routineModal('${r.id}')">${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}${r.memo?' 📝':''}${r.images&&r.images.length?' 📷':''}</div>
+      <div class="dtime">${SLOTS[r.slot].slice(0,1)}・${fmtMin(r.estMin)}</div></div>`;}
+  const x=it.obj;const done=x.status==='done';
+  return `<div class="ditem ${done?'done':''}" data-lp="t_${x.id}" data-do="${tok}" style="${pastelBg(x)}">
+    <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${done?CHK:''}</div>
+    <div class="dt" onclick="setAnchor('${tok}');taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.status==='wait'?'<span class="wtag">待</span>':''}${x.memo?' 📝':''}${x.images&&x.images.length?' 📷':''}</div>
+    <div class="dtime">${x.estMin?fmtMin(x.estMin):''}${x.due?' ・'+fmtDateJa(x.due).slice(0,-3):''}</div></div>`;}
 function doItemRow(it,t){
   const tok=it.type+'_'+it.obj.id;
+  if(S.settings.dense)return doItemRowDense(it,t,tok);
   const arrows=todayArrows(tok);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
     return `<div class="ritem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}">
@@ -2105,7 +2134,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.28（2026-07-20）</b><br>
+  <div class="mini"><b>v1.29（2026-07-20）</b><br>
+  ・今日の画面を見やすく：<b>省スペース表示（1行1タスク）</b>を既定に。開くだけで全体像が見える。見出しの「詳しく／省スペース」で切替<br>
+  ・「ルーティン開始」と「組む」を1行に集約して上部を圧縮<br>
+  <b>v1.28（2026-07-20）</b><br>
   ・タスクタブもルーティンと同じ操作に：行タップで「編集／並び替え／この下に追加」を選択（並び替えは手動並びで選択＋▲▼/配置）<br>
   <b>v1.27（2026-07-20）</b><br>
   ・「こまめ」タブを追加。スキマ時間に何度もやること（ストレッチ等）を「＋1回」で記録＝多いほど◎。今日/週/月の回数・時間・曜日別を集計<br>
