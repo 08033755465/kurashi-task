@@ -1460,7 +1460,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   return `${hint}<div class="tlwrap">
     <div class="tl${placing?' placing':''}" style="height:${H}px" ${placing?'onclick="placeAtClick(event)"':''}>${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
     ${poolHtml}${evPop}</div>${actionBar}
-    ${t===todayStr()?`<button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button>`:''}
+    ${t===todayStr()&&!flowList.length?`<button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button>`:''}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
