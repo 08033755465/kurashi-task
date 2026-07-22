@@ -680,7 +680,7 @@ const HUES12=[
   {n:'オレンジ（濃）',p:'#F9CFA0', v:'#E9761A'},
   {n:'レッド（赤）', p:'#F4B2AA', v:'#D8362B'},
   {n:'ピンク',       p:'#F8C5DC', v:'#E7519A'},
-  {n:'コーラルピンク',p:'#FBC7B7', v:'#F06E54'},
+  {n:'コーラルピンク',p:'#FBC8CE', v:'#F26E86'},
   {n:'エメラルド',   p:'#ADE3CF', v:'#0FA678'},
   {n:'水色（青み）', p:'#B9DDF2', v:'#2E9BDB'},
   {n:'ブルー',       p:'#BECCEF', v:'#3556C8'},
@@ -1901,7 +1901,7 @@ function eventsOn(d){const ids=visibleGroups(calSel);
 function dueTasksOn(d){if(!S.settings.showDue)return[];const ids=visibleGroups(calSel);
   return S.tasks.filter(x=>x.due===d&&x.status!=='done'&&(!ids||ids.has(x.groupId)));}
 function marksOn(m,d){const out=[];
-  S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+(b.honorific||'さん')+'の誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
+  S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+'の誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
   S.marks.forEach(k=>{if(+k.month===m&&+k.day===d)out.push({icon:k.icon,color:k.color,name:k.name});});
   return out;}
 function renderCal(){
@@ -2696,7 +2696,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.45（2026-07-22）</b><br>
+  <div class="mini"><b>v1.46（2026-07-23）</b><br>
+  ・オレンジとコーラルピンクの色味を離して見分けやすく<br>
+  ・誕生日の敬称を廃止（「さん」も付けず、名前そのままで表示）<br>
+  <b>v1.45（2026-07-22）</b><br>
   ・改善5点：<b>タイムラインの空き時間をタップ</b>→その時刻に予定/記録を追加／予定の色選びに<b>色ラベル名</b>を表示／<b>「使い方」ページ</b>を追加（設定）／「＋追加→予定」は開始を<b>今</b>で初期化／未配置を<b>「全部あすへ」</b>ボタン<br>
   <b>v1.44（2026-07-22）</b><br>
   ・タイムラインの<b>予定をタップ→右に詳細ポップ</b>（時間・色カテゴリ・メモ・リンク・編集/複製/削除）<br>
@@ -2898,7 +2901,7 @@ function bdayList(){openModal(`<div class="mh"><b>誕生日</b><button onclick="
     <button class="addlink" style="margin-bottom:8px;" onclick="bdayModal(null)">＋ 誕生日を追加</button>
     ${S.birthdays.length?S.birthdays.map(b=>`<div class="listrow" onclick="bdayModal('${b.id}')">
       <span style="width:16px;height:16px;color:${b.gift?(b.color||'#E8618C'):'var(--sub)'};">${icSvg('cake')}</span>
-      <span class="lt">${esc(b.name)}${esc(b.honorific||'さん')}</span><span class="ls">${b.month}/${b.day}${b.gift?'・プレゼント準備':''}</span></div>`).join('')
+      <span class="lt">${esc(b.name)}</span><span class="ls">${b.month}/${b.day}${b.gift?'・プレゼント準備':''}</span></div>`).join('')
       :'<div class="mini" style="padding:8px 0;">登録するとカレンダーにケーキのマークが表示されます</div>'}
   </div>`);}
 function markList(){openModal(`<div class="mh"><b>マーク付きの日</b><button onclick="closeModal()">✕</button></div>
@@ -2943,8 +2946,7 @@ function bdayModal(id){
   const b=id?S.birthdays.find(x=>x.id===id):null;
   openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
-    <div class="frow f2"><div style="flex:2;"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
-      <div><label>敬称（空欄なら「さん」）</label><input id="bmHon" value="${esc(b?.honorific||'')}" placeholder="さん"></div></div>
+    <div class="frow"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
     <div class="frow f2"><div><label>月</label><input id="bmM" type="number" inputmode="numeric" min="1" max="12" value="${b?.month||''}"></div>
       <div><label>日</label><input id="bmD" type="number" inputmode="numeric" min="1" max="31" value="${b?.day||''}"></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="bmGift" style="width:auto;" ${b?.gift?'checked':''}>
@@ -2960,7 +2962,7 @@ function saveBday(id){
   const name=$('#bmName').value.trim(),m=+$('#bmM').value,d=+$('#bmD').value;
   if(!name||!m||!d){uiAlert('名前と月日を入力してください');return;}
   const color=$('#bmColor button.on')?.dataset.c||'#E8618C';
-  const data={name,month:m,day:d,gift:$('#bmGift').checked,color,honorific:$('#bmHon').value.trim()};
+  const data={name,month:m,day:d,gift:$('#bmGift').checked,color};
   if(id)Object.assign(S.birthdays.find(x=>x.id===id),data);
   else S.birthdays.push({id:uid(),...data});
   save();bdayList();render();}
