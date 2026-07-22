@@ -193,10 +193,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #undobar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
 #undobar button{color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:16px !important;padding:6px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
 /* 配色パレット選択 */
-.huelegend{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding:2px 16px 6px;}
-.huepair{display:flex;align-items:center;gap:5px;}
-.huepair .hs{width:16px;height:16px;flex:0 0 16px;border-radius:5px !important;}
-.huepair .hlab{flex:1;min-width:0;font-size:12px;padding:5px 7px;}
+.huelegend{display:flex;flex-direction:column;gap:6px;padding:2px 16px 6px;}
+.huerow{display:flex;align-items:center;gap:8px;}
+.huerow .hcp{width:34px;height:30px;flex:0 0 34px;padding:2px;border:1px solid var(--line);border-radius:6px !important;background:none;cursor:pointer;}
+.huerow .hlab{flex:1;min-width:0;font-size:12.5px;padding:6px 8px;}
 /* 予定編集の色ピッカー */
 .huepick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
 .huepick button{height:30px;border-radius:6px !important;border:2px solid transparent;position:relative;overflow:hidden;}
@@ -687,14 +687,19 @@ const HUES12=[
   {n:'パープル',     p:'#D6C7F0', v:'#8654C6'},
 ];
 function hashStr(s){let h=0;s=s||'';for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
+/* 実際に使う色＝デフォルト(HUES12)＋ユーザー上書き(settings.hueColors)。テスト期間中は各自で編集可 */
+function HUE(i){const d=HUES12[i]||{n:'',p:'#CCCCCC',v:'#888888'};const o=(S.settings.hueColors||[])[i]||{};
+  return {n:d.n,p:o.p||d.p,v:o.v||d.v};}
 function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
-function evColor(e){const h=HUES12[hueOf(e)];return (e&&e.important)?h.v:h.p;}
+function evColor(e){const h=HUE(hueOf(e));return (e&&e.important)?h.v:h.p;}
 function hueLabel(i){return (S.settings.hueLabels||[])[i]||'';}
-function hueLegendChips(){const items=HUES12.map((h,i)=>({h,i,lab:hueLabel(i)})).filter(x=>x.lab);
+function setHueColor(i,which,val){const a=(S.settings.hueColors||[]).slice();a[i]={...(a[i]||{}),[which]:val};S.settings.hueColors=a;save();render();}
+function resetHueColors(){S.settings.hueColors=[];save();render();toast('配色を初期値に戻しました');}
+function hueLegendChips(){const items=HUES12.map((_,i)=>({p:HUE(i).p,i,lab:hueLabel(i)})).filter(x=>x.lab);
   if(!items.length)return '';
-  return `<div class="huechips">${items.map(x=>`<span class="huechip"><span class="d" style="background:${x.h.p}"></span>${esc(x.lab)}</span>`).join('')}</div>`;}
+  return `<div class="huechips">${items.map(x=>`<span class="huechip"><span class="d" style="background:${x.p}"></span>${esc(x.lab)}</span>`).join('')}</div>`;}
 function colorLabelOf(e){return hueLabel(hueOf(e));}
 function setHueLabel(i,v){const a=(S.settings.hueLabels||[]).slice();a[i]=v.trim();S.settings.hueLabels=a;save();}
 function isLight(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return true;const n=parseInt(m[1],16);
@@ -832,10 +837,10 @@ function dayLog(d){if(!S.dayLog[d])S.dayLog[d]={routines:{}};return S.dayLog[d];
 function groupHue(id){const g=S.groups.find(x=>x.id===id);
   if(g&&g.hue!=null&&HUES12[g.hue])return g.hue;
   return hashStr(id||'')%HUES12.length;}
-function groupColor(id){return HUES12[groupHue(id)].p;}
+function groupColor(id){return HUE(groupHue(id)).p;}
 /* 親子の色を合体したグループマーク */
 function gchain(id){const out=[];let g=S.groups.find(x=>x.id===id);
-  while(g){out.unshift(HUES12[groupHue(g.id)].p);g=S.groups.find(x=>x.id===g.parentId);}return out;}
+  while(g){out.unshift(HUE(groupHue(g.id)).p);g=S.groups.find(x=>x.id===g.parentId);}return out;}
 function markCss(id,deg){const c=gchain(id);deg=deg||135;
   if(c.length===0)return 'background:#B5BAC4';
   if(c.length===1)return `background:${c[0]}`;
@@ -1429,8 +1434,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     return `<div class="tllog" style="top:${top}px;min-height:${h-2}px;border-left-color:${k.c};" onclick="logEditor('${l.id}')"><span class="lgi">${k.i}</span><span class="lgx">${esc(l.text)}</span>${l.dur?`<span class="lgd">${fmtMin(l.dur)}</span>`:''}</div>`;}).join('');
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}`;
-    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing||bl.done?'':`onclick="tlTapTask('${tk}')"`}>
-      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'✓ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTapTask('${tk}')`}"`}>
+      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
   const overAny=placed.some(p=>p.ax+p.est>end);
@@ -1505,6 +1510,11 @@ function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayS
     dl.at[tk]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);}); // 複数は続けて配置（起床基準の軸で連続）
   placeToks=null;save();render();flashUndo('配置しました');}
 function unpinItem(tok){const dl=dayLog(todayStr());if(dl.at){snapUndo();delete dl.at[tok];save();render();flashUndo('未配置に戻しました');}}
+/* タイムラインの完了ゴーストをタップ→未完了に戻す（誤操作リカバリ・全タブ共通の考え方） */
+function tlUndone(tk){const t=todayStr();const type=tk[0],id=tk.slice(2);snapUndo();
+  if(type==='r'){const log=dayLog(t);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
+  else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='todo';delete x.doneAt;delete x.doneMin;}}
+  save();render();flashUndo('未完了に戻しました');}
 /* 未配置を「今」から順に自動配置（10分刻み・24時間軸） */
 function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;const at=(dayLog(t).at)||{};
   const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
@@ -1988,11 +1998,13 @@ function nextTaskDate(fromDs,repeat){const d=parseDs(fromDs);
   else return null;
   return dsOf(d);}
 function advanceRepeatTask(x){if(!x.repeat)return false;
-  const base=x.today||x.due||todayStr();const nd=nextTaskDate(base,x.repeat);if(!nd)return false;
-  dayLogs(todayStr()).push({id:uid(),kind:'done',text:x.title,at:curMin(),dur:0});
+  const t=todayStr();const base=x.today||x.due||t;const nd=nextTaskDate(base,x.repeat);if(!nd)return false;
+  const pd=parseDs(base);const md=(pd.getMonth()+1)+'/'+pd.getDate();
+  const label=(base!==t)?`${x.title}（${md}分）`:x.title; // いつの分か分かるように
+  dayLogs(t).push({id:uid(),kind:'done',text:label,at:curMin(),dur:0});
   x.status='todo';x.today=nd;if(x.due)x.due=nd;delete x.doneAt;delete x.doneMin;
-  const at=dayLog(todayStr()).at;if(at)delete at['t_'+x.id];
-  toast('完了！次回は '+fmtDateJa(nd)+' に繰り返します🔁');return true;}
+  const at=dayLog(t).at;if(at)delete at['t_'+x.id];
+  toast(`完了！${base!==t?`（${md}分）`:''}次回は ${fmtDateJa(nd)} に繰り返します🔁`);return true;}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
   if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
   save();render();checkCelebrate();}
@@ -2146,7 +2158,7 @@ function eventModal(id,presetDate,presetStart){
       <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
     <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
     <div class="frow"><label>色（12色から選ぶ）</label>
-      <div class="huepick labeled" id="emHue">${HUES12.map((h,i)=>`<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${hueLabel(i)||h.n}"><span class="pop" style="background:${h.v}"></span>${hueLabel(i)?`<span class="hpl">${esc(hueLabel(i))}</span>`:''}</button>`).join('')}</div>
+      <div class="huepick labeled" id="emHue">${HUES12.map((_,i)=>{const h=HUE(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${hueLabel(i)||h.n}"><span class="pop" style="background:${h.v}"></span>${hueLabel(i)?`<span class="hpl">${esc(hueLabel(i))}</span>`:''}</button>`;}).join('')}</div>
       <div class="mini" style="padding:4px 0 0;">色に名前を付けると（設定→予定・カテゴリ設定）ここに表示されます。未選択ならグループの色。</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
       <span style="font-size:13px;">★ 重要な予定（同じ色のポップ〔彩度高め〕で目立たせる）</span></div>
@@ -2160,7 +2172,9 @@ function eventModal(id,presetDate,presetStart){
     ${e?`<button class="del" onclick="delEvent('${e.id}')">削除</button><button onclick="dupEvent('${e.id}')">複製</button>`:''}
     <button class="save" onclick="saveEvent('${e?.id||''}')">保存</button>
   </div>`);
-  emDowUpd();}
+  emDowUpd();
+  if(!id){const el=$('#emTitle');if(el){setTimeout(()=>{el.focus();el.scrollIntoView({block:'center'});},120);}} // 新規はすぐ入力モード
+}
 function emDowUpd(){const v=$('#emDate')?.value;const el=$('#emDow');if(!el)return;
   if(!v){el.textContent='';return;}
   const d=parseDs(v);let s='（'+WD[d.getDay()]+'）';
@@ -2661,10 +2675,13 @@ function renderSettings(){
       ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
     <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>`;
   if(P==='event')return back+`<div class="vhead"><h1>予定・カテゴリ設定</h1></div>
-    <div class="sec-h">色カテゴリ（12色 × 2トーン）</div>
-    <div class="huelegend">${HUES12.map((h,i)=>`<div class="huepair"><span class="hs" style="background:${h.p}"></span><span class="hs" style="background:${h.v}"></span>
-      <input class="hlab" value="${esc(hueLabel(i))}" placeholder="${h.n}（用途を入力）" onchange="setHueLabel(${i},this.value)"></div>`).join('')}</div>
-    <div class="mini">TimeTree式の<b>色のラベル</b>です。「この色は仕事」「この色は家族」など<b>任意で</b>名前を付けられます（実際のグループ分けとは別の、色の目印）。ふだんは<b>パステル</b>、<b>★重要</b>で同じ色の<b>ポップ</b>表示。</div>
+    <div class="sec-h">色カテゴリ（12色 × 2トーン・自分で編集OK）</div>
+    <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);return `<div class="huerow">
+      <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="パステル">
+      <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="ポップ（★重要）">
+      <input class="hlab" value="${esc(hueLabel(i))}" placeholder="${HUES12[i].n}（用途）" onchange="setHueLabel(${i},this.value)"></div>`;}).join('')}</div>
+    <div style="padding:2px 16px 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ 配色を初期値に戻す</button></div>
+    <div class="mini">左の2つ＝<b>パステル／ポップ</b>の色（タップで変更）、右＝色の<b>名前</b>（TimeTree式・任意）。ふだんはパステル、<b>★重要</b>で同じ色のポップ表示。<b>テスト期間中は自由に調整OK</b>です。</div>
     <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）</div><div class="sd">${S.groups.length}件・階層と色系統</div></div><span style="color:var(--sub);">▸</span></div>
@@ -2696,7 +2713,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.46（2026-07-23）</b><br>
+  <div class="mini"><b>v1.47（2026-07-23）</b><br>
+  ・<b>配色を自分で編集</b>できるように（設定→予定・カテゴリ設定。各色のパステル／ポップをタップで変更・初期値に戻す）。※テスト期間中<br>
+  ・先の日付の<b>繰り返しタスクを早めに完了</b>したとき、記録に<b>「◯/◯分」</b>と何日分か表示<br>
+  ・<b>完了を未完了に戻せる</b>ように（タイムラインの完了をタップ／各タブのチェックで解除・「元に戻す」も）<br>
+  ・予定の入力画面を開いたら<b>すぐ入力モード</b>（予定名にカーソル）<br>
+  <b>v1.46（2026-07-23）</b><br>
   ・オレンジとコーラルピンクの色味を離して見分けやすく<br>
   ・誕生日の敬称を廃止（「さん」も付けず、名前そのままで表示）<br>
   <b>v1.45（2026-07-22）</b><br>
@@ -3007,7 +3029,7 @@ function groupModal(id){
       <option value="">なし（最上位）</option>
       ${S.groups.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${g?.parentId===x.id?'selected':''}>${esc(groupPath(x.id))}</option>`).join('')}</select></div>
     <div class="frow"><label>色（予定と共通の12色パレット）</label><div class="huepick" id="gmColor">
-      ${HUES12.map((h,i)=>`<button type="button" data-h="${i}" class="${(g?.hue??groupHue(g?.id))===i?'on':''}" style="background:${h.p}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`).join('')}</div></div>
+      ${HUES12.map((_,i)=>{const h=HUE(i);return `<button type="button" data-h="${i}" class="${(g?.hue??groupHue(g?.id))===i?'on':''}" style="background:${h.p}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')" title="${hueLabel(i)||h.n}"><span class="pop" style="background:${h.v}"></span></button>`;}).join('')}</div></div>
     ${g&&g.parentId?`<div class="mini" style="padding:0 0 8px;">マークの見え方：<span class="gmark" style="width:14px;height:14px;${markCss(g.id)}"></span>（親の色＋自分の色）</div>`:''}
   </div>
   <div class="mbtns">${g?`<button class="del" onclick="delGroup('${g.id}')">削除</button>`:''}
@@ -3042,7 +3064,7 @@ function importData(inp){const f=inp.files[0];if(!f)return;
   r.readAsText(f);}
 
 /* ========================= modal共通・ダイアログ・通知 ========================= */
-function openModal(html){$('#modal').innerHTML=html;$('#modalWrap').classList.add('show');}
+function openModal(html){const m=$('#modal');m.innerHTML=html;$('#modalWrap').classList.add('show');m.scrollTop=0;}
 function closeModal(){$('#modalWrap').classList.remove('show');taskAddAfter=null;routineAddAfter=null;}
 /* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
 let dlgResolve=null;
