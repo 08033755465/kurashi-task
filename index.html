@@ -481,7 +481,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #dlg .linkedit .lb{flex:0 0 34%;}
 #dlg .linkedit button{width:auto;flex:0 0 auto;}
 /* フロー内 全項目一覧 */
-#flow .flist{align-self:stretch;flex:1;overflow-y:auto;margin:6px 0;-webkit-overflow-scrolling:touch;}
+#flow .flist{align-self:stretch;flex:1;min-height:0;overflow-y:auto;margin:6px 0;-webkit-overflow-scrolling:touch;}
 #flow .fli{display:flex;align-items:center;gap:10px;padding:12px 6px;border-bottom:1px solid #2A2E35;color:#C6CAD2;cursor:pointer;}
 #flow .fli.cur{color:#fff;font-weight:700;background:#20242B;}
 #flow .fli.done{color:#666C76;}
@@ -523,7 +523,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .fnexti{padding:7px 2px;border-top:1px solid #24282F;color:#C6CAD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:11px 18px;font-size:13.5px;font-weight:700;z-index:600;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-#flow .fmain{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
+#flow .fmain{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
+#flow .fmain:has(.flist){justify-content:flex-start;}
 #flow .slot{font-size:12px;letter-spacing:.2em;color:#9AA1AD;}
 #flow .rname{font-size:26px;font-weight:700;line-height:1.4;}
 #flow .rmeta{font-size:13px;color:#9AA1AD;}
@@ -663,18 +664,18 @@ const QUADS=[
 const PASTELS=[{c:'#FBE3E8',n:'もも'},{c:'#FCEFD9',n:'あんず'},{c:'#FBF6D3',n:'れもん'},{c:'#E1F1DC',n:'わかば'},{c:'#DDEBF9',n:'そら'},{c:'#E8E2F5',n:'ふじ'}];
 /* 予定の配色: 12色 × 2トーン（p=パステル / v=ポップ〔彩度高め〕）。重要な予定はポップで表示 */
 const HUES12=[
-  {n:'ローズ',   p:'#F6C6CE', v:'#E85D75'},
-  {n:'コーラル', p:'#FBD1C2', v:'#F26F3E'},
-  {n:'アプリコット',p:'#FBE2C2', v:'#F0A03C'},
-  {n:'レモン',   p:'#F7EEB6', v:'#EDC42E'},
-  {n:'ライム',   p:'#DDECAE', v:'#A6CC45'},
-  {n:'ミント',   p:'#C2E8CF', v:'#42B678'},
-  {n:'アクア',   p:'#BFE7E4', v:'#2FACA6'},
-  {n:'スカイ',   p:'#C6E1F1', v:'#48A2DD'},
-  {n:'ブルー',   p:'#C7D3F1', v:'#5A79D8'},
-  {n:'ラベンダー',p:'#DACFF1', v:'#8B6ED0'},
-  {n:'グレープ', p:'#E7CAEB', v:'#B857C0'},
-  {n:'ピンク',   p:'#F7C9E1', v:'#E766AC'},
+  {n:'すみ（黒）',   p:'#C7CAD0', v:'#33363B'},
+  {n:'グレー',       p:'#DCDFE3', v:'#828892'},
+  {n:'ブラウン（茶）',p:'#DCC3A2', v:'#96633A'},
+  {n:'イエロー（黄）',p:'#F7E6A0', v:'#E7BC17'},
+  {n:'オレンジ（濃）',p:'#F9CFA0', v:'#E9761A'},
+  {n:'レッド（赤）', p:'#F4B2AA', v:'#D8362B'},
+  {n:'ピンク',       p:'#F8C5DC', v:'#E7519A'},
+  {n:'コーラルピンク',p:'#FBC7B7', v:'#F06E54'},
+  {n:'エメラルド',   p:'#ADE3CF', v:'#0FA678'},
+  {n:'水色（青み）', p:'#B9DDF2', v:'#2E9BDB'},
+  {n:'ブルー',       p:'#BECCEF', v:'#3556C8'},
+  {n:'パープル',     p:'#D6C7F0', v:'#8654C6'},
 ];
 function hashStr(s){let h=0;s=s||'';for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
 function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
@@ -2508,7 +2509,7 @@ function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">「${esc(r.title)}」を手動で完了
     <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 4px;">かかった時間（分）</label>
     <input id="fmMin" class="bigmin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${mins||''}" placeholder="例）25" onfocus="this.select()" onkeydown="if(event.key==='Enter')saveManualDone()">
-    <div class="minchips">${[5,10,15,20,30,45,60].map(n=>`<button type="button" onclick="$('#fmMin').value=${n};$('#fmMin').focus()">${n}分</button>`).join('')}</div></div>
+    <div class="minchips">${[2,4,6,8,10,15,20,30,45,60].map(n=>`<button type="button" onclick="$('#fmMin').value=${n};$('#fmMin').focus()">${n}分</button>`).join('')}</div></div>
     <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveManualDone()">完了にする</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>{const v=$('#fmMin');if(v){v.focus();v.select();}},120);}
 function saveManualDone(){const min=parseInt($('#fmMin').value,10)||0;dlgEnd();completeCurrentFlow(min*60);}
