@@ -202,6 +202,15 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .huepick button{height:30px;border-radius:6px !important;border:2px solid transparent;position:relative;overflow:hidden;}
 .huepick button.on{border-color:var(--ink);}
 .huepick button .pop{position:absolute;right:0;top:0;bottom:0;width:42%;}
+.huepick.labeled{grid-template-columns:repeat(2,1fr);}
+.huepick.labeled button{height:32px;display:flex;align-items:center;gap:6px;padding:0 8px;justify-content:flex-start;overflow:hidden;}
+.huepick.labeled button .pop{position:static;width:12px;height:12px;flex:0 0 12px;border-radius:3px !important;}
+.huepick.labeled button .hpl{font-size:11px;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.helpwrap{padding:6px 16px 20px;}
+.helpwrap h3{font-size:14px;margin:16px 0 6px;display:flex;align-items:center;gap:7px;}
+.helpwrap p{font-size:13px;line-height:1.7;color:var(--ink);margin:0 0 6px;}
+.helpwrap .step{display:flex;gap:9px;margin:0 0 8px;font-size:13px;line-height:1.6;}
+.helpwrap .step b{flex:0 0 22px;height:22px;background:var(--ink);color:#fff;border-radius:50% !important;display:flex;align-items:center;justify-content:center;font-size:12px;}
 /* カレンダーの色付き予定ブロック（週ビュー等） */
 .cev{position:relative;padding:5px 8px 6px;margin-bottom:4px;display:flex;flex-direction:column;gap:2px;border-radius:7px !important;}
 .cev.imp{font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.16);}
@@ -1182,11 +1191,11 @@ function renderToday(){
       <div class="body"><div class="tt" style="color:var(--sub);">${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</div></div>
       <div class="right"><button class="todayBtn" onclick="restoreHidden('${it.type}_${it.obj.id}')">戻す</button></div></div>`).join('')}</div>`:'';})()}`;
 }
-function addTodayItem(){const sheet=$('#colorSheet');
+function addTodayItem(){const sheet=$('#colorSheet');const nowHm=min2hm(curMin());
   sheet.innerHTML=`<div class="t">今日に追加</div><div class="actsheet">
     <button onclick="closeSheet();taskModal(null,'',true)">✔ タスクを追加（今日）</button>
     <button onclick="closeSheet();routineModal(null)">🔁 ルーティンを追加</button>
-    <button onclick="closeSheet();eventModal(null,todayStr())">📅 予定を追加</button>
+    <button onclick="closeSheet();eventModal(null,todayStr(),'${nowHm}')">📅 予定を追加</button>
     <button onclick="closeSheet();addTodayLog('event')">📝 記録（出来事・メモ・場所・やったこと）</button>
     <button onclick="closeSheet();switchView('tasks')">＋ 既存のタスクから選ぶ</button></div>`;
   sheet.classList.add('show');
@@ -1195,7 +1204,8 @@ function addTodayItem(){const sheet=$('#colorSheet');
 /* ===== 記録（出来事・メモ・場所・やったこと・稼働） ===== */
 function dayLogs(t){const dl=dayLog(t);if(!dl.logs)dl.logs=[];return dl.logs;}
 function addTodayLog(kind){logEditor(null,kind,null);}
-function logEditor(id,kind,taskId){const t=todayStr();const logs=dayLogs(t);const g=id?logs.find(l=>l.id===id):null;
+function addTodayLogAt(kind,mn){logEditor(null,kind,null,mn);}
+function logEditor(id,kind,taskId,presetMin){const t=todayStr();const logs=dayLogs(t);const g=id?logs.find(l=>l.id===id):null;
   const k=g?g.kind:(kind||'event');const isWork=k==='work';
   const tId=g?g.taskId:taskId;const task=tId?S.tasks.find(x=>x.id===tId):null;const wname=task?task.title:(g?.text||'');
   openModal(`<div class="mh"><b>${g?'記録を編集':(isWork?'稼働を記録':'記録を追加')}</b><button onclick="closeModal()">✕</button></div>
@@ -1205,7 +1215,7 @@ function logEditor(id,kind,taskId){const t=todayStr();const logs=dayLogs(t);cons
          <div class="frow"><label>タスク</label><div style="font-weight:600;font-size:14px;">${esc(wname)}</div></div>`
        :`<div class="frow"><label>種類</label><select id="lgKind">${Object.entries(LOG_KINDS).filter(([kk])=>kk!=='work').map(([kk,v])=>`<option value="${kk}" ${k===kk?'selected':''}>${v.i} ${v.n}</option>`).join('')}</select></div>
          <div class="frow"><label>内容</label><textarea id="lgText" rows="2" placeholder="出来事・メモ・場所・やったこと など">${esc(g?.text||'')}</textarea></div>`}
-     <div class="frow f2"><div><label>時刻</label>${timeInput('lgAt', g?min2hm(g.at):min2hm(curMin()))}</div>
+     <div class="frow f2"><div><label>時刻</label>${timeInput('lgAt', g?min2hm(g.at):(presetMin!=null?min2hm(presetMin):min2hm(curMin())))}</div>
        <div><label>${isWork?'稼働した時間':'かかった時間'}（分・任意）</label><input id="lgDur" type="number" inputmode="numeric" min="0" value="${g?.dur||(isWork?30:0)}"></div></div>
    </div>
    <div class="mbtns">${g?`<button class="del" onclick="delLog('${g.id}')">削除</button>`:''}<button class="save" onclick="saveLog('${g?.id||''}')">保存</button></div>`);}
@@ -1432,7 +1442,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
         <span class="pt">${sel?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
       :'<div class="poolempty">すべて配置済み🎉</div>'}
-    ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>`:''}
+    ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>
+      <button class="poolall" onclick="poolAllTomorrow()">→ 全部あすへ送る</button>`:''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・10分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
@@ -1459,13 +1470,27 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
         <div class="evpopacts"><button onclick="eventModal('${e.id}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}');tlEvSel=null;">🗑</button></div>
       </div></div>`;})():'';
   return `${hint}<div class="tlwrap">
-    <div class="tl${placing?' placing':''}" style="height:${H}px" ${placing?'onclick="placeAtClick(event)"':''}>${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
+    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
     ${poolHtml}${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button>`:''}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
+/* タイムラインの空き部分をタップ→その時刻に予定/記録を追加（選択中はまず解除） */
+function tlEmptyTap(ev){if(placeToks)return;
+  if(ev.target.closest('.tltask,.tlev,.tllog,.evpop'))return;
+  if(tlSel.length||tlEvSel){tlClearSel();return;}
+  const t=todayStr();const w=hm2min(dayWake(t));
+  const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/TL_PX;
+  ax=Math.round(ax/10)*10;const mn=((ax%1440)+1440)%1440;const hm=min2hm(mn);
+  const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">${hm} に追加</div><div class="actsheet">
+    <button onclick="closeSheet();eventModal(null,'${t}','${hm}')">📅 予定を追加（${hm}〜）</button>
+    <button onclick="closeSheet();addTodayLogAt('event',${mn})">📝 記録を追加（${hm}）</button></div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
@@ -1488,6 +1513,10 @@ function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+144
   const dl=dayLog(t);dl.at=dl.at||{};
   pool.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);dl.at[it.type+'_'+it.obj.id]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);});
   save();render();flashUndo(pool.length+'件を今から順に配置しました');}
+function poolAllTomorrow(){const t=todayStr();const at=(dayLog(t).at)||{};
+  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
+  if(!pool.length)return;snapUndo();pool.forEach(it=>applyTomorrow(it.type+'_'+it.obj.id));
+  save();render();flashUndo(pool.length+'件を明日へ送りました');}
 /* ===== タイムラインのタップ＝複数選択→下のバーで一括操作（⑥⑦⑧⑨） ===== */
 let tlSel=[],tlEvSel=null;
 function tlTapTask(tk){tlEvSel=null;const i=tlSel.indexOf(tk);i>=0?tlSel.splice(i,1):tlSel.push(tk);render();}
@@ -2094,7 +2123,7 @@ function setDayColor(d,i){if(i===null)delete S.dayColors[d];else S.dayColors[d]=
   save();$('#colorSheet').classList.remove('show');render();attachCellPress();}
 
 /* ===== event modal ===== */
-function eventModal(id,presetDate){
+function eventModal(id,presetDate,presetStart){
   const e=id?S.events.find(v=>v.id===id):null;
   editLinks=(e?.links||[]).map(l=>({...l}));editImages=(e?.images||[]).slice();
   openModal(`<div class="mh"><b>${e?'予定の編集':'予定の追加'}</b><button onclick="closeModal()">✕</button></div>
@@ -2113,12 +2142,12 @@ function eventModal(id,presetDate){
     <div class="frow"><label>グループ</label>
       <div style="display:flex;gap:6px;"><select id="emGroup" style="flex:1;">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
       <button type="button" class="inlineadd" onclick="addGroupInline('emGroup')">＋新規</button></div></div>
-    <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||'',{clear:true,next:'emEnd'})}</div>
+    <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||presetStart||'',{clear:true,next:'emEnd'})}</div>
       <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
     <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
     <div class="frow"><label>色（12色から選ぶ）</label>
-      <div class="huepick" id="emHue">${HUES12.map((h,i)=>`<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`).join('')}</div>
-      <div class="mini" style="padding:4px 0 0;">未選択のときはグループごとに自動で色分けします。</div></div>
+      <div class="huepick labeled" id="emHue">${HUES12.map((h,i)=>`<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${hueLabel(i)||h.n}"><span class="pop" style="background:${h.v}"></span>${hueLabel(i)?`<span class="hpl">${esc(hueLabel(i))}</span>`:''}</button>`).join('')}</div>
+      <div class="mini" style="padding:4px 0 0;">色に名前を付けると（設定→予定・カテゴリ設定）ここに表示されます。未選択ならグループの色。</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
       <span style="font-size:13px;">★ 重要な予定（同じ色のポップ〔彩度高め〕で目立たせる）</span></div>
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
@@ -2568,15 +2597,34 @@ function renderSettings(){
     event:'<rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     data:'<path d="M6 19a4 4 0 0 1 0-8 6 6 0 0 1 11.5-1.5A3.5 3.5 0 0 1 18 19z"/>',
     personal:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"/>',
-    release:'<path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 15.5h6"/>'};
+    release:'<path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 15.5h6"/>',
+    help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01"/>'};
   if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ</span></div><div class="setmenu">
-    ${[['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
+    ${[['help','使い方','初めての方へ・基本の流れ'],
+       ['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
        ['time','時間関連設定','起床/就寝・夜の開始・通知時刻'],
        ['event','予定・カテゴリ設定','誕生日・マーク・グループ・テンプレ・よく使うリンク'],
        ['data','同期・データ','クラウド同期・バックアップ'],
        ['personal','個人・改善設定','通知先メール・改善メモ送信'],
        ['release','リリース情報','更新履歴']]
       .map(([k,t,d])=>`<div class="listrow" onclick="goSet('${k}')"><span class="seticon"><svg viewBox="0 0 24 24">${SETICON[k]}</svg></span><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>`;
+  if(P==='help')return back+`<div class="vhead"><h1>使い方</h1></div>
+    <div class="helpwrap">
+      <p>「くらしタスク」は、家事・育児・仕事のやることを<b>1日のタイムライン</b>で組み立てるアプリです。</p>
+      <h3>🕐 今日タブ（基本の流れ）</h3>
+      <div class="step"><b>1</b><div>右の「<b>未配置</b>」に、今日のルーティンとタスクが並びます。</div></div>
+      <div class="step"><b>2</b><div>やる項目を<b>タップ</b>（複数選べます）→左のタイムラインで<b>時間をタップ</b>すると、その時刻に置けます。「⚡今から順に自動配置」でまとめて置くことも。</div></div>
+      <div class="step"><b>3</b><div>置いたら「<b>▶ルーティン開始</b>」で1つずつ実行。時間を計って完了していきます（「⌨手動で完了」で分を入力も可）。</div></div>
+      <div class="step"><b>4</b><div>選んだ項目は下の<b>バー</b>で一括操作（完了・時間指定・明日へ・隠す）。まちがえたら「<b>↶元に戻す</b>」。</div></div>
+      <h3>📅 予定・記録</h3>
+      <p>予定は「＋追加」や、タイムラインの<b>空き時間をタップ</b>して追加。予定を<b>タップ</b>すると右に詳細（メモ・リンク）がひらきます。「📝記録」でその日の出来事・行った場所も残せます。</p>
+      <h3>🎨 色（カテゴリ）</h3>
+      <p>予定・カテゴリは<b>12色</b>から選べます。設定→予定・カテゴリ設定で「この色は仕事／家族」など<b>名前</b>を付けられます（TimeTree式）。<b>★重要</b>にすると同じ色が濃く目立ちます。</p>
+      <h3>🔁 ルーティン／タスク</h3>
+      <p>毎日・毎週くり返すことは「<b>ルーティン</b>」。1回きりの用事は「<b>タスク</b>」。タスクにも<b>繰り返し</b>を設定でき、完了すると次回に送られます。</p>
+      <h3>📱 スマホに入れる</h3>
+      <p>ブラウザの<b>共有→ホーム画面に追加</b>で、アプリのように使えます。設定でクラウド同期（合言葉）を入れると、PC・スマホでデータが揃います。</p>
+    </div>`;
   if(P==='disp')return back+`<div class="vhead"><h1>表示設定</h1></div>
     <div class="setrow"><div><div class="sl">週の開始</div></div>
       <select style="width:100px;" onchange="S.settings.weekStart=+this.value;save();">
@@ -2648,7 +2696,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.44（2026-07-22）</b><br>
+  <div class="mini"><b>v1.45（2026-07-22）</b><br>
+  ・改善5点：<b>タイムラインの空き時間をタップ</b>→その時刻に予定/記録を追加／予定の色選びに<b>色ラベル名</b>を表示／<b>「使い方」ページ</b>を追加（設定）／「＋追加→予定」は開始を<b>今</b>で初期化／未配置を<b>「全部あすへ」</b>ボタン<br>
+  <b>v1.44（2026-07-22）</b><br>
   ・タイムラインの<b>予定をタップ→右に詳細ポップ</b>（時間・色カテゴリ・メモ・リンク・編集/複製/削除）<br>
   ・<b>色カテゴリのラベル</b>を設定可能に（TimeTree式）。設定→予定・カテゴリ設定で「この色は仕事／家族」など任意に命名。今日画面上部に凡例を表示<br>
   ・改善: <b>「今へ」ジャンプ</b>ボタン／未配置を<b>今から順に自動配置</b>／<b>タスク検索</b>／完了の薄い表示を<b>ON/OFF</b>（設定）<br>
