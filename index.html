@@ -264,6 +264,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .drecadd{width:calc(100% - 32px);margin:8px 16px 2px;padding:8px 0;border:1px dashed var(--line);color:var(--accent);font-size:12px;}
 .cki{width:11px;height:11px;flex:0 0 11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px;}
 .cevrep .cki{width:12px;height:12px;}
+.evmk{display:inline-flex;width:13px;height:13px;vertical-align:-2px;margin-right:3px;}
+.evmk svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .rfilter{display:flex;gap:5px;padding:2px 16px 8px;overflow-x:auto;}
 .rfilter button{flex:0 0 auto;min-width:30px;padding:5px 9px;font-size:12px;border:1px solid var(--line);color:var(--sub);background:var(--card,#fff);}
 .rfilter button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
@@ -733,6 +735,9 @@ function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(
   return groupHue(g.id);}
 function evLine(e){return HUE(e&&e.hue!=null?hueOf(e):rootHueOf(e&&e.groupId)).v;}
 function evLineW(e){return e&&e.important?7:4;}
+function evMk(e){return e&&e.mark?`<span class="evmk">${icSvg(e.mark)}</span>`:'';}
+function evLabel(e){const mk=evMk(e);if(e&&e.markOnly)return (mk||'●')+(e&&e.important?'★':'');
+  return `${mk}${e&&e.important?'★ ':''}${esc(evTitle(e))}`;}
 function hueLabel(i){return (S.settings.hueLabels||[])[i]||'';}
 function setHueColor(i,which,val){const a=(S.settings.hueColors||[]).slice();a[i]={...(a[i]||{}),[which]:val};S.settings.hueColors=a;save();render();}
 function hueChanged(i){const o=(S.settings.hueColors||[])[i];return !!(o&&(o.p||o.v));}
@@ -1472,7 +1477,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=A(hm2min(e.start)),b=e.end?A(hm2min(e.end)):a+30;const top=y(a),h=Math.max(18,(b-a)*PX);
     const bg=evColor(e),tc=evTextColor(bg);
-    return `<div class="tlev${tlEvSel===e.id?' tlsel':''}" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" ${placing?'':`onclick="tlTapEv('${e.id}')"`}><b>${e.start}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
+    return `<div class="tlev${tlEvSel===e.id?' tlsel':''}" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" ${placing?'':`onclick="tlTapEv('${e.id}')"`}><b>${e.start}</b> ${evLabel(e)}</div>`;}).join('');
   const logH=logs.slice().sort((a,b)=>A(a.at)-A(b.at)).map(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;const top=y(A(l.at));const h=Math.max(20,(l.dur||0)*PX);
     return `<div class="tllog" style="top:${top}px;min-height:${h-2}px;border-left-color:${k.c};" onclick="logEditor('${l.id}')"><span class="lgi">${k.i}</span><span class="lgx">${esc(l.text)}</span>${l.dur?`<span class="lgd">${fmtMin(l.dur)}</span>`:''}</div>`;}).join('');
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
@@ -1508,7 +1513,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
     const top=y(A(hm2min(e.start)));const bg=evColor(e),tc=evTextColor(bg);
     return `<div class="evpop" style="top:${Math.max(0,top-6)}px;">
-      <div class="evpoph" style="background:${bg};color:${tc};"><b>${e.important?'★ ':''}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
+      <div class="evpoph" style="background:${bg};color:${tc};"><b>${evMk(e)}${e.important?'★ ':''}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
       <div class="evpopb">
         <div class="evpopt">${CLOCKI}${evTimeText(e)}${e.repeat?' ・'+(REPEAT_LABEL[e.repeat]||''):''}</div>
         <div class="evpopcat"><span class="dot" style="background:${bg}"></span>${esc(groupPath(e.groupId))}</div>
@@ -1944,7 +1949,7 @@ function scheduleListHtml(evs,wake){
     const bg=evColor(e),tc=evTextColor(bg);
     html+=`<div class="cev dcev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="eventTap('${e.id}')">
       ${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}
-      <div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}</div>
+      <div class="cevt">${evLabel(e)}</div>
       <div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
       ${e.memo?`<div class="cevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
   return html;}
@@ -1980,7 +1985,7 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:evTitle(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e)})),
+      const items=[...evs.map(e=>({t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e)})),
                    ...dues.map(x=>({t:x.title,c:'',due:1,time:'',imp:0}))];
       const max=S.settings.monthMax||4;const shown=calMonthAll?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
@@ -1990,7 +1995,7 @@ function renderCal(){
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(calMonthAll&&it.time)?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:'';
-          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`}>${tf}${it.imp?'★':''}${esc(it.t)}</div>`;}).join('')}
+          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
     body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -2011,7 +2016,7 @@ function renderCal(){
           ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}</div><div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
+          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${evLabel(e)}</div><div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -2093,7 +2098,7 @@ function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr)
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpbody">
       ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
-      ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
+      ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${evMk(e)}${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
       ${dues.map(x=>`<div class="dpdue">⏰ 期限：${esc(x.title)}</div>`).join('')}
     </div>
     <div class="dpacts">
@@ -2233,6 +2238,12 @@ function eventModal(id,presetDate,presetStart){
       <div class="huepick" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span style="font-size:9px;color:#888;">G</span></button>${HUES12.map((_,i)=>{const h=HUE(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`;}).join('')}</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
       <span style="font-size:13px;">★ 重要な予定（同じ色のポップ〔彩度高め〕で目立たせる）</span></div>
+    <div class="frow"><label>マーク（予定名の頭に表示・任意）</label>
+      <div class="icontabs" id="emIconTabs"></div>
+      <div class="icongrid" id="emIconGrid"></div>
+      <div style="margin-top:6px;"><button type="button" class="inlineadd" onclick="emIconPick('')">マークなし</button></div></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emMarkOnly" style="width:auto;" ${e?.markOnly?'checked':''}>
+      <span style="font-size:13px;">マークのみ表示（名前を隠して線画だけ／タップで内容）</span></div>
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     <div class="frow"><label>画像メモ（写真・スクショ）</label>${imagesEditorHtml()}</div>
@@ -2244,8 +2255,15 @@ function eventModal(id,presetDate,presetStart){
     <button class="save" onclick="saveEvent('${e?.id||''}')">保存</button>
   </div>`);
   emDowUpd();
+  window._emIcon=e?.mark||'';window._emCat=(e?.mark&&ICONS[e.mark]?ICONS[e.mark].c:'イベント');emIconRefresh();
   if(!id){const el=$('#emTitle');if(el){setTimeout(()=>{el.focus();el.scrollIntoView({block:'center'});},120);}} // 新規はすぐ入力モード
 }
+function emIconRefresh(){const tabs=$('#emIconTabs'),grid=$('#emIconGrid');if(!tabs)return;
+  tabs.innerHTML=ICON_CATS.map(c=>`<button type="button" class="${window._emCat===c?'on':''}" onclick="emIconTab('${c}')">${c}</button>`).join('');
+  grid.innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._emCat)
+    .map(([key])=>`<button type="button" class="${window._emIcon===key?'on':''}" onclick="emIconPick('${key}')">${icSvg(key)}</button>`).join('');}
+function emIconTab(c){window._emCat=c;emIconRefresh();}
+function emIconPick(key){window._emIcon=key;if(key&&ICONS[key])window._emCat=ICONS[key].c;emIconRefresh();}
 function emDowUpd(){const v=$('#emDate')?.value;const el=$('#emDow');if(!el)return;
   if(!v){el.textContent='';return;}
   const d=parseDs(v);let s='（'+WD[d.getDay()]+'）';
@@ -2272,6 +2290,7 @@ function saveEvent(id){
   snapUndo();const hueBtn=$('#emHue button.on');const hv=hueBtn?+hueBtn.dataset.h:-1;
   const data={title:$('#emTitle').value.trim(),date,groupId:$('#emGroup').value,repeat:$('#emRepeat').value,
     start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,important:$('#emImp').checked,
+    mark:window._emIcon||'',markOnly:$('#emMarkOnly').checked,
     hue:hv>=0?hv:null,links:collectLinks(),images:editImages.slice()};
   if(id)Object.assign(S.events.find(e=>e.id===id),data);
   else S.events.push({id:uid(),...data});
@@ -2786,7 +2805,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.52（2026-07-23）</b><br>
+  <div class="mini"><b>v1.53（2026-07-23）</b><br>
+  ・予定に<b>マーク（線画）</b>を設定できるように（予定名の頭に表示）。<b>「マークのみ表示」</b>にすると名前を隠して線画だけ表示→タップで内容。週・日・月・タイムラインに反映<br>
+  <b>v1.52（2026-07-23）</b><br>
   ・グループ設定を<b>階層ツリー表示</b>に刷新（インデント＋親色ライン＋色チップ）。<b>▲▼で並べ替え・「＋子」で下の階層を追加</b>。新規は<b>未使用の色</b>を自動選択、色ピッカーに<b>使用中の色</b>を表示<br>
   <b>v1.51（2026-07-23）</b><br>
   ・<b>月カレンダーの日をタップ→その日の予定がピヨっと表示</b>。予定タップで編集、＋予定・色分け・この日を開く。<b>ポップを長押しで日ページへ</b>（日付セルの長押しは従来どおり色分け）<br>
