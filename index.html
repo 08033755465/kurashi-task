@@ -26,7 +26,7 @@ body{
   -webkit-font-smoothing:antialiased;
   touch-action:manipulation; /* ダブルタップ拡大を無効化（ピンチ・スクロールは可） */
 }
-#app{max-width:960px;margin:0 auto;min-height:100dvh;padding-bottom:calc(72px + env(safe-area-inset-bottom));padding-top:max(env(safe-area-inset-top),6px);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);box-sizing:border-box;}
+#app{max-width:960px;margin:0 auto;min-height:100dvh;padding-bottom:calc(50px + env(safe-area-inset-bottom));padding-top:max(env(safe-area-inset-top),6px);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);box-sizing:border-box;}
 /* 上部（時計・ダイナミックアイランド）にコンテンツが潜り込まないよう不透明マスク */
 #safetop{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:70;pointer-events:none;}
 button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -41,8 +41,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 
 /* ===== bottom nav ===== */
 #nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ink);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
-#nav button{flex:1;padding:10px 0 8px;font-size:10px;letter-spacing:.02em;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;height:56px;justify-content:center;}
-#nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6;}
+#nav button{flex:1;padding:4px 0 3px;font-size:9.5px;letter-spacing:.02em;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:2px;white-space:nowrap;height:44px;justify-content:center;}
+#nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;}
 #nav button.on{color:var(--ink);font-weight:700;}
 #nav{max-width:960px;margin:0 auto;}
 
@@ -155,7 +155,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .evpopmemo{font-size:12px;line-height:1.5;color:var(--ink);word-break:break-word;}
 .evpopacts{display:flex;gap:6px;margin-top:2px;}
 .evpopacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:7px 4px;font-size:11.5px;}
-.tlnowbtns{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:flex-end;margin:0 14px;z-index:58;pointer-events:none;}
+.tlnowbtns{position:sticky;bottom:calc(54px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:flex-end;margin:0 14px;z-index:58;pointer-events:none;}
 .tlnowbtn{pointer-events:auto;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);}
 .tl{position:relative;flex:1;min-width:0;}
 .tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
@@ -224,7 +224,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .minchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .minchips button{flex:1 1 auto;min-width:52px;border:1px solid var(--line);padding:9px 0;font-size:13px;}
 .minchips button:active{background:var(--ink);color:#fff;}
-#undobar{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(64px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:9px 10px 9px 16px;border-radius:24px !important;display:none;align-items:center;gap:12px;z-index:70;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:13px;max-width:92vw;opacity:0;transition:opacity .25s,transform .25s;}
+#undobar{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(52px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:9px 10px 9px 16px;border-radius:24px !important;display:none;align-items:center;gap:12px;z-index:70;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:13px;max-width:92vw;opacity:0;transition:opacity .25s,transform .25s;}
 #undobar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
 #undobar button{color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:16px !important;padding:6px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
 /* 配色パレット選択 */
@@ -570,7 +570,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #flow .flireorder{width:100%;margin-top:12px;padding:11px 0;border:1px solid #4A4F58;color:#C6CAD2;font-size:13px;}
 #flow .fnexti{cursor:pointer;}
 #flow .fh span:last-child{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
-#flowbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
+#flowbar{position:fixed;left:0;right:0;bottom:calc(46px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;background:var(--ink);color:#fff;display:none;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;z-index:55;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
 #flowbar.show{display:flex;}
 #flowbar span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
@@ -589,7 +589,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .rttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;}
 .rrow.done .rttl{text-decoration:line-through;color:var(--done);}
 .rdone{font-size:11px;color:var(--done);flex:0 0 auto;}
-.reorderfab{position:fixed;right:14px;bottom:84px;display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
+.reorderfab{position:fixed;right:14px;bottom:calc(56px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;padding:8px 10px 8px 14px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.28);}
 .reorderfab span{font-size:12px;letter-spacing:.05em;}
 .reorderfab button{color:#fff;border:1px solid #4A4F58;width:42px;height:42px;font-size:18px;}
 .reorderfab button.decide{width:auto;padding:0 16px;font-size:14px;font-weight:700;background:var(--accent);border-color:var(--accent);}
