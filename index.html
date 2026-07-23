@@ -375,7 +375,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:clip;}
 .cell .marks{display:flex;gap:2px;padding:1px 0 1px 2px;flex-wrap:wrap;}
 .cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
-.evbar{font-size:9.5px;line-height:1.5;padding:0 1px 0 3px;margin-top:1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;}
+/* 予定名は2行まで折り返して表示（…での省略はしない。3行目以降だけ隠れる） */
+.evbar{font-size:9.5px;line-height:1.32;padding:1px 1px 1px 3px;margin-top:1px;color:#fff;
+  white-space:normal;word-break:break-word;overflow-wrap:anywhere;
+  max-height:2.64em;overflow:hidden;text-overflow:clip;}
+#calGrid.allmode .evbar{max-height:none;} /* ALL表示は全文 */
 .evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);}
 /* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
 .evbar.mkonly{background:none !important;border-left:none !important;padding:0 0 0 2px;font-weight:700;}
@@ -731,7 +735,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 
 /* ========================= state ========================= */
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.65';
+const APP_VERSION='v1.66';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2934,7 +2938,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.65（2026-07-24）</b><br>
+  <div class="mini"><b>v1.66（2026-07-24）</b><br>
+  ・月カレンダーの予定名を<b>2行まで折り返して表示</b>（10文字前後まで読めます）。ALL表示では全文表示<br>
+  <b>v1.65（2026-07-24）</b><br>
   ・「マークのみ表示」の予定は、<b>月・週・日すべてで付箋（カラー帯）を出さず線画だけ</b>で表示するように（線画の色は予定の色）<br>
   <b>v1.64（2026-07-24）</b><br>
   ・月カレンダーの予定名・祝日名を<b>枠のギリギリまで表示</b>（…での省略をやめました）<br>
