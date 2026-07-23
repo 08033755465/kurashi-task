@@ -700,6 +700,12 @@ function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
 function evColor(e){const h=HUE(hueOf(e));return (e&&e.important)?h.v:h.p;}
+/* 親（最上位グループ）の色＝縦ライン、子（その予定のグループ）の色＝本体 */
+function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(gid||'')%HUES12.length;
+  let guard=0;while(g.parentId&&guard++<20){const p=S.groups.find(x=>x.id===g.parentId);if(!p)break;g=p;}
+  return groupHue(g.id);}
+function evLine(e){return HUE(e&&e.hue!=null?hueOf(e):rootHueOf(e&&e.groupId)).v;}
+function evLineW(e){return e&&e.important?7:4;}
 function hueLabel(i){return (S.settings.hueLabels||[])[i]||'';}
 function setHueColor(i,which,val){const a=(S.settings.hueColors||[]).slice();a[i]={...(a[i]||{}),[which]:val};S.settings.hueColors=a;save();render();}
 function hueChanged(i){const o=(S.settings.hueColors||[])[i];return !!(o&&(o.p||o.v));}
@@ -1439,7 +1445,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=A(hm2min(e.start)),b=e.end?A(hm2min(e.end)):a+30;const top=y(a),h=Math.max(18,(b-a)*PX);
     const bg=evColor(e),tc=evTextColor(bg);
-    return `<div class="tlev${tlEvSel===e.id?' tlsel':''}" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left-color:${bg};" ${placing?'':`onclick="tlTapEv('${e.id}')"`}><b>${e.start}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
+    return `<div class="tlev${tlEvSel===e.id?' tlsel':''}" style="top:${top}px;height:${h}px;background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" ${placing?'':`onclick="tlTapEv('${e.id}')"`}><b>${e.start}</b> ${e.important?'★':''}${esc(evTitle(e))}</div>`;}).join('');
   const logH=logs.slice().sort((a,b)=>A(a.at)-A(b.at)).map(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;const top=y(A(l.at));const h=Math.max(20,(l.dur||0)*PX);
     return `<div class="tllog" style="top:${top}px;min-height:${h-2}px;border-left-color:${k.c};" onclick="logEditor('${l.id}')"><span class="lgi">${k.i}</span><span class="lgx">${esc(l.text)}</span>${l.dur?`<span class="lgd">${fmtMin(l.dur)}</span>`:''}</div>`;}).join('');
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
@@ -1909,7 +1915,7 @@ function scheduleListHtml(evs,wake){
   sorted.forEach(e=>{const b=bandOf(e.start,wake);
     if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
     const bg=evColor(e),tc=evTextColor(bg);
-    html+=`<div class="cev dcev${e.important?' imp':''}" style="background:${bg};color:${tc};" onclick="eventTap('${e.id}')">
+    html+=`<div class="cev dcev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="eventTap('${e.id}')">
       ${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}
       <div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}</div>
       <div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
@@ -1947,7 +1953,7 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:evTitle(e),c:evColor(e),imp:e.important,due:0,time:e.start||''})),
+      const items=[...evs.map(e=>({t:evTitle(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e)})),
                    ...dues.map(x=>({t:x.title,c:'',due:1,time:'',imp:0}))];
       const max=S.settings.monthMax||4;const shown=calMonthAll?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
@@ -1957,7 +1963,7 @@ function renderCal(){
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(calMonthAll&&it.time)?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:'';
-          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};"`}>${tf}${it.imp?'★':''}${esc(it.t)}</div>`;}).join('')}
+          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`}>${tf}${it.imp?'★':''}${esc(it.t)}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
     body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -1978,7 +1984,7 @@ function renderCal(){
           ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}</div><div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
+          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${e.important?'★ ':''}${esc(evTitle(e))}</div><div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -2730,7 +2736,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.49（2026-07-23）</b><br>
+  <div class="mini"><b>v1.50（2026-07-23）</b><br>
+  ・予定の見た目を刷新：<b>左に親グループの色ライン＋本体は子グループのパステル</b>。<b>★重要は本体を濃く＋親ラインを太く</b>（週・日・月・タイムライン）<br>
+  <b>v1.49（2026-07-23）</b><br>
   ・色の仕組みを<b>グループ（カテゴリ）に一本化</b>。グループの色を変えると<b>そのグループの予定色が一括で反映</b>（「まま／子供」等の色運用が思いどおりに）<br>
   ・設定に<b>各色を使っているグループ／未使用</b>を表示。任意の色名ラベルは廃止<br>
   ・長押しの色分けから色名（あんず等）を非表示に<br>
