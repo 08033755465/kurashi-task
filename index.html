@@ -361,7 +361,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .calmode button.on{background:var(--ink);color:#fff;}
 #calGrid{display:grid;grid-template-columns:repeat(7,1fr);}
 .dow{font-size:10.5px;text-align:center;color:var(--sub);letter-spacing:.1em;padding:6px 0;border-bottom:1px solid var(--line);}
-.cell{min-height:88px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:3px 3px 4px;position:relative;cursor:pointer;
+.cell{min-height:88px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:3px 2px 4px 1px;position:relative;cursor:pointer;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;overflow:hidden;}
 .cell:nth-child(7n){border-right:none;}
 .cell.out{opacity:.35;}
@@ -372,18 +372,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .cell .rk{font-size:8.5px;color:var(--sub);letter-spacing:0;}
 .cell .rk.taian{color:var(--danger);}
 .cell .ich{font-size:8.5px;color:#B8860B;}
-.cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:clip;}
-.cell .marks{display:flex;gap:2px;padding:1px 0 1px 2px;flex-wrap:wrap;}
+.cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:1px;white-space:nowrap;overflow:hidden;text-overflow:clip;}
+.cell .marks{display:flex;gap:2px;padding:1px 0 1px 1px;flex-wrap:wrap;}
 .cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
-/* 予定名は2行まで折り返して表示（…での省略はしない。3行目以降だけ隠れる） */
-.evbar{font-size:9.5px;line-height:1.32;padding:1px 1px 1px 3px;margin-top:1px;color:#fff;
-  white-space:normal;word-break:break-word;overflow-wrap:anywhere;
-  max-height:2.64em;overflow:hidden;text-overflow:clip;}
-#calGrid.allmode .evbar{max-height:none;} /* ALL表示は全文 */
-.evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);}
+/* 予定名は1行。…での省略はせず、枠のギリギリまで表示（余白は最小） */
+.evbar{font-size:var(--mfs,9.5px);line-height:1.45;padding:0 0 0 1px;margin-top:1px;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:clip;}
+.evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);padding-left:2px;}
 /* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
-.evbar.mkonly{background:none !important;border-left:none !important;padding:0 0 0 2px;font-weight:700;}
-.evbar.mkonly .evmk{width:15px;height:15px;vertical-align:-3px;margin-right:2px;}
+.evbar.mkonly{background:none !important;border-left:none !important;padding:0 0 0 1px;font-weight:700;}
+.evbar.mkonly .evmk{width:1.55em;height:1.55em;vertical-align:-.35em;margin-right:2px;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 
 /* week/day */
@@ -734,8 +732,10 @@ function fmtMin(m){m=Math.round(m);if(!m)return'0分';const h=Math.floor(m/60),r
 function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;}
 
 /* ========================= state ========================= */
+/* 月カレンダーの予定の文字サイズ（表示設定） */
+const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},l:{n:'大',px:11},xl:{n:'特大',px:12.5}};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.66';
+const APP_VERSION='v1.67';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -904,6 +904,7 @@ function migrate(){const st=S.settings;
   if(st.showNight===undefined)st.showNight=true;
   if(st.showAdjShade===undefined)st.showAdjShade=true;
   st.monthMax=st.monthMax||4;
+  if(!MONTH_FONTS[st.monthFont])st.monthFont='m';
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
@@ -2033,6 +2034,7 @@ function scheduleListHtml(evs,wake){
       <div class="cevm" style="color:${mo?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
       ${e.memo?`<div class="cevmemo" style="color:${mo?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
   return html;}
+function setMonthFont(k){if(!MONTH_FONTS[k])return;S.settings.monthFont=k;save();render();}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
@@ -2079,7 +2081,7 @@ function renderCal(){
           return `<div class="evbar ${it.due?'due':''}${it.mo?' mkonly':''}" ${st}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
-    body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
+    body=`<div id="calGrid" class="${calMonthAll?'allmode':''}" style="--mfs:${(MONTH_FONTS[S.settings.monthFont]||MONTH_FONTS.m).px}px;">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
     <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示</div>`;
   }else if(calMode==='week'){
     const base=parseDs(calDate);const ws=S.settings.weekStart;
@@ -2874,6 +2876,10 @@ function renderSettings(){
     <div class="setrow"><div><div class="sl">月セルの最大表示件数</div><div class="sd">これを超えると「+N」。月をもう一度押すと全表示</div></div>
       <select style="width:80px;" onchange="S.settings.monthMax=+this.value;save();">
         ${[3,4,5,6,7,8].map(n=>`<option value="${n}" ${s.monthMax===n?'selected':''}>${n}</option>`).join('')}</select></div>
+    <div class="setrow" style="display:block;"><div class="sl">月カレンダーの文字サイズ</div><div class="sd">予定名の大きさ。小さいほど1行に多く入ります</div>
+      <div class="seg" style="margin:9px 0 0;width:100%;">
+        ${Object.keys(MONTH_FONTS).map(k=>`<button style="flex:1;" class="${s.monthFont===k?'on':''}" onclick="setMonthFont('${k}')">${MONTH_FONTS[k].n}</button>`).join('')}</div>
+      <div class="mini" style="padding:7px 0 0;">見本：<span style="display:inline-block;background:var(--ink);color:#fff;padding:0 0 0 1px;font-size:${(MONTH_FONTS[s.monthFont]||MONTH_FONTS.m).px}px;line-height:1.45;">歯医者の定期検診</span></div></div>
     <div class="setrow"><div><div class="sl">前月・翌月を網かけ</div><div class="sd">当月以外の日をうすいグレーの網かけに</div></div>${tgl('showAdjShade')}</div>
     <div class="setrow"><div><div class="sl">時間帯で切り分け表示</div><div class="sd">午前/午後/夜で区切り＋🌙マーク（今日・日表示）</div></div>${tgl('showNight')}</div>
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
@@ -2938,8 +2944,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.66（2026-07-24）</b><br>
-  ・月カレンダーの予定名を<b>2行まで折り返して表示</b>（10文字前後まで読めます）。ALL表示では全文表示<br>
+  <div class="mini"><b>v1.67（2026-07-24）</b><br>
+  ・月カレンダーの予定名は<b>1行のまま・…なし</b>に戻し、<b>上下と左の余白を最小化</b>（同じ文字サイズでも入る文字数が増えました）<br>
+  ・表示設定に<b>「月カレンダーの文字サイズ」（特小／小／中／大／特大）</b>を追加。見本つきで選べます<br>
+  <b>v1.66（2026-07-24）</b><br>
+  ・月カレンダーの予定名の折り返し表示（v1.67で1行表示に戻しました）<br>
   <b>v1.65（2026-07-24）</b><br>
   ・「マークのみ表示」の予定は、<b>月・週・日すべてで付箋（カラー帯）を出さず線画だけ</b>で表示するように（線画の色は予定の色）<br>
   <b>v1.64（2026-07-24）</b><br>
