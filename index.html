@@ -368,10 +368,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .cell .rk{font-size:8.5px;color:var(--sub);letter-spacing:0;}
 .cell .rk.taian{color:var(--danger);}
 .cell .ich{font-size:8.5px;color:#B8860B;}
-.cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cell .holname{font-size:8.5px;color:var(--danger);line-height:1.2;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:clip;}
 .cell .marks{display:flex;gap:2px;padding:1px 0 1px 2px;flex-wrap:wrap;}
 .cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
-.evbar{font-size:9.5px;line-height:1.5;padding:0 3px;margin-top:1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.evbar{font-size:9.5px;line-height:1.5;padding:0 1px 0 3px;margin-top:1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;}
 .evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 
@@ -724,7 +724,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 
 /* ========================= state ========================= */
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.63';
+const APP_VERSION='v1.64';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2923,7 +2923,14 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.62（2026-07-23）</b><br>
+  <div class="mini"><b>v1.64（2026-07-24）</b><br>
+  ・月カレンダーの予定名・祝日名を<b>枠のギリギリまで表示</b>（…での省略をやめました）<br>
+  <b>v1.63（2026-07-24）</b><br>
+  ・「更新しても新しくならない」対策：設定に<b>バージョン表示</b>と<b>「最新に更新する」</b>ボタンを追加<br>
+  ・流し込みのとき<b>フォルダの並び順のまま</b>配置されるように修正<br>
+  ・バーチカルで<b>ルーティンを全選択</b>／選んだぶんを<b>まとめて未配置に</b>／<b>今日から消す</b>を追加<br>
+  ・ルーティンの並び替えを<b>タスクと同じ方式</b>（選んだ順に番号→▲▼→「決定」でまとめる）に統一<br>
+  <b>v1.62（2026-07-23）</b><br>
   ・ルーティンの流し込みを<b>「フォルダを選ぶ→内容を確認（不要なものは外す）→時間をタップして配置」</b>の流れに刷新<br>
   <b>v1.61（2026-07-23）</b><br>
   ・目安/所要時間を<b>分チップ（2/4/6/8/10…）＋手動入力</b>に（ルーティン・タスク共通）<br>
@@ -2938,7 +2945,7 @@ function renderSettings(){
   ・ルーティンに<b>マーク（線画）</b>設定を追加／<b>朝昼夜の区分を廃止</b>（色はフォルダごと・時間帯はフォルダ名で表現）<br>
   ・ルーティンごとに<b>「やったこと」に記録する/しない</b>を設定（洗顔などはOFF、家事育児はON）<br>
   <b>v1.58（2026-07-23）</b><br>
-  ・予定名がはみ出す時は<b>…で省略</b>（枠からはみ出さない）<br>
+  ・予定名がはみ出す時も<b>枠のギリギリまで表示</b>（…での省略はしません）<br>
   ・横向き等で<b>右側が見切れる／少し拡大される</b>のを改善（横方向の安全域＋横スクロール抑制）<br>
   ・下のタブ（フッター）が画面ごとに上下しないよう安定化（画面の高さ計算を最新方式に）<br>
   ・設定を並べ替え：「<b>予定・カテゴリ・色設定</b>」を一番上、「使い方」を一番下に<br>
