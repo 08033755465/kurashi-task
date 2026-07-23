@@ -2085,7 +2085,7 @@ function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${esc(obj.title)} の色分け</div><div class="sw">
-    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})">${p.n}</button>`).join('')}
+    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
     <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
@@ -2141,7 +2141,7 @@ async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);cons
 function openColorSheet(dstr){
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
-    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})">${p.n}</button>`).join('')}
+    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
     <button class="clear" onclick="setDayColor('${dstr}',null)">なし</button></div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
