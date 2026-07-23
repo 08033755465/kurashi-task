@@ -126,6 +126,23 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* 予定タップ→右側にピヨっと出る詳細ポップ */
 .evpop{position:absolute;right:0;width:60%;max-width:230px;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.22);z-index:45;overflow:hidden;transform-origin:right top;animation:evpopin .18s cubic-bezier(.34,1.56,.64,1);}
 @keyframes evpopin{from{opacity:0;transform:scale(.8) translateX(8px);}to{opacity:1;transform:scale(1) translateX(0);}}
+/* 月タップ→その日の予定ポップ */
+#daypop{position:fixed;inset:0;background:rgba(21,23,26,.35);z-index:120;display:none;align-items:center;justify-content:center;padding:24px;}
+#daypop.show{display:flex;}
+#daypop .dpbox{background:var(--card,#fff);width:100%;max-width:340px;max-height:76vh;overflow-y:auto;border-radius:16px !important;box-shadow:0 12px 40px rgba(0,0,0,.3);transform-origin:center;animation:evpopin .16s cubic-bezier(.34,1.4,.64,1);}
+#daypop .dph{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card,#fff);}
+#daypop .dph b{font-size:15px;}
+#daypop .dph button{font-size:18px;color:var(--sub);}
+#daypop .dpbody{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+#daypop .dpev{padding:7px 10px;border-radius:8px !important;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
+#daypop .dpevt{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#daypop .dpevm{font-size:11px;opacity:.85;white-space:nowrap;font-variant-numeric:tabular-nums;}
+#daypop .dpmk{font-size:12.5px;display:flex;align-items:center;gap:6px;}
+#daypop .dpdue{font-size:12px;color:var(--sub);}
+#daypop .dpempty{font-size:12.5px;color:var(--sub);padding:6px 2px;}
+#daypop .dpacts{display:flex;gap:6px;padding:4px 12px 10px;}
+#daypop .dpacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:9px 4px;font-size:12.5px;}
+#daypop .dphint{text-align:center;font-size:10.5px;color:var(--sub);padding:0 0 10px;}
 .evpoph{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;font-size:12.5px;line-height:1.3;}
 .evpoph b{font-weight:700;}
 .evpoph button{font-size:15px;flex:0 0 auto;}
@@ -2058,6 +2075,29 @@ async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
   if(type==='r'){const log=dayLog(dstr);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
   else{const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr){x.status='todo';delete x.doneAt;delete x.doneMin;}}
   save();render();flashUndo('未完了に戻しました');}
+/* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
+function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr);
+  const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
+  let el=$('#daypop');if(!el){el=document.createElement('div');el.id='daypop';document.body.appendChild(el);}
+  el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
+    <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
+    <div class="dpbody">
+      ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
+      ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
+      ${dues.map(x=>`<div class="dpdue">⏰ 期限：${esc(x.title)}</div>`).join('')}
+    </div>
+    <div class="dpacts">
+      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
+      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();openColorSheet('${dstr}')">🎨 色分け</button>
+      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 この日を開く</button></div>
+    <div class="dphint">長押しでこの日のページへ</div>
+  </div>`;
+  el.classList.add('show');
+  el.onclick=e=>{if(e.target===el)closeDayPopup();};}
+function closeDayPopup(){$('#daypop')?.classList.remove('show');}
+let _dpPress=null;
+function dpPressStart(dstr){clearTimeout(_dpPress);_dpPress=setTimeout(()=>{closeDayPopup();calGoto(dstr);},520);}
+function dpPressEnd(){clearTimeout(_dpPress);}
 /* 長押し→色（タップでは発動しない。移動・スクロール・指を離すと確実にキャンセル） */
 let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressLp=null,lpSuppress=false,pressDocBound=false;
 function endPressTimer(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
@@ -2069,7 +2109,7 @@ function attachCellPress(){
     },{passive:true});
     document.addEventListener('pointerup',()=>{
       const had=!!pressTimer;endPressTimer();
-      if(had&&pressCell&&!pressFired)calGoto(pressCell.dataset.d);
+      if(had&&pressCell&&!pressFired)openDayPopup(pressCell.dataset.d);
       pressCell=null;pressLp=null;pressStart=null;setTimeout(()=>{pressFired=false;},0);});
     document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressLp=null;pressStart=null;});
     window.addEventListener('scroll',()=>endPressTimer(),{passive:true});
@@ -2736,7 +2776,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.50（2026-07-23）</b><br>
+  <div class="mini"><b>v1.51（2026-07-23）</b><br>
+  ・<b>月カレンダーの日をタップ→その日の予定がピヨっと表示</b>。予定タップで編集、＋予定・色分け・この日を開く。<b>ポップを長押しで日ページへ</b>（日付セルの長押しは従来どおり色分け）<br>
+  <b>v1.50（2026-07-23）</b><br>
   ・予定の見た目を刷新：<b>左に親グループの色ライン＋本体は子グループのパステル</b>。<b>★重要は本体を濃く＋親ラインを太く</b>（週・日・月・タイムライン）<br>
   <b>v1.49（2026-07-23）</b><br>
   ・色の仕組みを<b>グループ（カテゴリ）に一本化</b>。グループの色を変えると<b>そのグループの予定色が一括で反映</b>（「まま／子供」等の色運用が思いどおりに）<br>
