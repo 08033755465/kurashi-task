@@ -282,6 +282,14 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .evmk{display:inline-flex;width:13px;height:13px;vertical-align:-2px;margin-right:3px;}
 .evmk svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .rfilter{display:flex;gap:5px;padding:2px 16px 8px;overflow-x:auto;}
+.rfold{margin:2px 0 12px;}
+.rfoldh{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.rfoldh b{font-size:14px;flex:0 0 auto;}
+.rfoldh .rfmeta{flex:1;font-size:11px;color:var(--sub);}
+.rfoldh .rfacts{display:flex;gap:4px;}
+.rfoldh .rfacts button{width:28px;height:28px;border:1px solid var(--line);font-size:12px;color:var(--sub);border-radius:6px !important;}
+.rfoldh .rfacts button:last-child{width:auto;padding:0 8px;}
+.rfadd{width:calc(100% - 32px);margin:6px 16px 0;padding:8px 0;border:1px dashed var(--line);color:var(--accent);font-size:12.5px;}
 .cfold{margin:6px 0 10px;}
 .cfoldh{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--ink);font-size:13.5px;}
 .cfoldh .chip{flex:0 0 auto;}
@@ -883,7 +891,7 @@ function migrate(){const st=S.settings;
   if(st.timeline===undefined)st.timeline=true;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
     if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
-  S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;if(r.folder==null)r.folder=({morning:'朝のルーティン',day:'昼のルーティン',night:'夜のルーティン',any:'いつでも'}[r.slot]||'マイルーティン');});
+  S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;if(r.folder==null)r.folder=({morning:'朝のルーティン',day:'昼のルーティン',night:'夜のルーティン',any:'いつでも'}[r.slot]||'マイルーティン');if(r.mark===undefined)r.mark='';if(r.recordDone===undefined)r.recordDone=true;});
   S.groups.forEach((g,i)=>{if(g.hue==null)g.hue=i%HUES12.length;}); // 旧colorから12色パレットへ移行
   S.tasks.forEach(x=>{if(x.repeat===undefined)x.repeat='';});
   if(!Array.isArray(st.hueLabels))st.hueLabels=[]; // 色カテゴリの任意ラベル（TimeTree式）
@@ -1401,7 +1409,8 @@ const REFRESHI='<svg class="cki" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2
 function evTimeText(e){return e.start?(e.start+(e.end?' – '+e.end:'')):'終日';}
 const SLOT_COLOR={morning:'#E0A94A',day:'#E08A5E',night:'#8E7BC8',any:'#B5BAC4'};
 const BAND_Z={morning:'#F7E6C2',day:'#F8DCCB',night:'#E7DEF6'};
-function bandColorOf(it){return it.type==='r'?(SLOT_COLOR[it.obj.slot]||'#B5BAC4'):'#C4B7A6';}
+function folderHue(f){return hashStr(f||'マイルーティン')%HUES12.length;}
+function bandColorOf(it){return it.type==='r'?HUE(folderHue(it.obj.folder)).v:'#C4B7A6';}
 function doItemRowDense(it,t,tok){
   const bc=bandColorOf(it);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;
@@ -1500,7 +1509,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}`;
     return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTapTask('${tk}')`}"`}>
-      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
   const overAny=placed.some(p=>p.ax+p.est>end);
@@ -1510,7 +1519,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     <div class="tlpoolh">これから行う<br>ルーティン ${pool.length}件</div>
     ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing?placeToks.includes(tk):tlSel.includes(tk);
       return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
-        <span class="pt">${sel?'✓ ':''}🔁 ${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
+        <span class="pt">${sel?'✓ ':''}${it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
       :`<div class="poolempty">${dayLog(t).planRoutines?'すべて配置済み🎉':'まだ選んでいません'}</div>`}
     <button class="poolall" onclick="composeToday()">🔁 ルーティンを選ぶ</button>
     ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>`:''}
@@ -2105,7 +2114,7 @@ function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=
   eventsOn(dstr).forEach(e=>{if(e.start)items.push({at:hm2min(e.start),icon:'📅',text:evTitle(e),sub:evTimeText(e),c:evColor(e)});});
   (dl.logs||[]).forEach(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;items.push({at:l.at,icon:k.i,text:l.text,sub:k.n+(l.dur?'・'+fmtMin(l.dur):''),c:k.c,logId:l.id});});
   S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr).forEach(x=>{const at=x.doneMin;items.push({at:at??100000,icon:'✅',text:x.title,sub:'完了'+(at!=null?'・'+min2hm(at):'')+'（タップで戻す）',c:'#48A2DD',tok:'t_'+x.id});});
-  Object.entries(dl.routines||{}).forEach(([id,st])=>{if(st&&st.done){const r=S.routines.find(rr=>rr.id===id);if(r)items.push({at:st.doneMin??100000,icon:'✅',text:r.title,sub:'完了'+(st.doneMin!=null?'・'+min2hm(st.doneMin):'')+'（タップで戻す）',c:'#48A2DD',tok:'r_'+id});}});
+  Object.entries(dl.routines||{}).forEach(([id,st])=>{if(st&&st.done){const r=S.routines.find(rr=>rr.id===id);if(r&&r.recordDone!==false)items.push({at:st.doneMin??100000,icon:'✅',text:(r.mark?'':'')+r.title,mk:r.mark,sub:'完了'+(st.doneMin!=null?'・'+min2hm(st.doneMin):'')+'（タップで戻す）',c:'#48A2DD',tok:'r_'+id});}});
   if(!items.length)return '';
   items.sort((a,b)=>a.at-b.at);
   return `<div class="sec"><div class="sec-h">1日の記録・流れ</div>
@@ -2372,14 +2381,15 @@ function openRoutineEdit(id){routineActiveRow=null;routineModal(id);}
 function enterReorderWith(id){routineActiveRow=null;routineReorder=true;routineSel=new Set([id]);render();}
 function addRoutineAfter(id){routineActiveRow=null;routineAddAfter=id;const r=S.routines.find(x=>x.id===id);routineModal(null,r?r.slot:null);}
 function placeRoutineAfter(newId,afterId){const nw=S.routines.find(r=>r.id===newId);if(!nw)return;
-  const arr=S.routines.filter(r=>r.slot===nw.slot&&r.id!==newId).sort((a,b)=>a.order-b.order);
+  const arr=S.routines.filter(r=>(r.folder||'マイルーティン')===(nw.folder||'マイルーティン')&&r.id!==newId).sort((a,b)=>a.order-b.order);
   const ai=arr.findIndex(r=>r.id===afterId);
   if(ai>=0)arr.splice(ai+1,0,nw);else arr.push(nw);
   arr.forEach((r,i)=>r.order=i);}
+const rFolderOf=r=>r.folder||'マイルーティン';
 function validContig(sel,list){if(!sel.size)return true;
   const idxs=list.map((r,i)=>sel.has(r.id)?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
-  const slot=list[idxs[0]].slot;
-  if(!idxs.every(i=>list[i].slot===slot))return false;
+  const fk=rFolderOf(list[idxs[0]]);
+  if(!idxs.every(i=>rFolderOf(list[i])===fk))return false;
   for(let k=1;k<idxs.length;k++)if(idxs[k]!==idxs[k-1]+1)return false;
   return true;}
 function tglRoutineSel(id){const list=routineOrderedList();
@@ -2388,54 +2398,64 @@ function tglRoutineSel(id){const list=routineOrderedList();
   if(routineSel.size)_reorderFollow=`[data-rk="${[...routineSel][0]}"]`;render();}
 function moveRoutineBlock(dir){if(!routineSel.size)return;
   const r0=S.routines.find(r=>routineSel.has(r.id));
-  const slotList=S.routines.filter(x=>x.slot===r0.slot).sort((a,b)=>a.order-b.order);
+  const slotList=S.routines.filter(x=>rFolderOf(x)===rFolderOf(r0)).sort((a,b)=>a.order-b.order);
   slotList.forEach((x,i)=>x.order=i);
   const idx=slotList.map((x,i)=>routineSel.has(x.id)?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
   const lo=idx[0],hi=idx[idx.length-1];const block=slotList.slice(lo,hi+1);
   if(dir<0){if(lo<=0)return;const above=slotList[lo-1];slotList.splice(lo-1,hi-lo+2,...block,above);}
   else{if(hi>=slotList.length-1)return;const below=slotList[hi+1];slotList.splice(lo,hi-lo+2,below,...block);}
   slotList.forEach((x,i)=>x.order=i);_reorderFollow=`[data-rk="${[...routineSel][0]}"]`;save();render();}
-let routineFilter=null; // null=すべて / 0-6=曜日 / 'daily'=毎日
+let routineFilter=null;let routineView='folder'; // 'folder'（フォルダ管理）/ 'week'（曜日一覧・横断）
 function routineOnWeekday(r,w){if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
   return (r.nths||[]).some(o=>o.d===w);}
-function setRoutineFilter(v){routineFilter=(routineFilter===v?null:v);render();}
+function setRoutineView(v){routineView=v;routineActiveRow=null;render();}
+function rMgmtRow(r){return `<div class="titem" data-lp="r_${r.id}" onclick="routineModal('${r.id}')" style="${pastelBg(r)}">
+  <div class="bar" style="background:${r.active?bandColorOf({type:'r',obj:r}):'var(--line)'};width:5px;"></div>
+  <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${r.mark?`<span class="evmk">${icSvg(r.mark)}</span>`:''}${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}${r.recordDone===false?' <span class="rtag">記録しない</span>':''}</div>
+  <div class="meta"><span>${esc(scheduleText(r))}</span>${r.weekOnce?'<span class="rtag opt">週1回</span>':''}<span>目安${fmtMin(r.estMin)}</span>${r.memo?'<span>📝</span>':''}${r.active?'':'<span>停止中</span>'}</div></div>
+  <span style="color:var(--sub);align-self:center;padding-right:10px;">✎</span></div>`;}
 function renderRoutines(){
-  let list=routineOrderedList();let cur='';
-  if(routineFilter==='daily')list=list.filter(r=>(r.freq||'weekly')==='weekly'&&(r.days||[]).length===7);
-  else if(routineFilter!=null)list=list.filter(r=>routineOnWeekday(r,routineFilter));
-  const ws=S.settings.weekStart||0;const wdOrder=[...Array(7)].map((_,i)=>(i+ws)%7);
-  const filterBar=routineReorder?'':`<div class="rfilter">
-    <button class="${routineFilter==null?'on':''}" onclick="setRoutineFilter(null)">すべて</button>
-    ${wdOrder.map(w=>`<button class="${routineFilter===w?'on':''}" onclick="setRoutineFilter(${w})">${WD[w]}</button>`).join('')}
-    <button class="${routineFilter==='daily'?'on':''}" onclick="setRoutineFilter('daily')">毎日</button></div>`;
-  return `<div class="vhead"><h1>ルーティン</h1><span>${routineReorder
-      ?`<button class="act" onclick="exitReorder()">完了</button>`
-      :`<button class="act" onclick="enterReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="routineModal(null)">＋ 追加</button>`}</span></div>
-  <div class="mini">${routineReorder
-    ?'動かす行をタップで選択（となり合う行は複数選択できます）。右下の▲▼でまとめて移動します。'
-    :'行をタップ →「編集／並び替え／その下に追加」を選べます。長押しで色分け。曜日で絞り込めます。'}</div>
-  ${filterBar}
-  ${list.length?'':'<div class="mini">この条件のルーティンはありません。</div>'}
-  ${list.map(r=>{const fk=r.folder||'マイルーティン';const h=fk!==cur?`<div class="sec-h">📁 ${esc(fk)}</div>`:'';cur=fk;
-    const st=r.stats||{n:0,total:0};const sel=routineSel.has(r.id);const active=routineActiveRow===r.id;
-    const row=`<div class="titem ${sel?'rsel':''} ${active?'ractive':''}" data-rk="${r.id}" ${routineReorder?'':`data-lp="r_${r.id}"`} onclick="${routineReorder?`tglRoutineSel('${r.id}')`:`setRoutineActive('${r.id}')`}" style="${sel||active?'':pastelBg(r)}">
-      <div class="bar" style="background:${sel?'var(--accent)':(r.active?(SLOT_COLOR[r.slot]||'var(--ink)'):'var(--line)')};width:5px;"></div>
-      <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${routineReorder?(sel?'☑ ':'☐ '):''}${esc(r.title)}${r.optional?' <span class="rtag opt">時間があれば</span>':''}</div>
-      <div class="meta"><span>${esc(scheduleText(r))}</span>${r.weekOnce?'<span class="rtag opt">週1回</span>':''}<span>目安${fmtMin(r.estMin)}</span>
-      ${st.n?`<span>平均 ${fmtMin(st.total/st.n/60)}（${st.n}回）</span>`:''}${r.memo?'<span>📝</span>':''}${r.active?'':'<span>停止中</span>'}</div>
-      ${r.memo?`<div class="memoline">${linkify(r.memo)}</div>`:''}${linkChips(r.links)}${rowImgs(r.images)}</div></div>`;
-    const actions=(!routineReorder&&active)?`<div class="ractions">
-      <button onclick="event.stopPropagation();openRoutineEdit('${r.id}')">✎ 編集</button>
-      <button onclick="event.stopPropagation();enterReorderWith('${r.id}')">↕ 並び替え</button>
-      <button onclick="event.stopPropagation();addRoutineAfter('${r.id}')">＋ この下に追加</button></div>`:'';
-    return h+row+actions;}).join('')}
-  ${routineReorder&&routineSel.size?`<div class="reorderfab"><span>${routineSel.size}件を移動</span>
-    <button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button></div>`:''}`;
+  if(routineReorder){const list=routineOrderedList();let cur='';
+    return `<div class="vhead"><h1>ルーティンの並び替え</h1><span><button class="act" onclick="exitReorder()">完了</button></span></div>
+    <div class="mini">動かす行をタップで選択（となり合う行は複数選択）。右下の▲▼でまとめて移動します。</div>
+    ${list.map(r=>{const fk=r.folder||'マイルーティン';const h=fk!==cur?`<div class="sec-h">📁 ${esc(fk)}</div>`:'';cur=fk;const sel=routineSel.has(r.id);
+      return h+`<div class="titem ${sel?'rsel':''}" data-rk="${r.id}" onclick="tglRoutineSel('${r.id}')" style="${sel?'':pastelBg(r)}">
+        <div class="bar" style="background:${sel?'var(--accent)':bandColorOf({type:'r',obj:r})};width:5px;"></div>
+        <div class="body"><div class="tt">${sel?'☑ ':'☐ '}${esc(r.title)}</div></div></div>`;}).join('')}
+    ${routineSel.size?`<div class="reorderfab"><span>${routineSel.size}件を移動</span><button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button></div>`:''}`;}
+  const seg=`<div class="seg" style="margin:6px 16px 4px;">
+    <button class="${routineView==='folder'?'on':''}" onclick="setRoutineView('folder')">📁 フォルダ</button>
+    <button class="${routineView==='week'?'on':''}" onclick="setRoutineView('week')">📅 曜日一覧</button></div>`;
+  const head=`<div class="vhead"><h1>ルーティン</h1><span>
+    <button class="act" onclick="enterReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="routineModal(null)">＋追加</button></span></div>${seg}`;
+  if(routineView==='week'){const ws=S.settings.weekStart||0;const wd=[...Array(7)].map((_,i)=>(i+ws)%7);
+    return head+`<div class="mini">曜日ごとに、その日に予定されているルーティンを横断で確認できます。タップで内容を編集。</div>
+    ${wd.map(w=>{const rs=S.routines.filter(r=>r.active&&routineOnWeekday(r,w)).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
+      return `<div class="rfold"><div class="rfoldh"><b>${WD[w]}曜</b><span class="rfmeta">${rs.length}件・計${fmtMin(tot)}</span></div>
+        ${rs.length?rs.map(rMgmtRow).join(''):'<div class="mini" style="padding:6px 16px;">なし</div>'}</div>`;}).join('')}`;}
+  // フォルダ管理
+  const folders=routineFolders();
+  return head+`<div class="mini">フォルダごとにルーティンを整理。フォルダ名に「朝」「仕事」など自由に。▲▼で並べ替え、名前は「✎」。ルーティンをタップで詳細編集。</div>
+    ${folders.length?folders.map((f,fi)=>{const rs=S.routines.filter(r=>(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
+      return `<div class="rfold"><div class="rfoldh"><b>📁 ${esc(f)}</b><span class="rfmeta">${rs.length}件・計${fmtMin(tot)}</span>
+        <span class="rfacts"><button onclick="moveFolder(${fi},-1)">▲</button><button onclick="moveFolder(${fi},1)">▼</button><button onclick="renameFolder(${fi})">✎名</button></span></div>
+        ${rs.map(rMgmtRow).join('')}
+        <button class="rfadd" onclick="addRoutineToFolder(${fi})">＋ このフォルダにルーティンを追加</button></div>`;}).join('')
+      :'<div class="mini">「＋追加」でルーティンを作成してください。</div>'}`;
 }
-function routineModal(id,presetSlot){
+function moveFolder(fi,dir){const folders=routineFolders();const f=folders[fi];const tj=fi+dir;if(tj<0||tj>=folders.length)return;
+  const other=folders[tj];const fRs=S.routines.filter(r=>(r.folder||'マイルーティン')===f);
+  const rest=S.routines.filter(r=>(r.folder||'マイルーティン')!==f);
+  let first=-1,last=-1;rest.forEach((r,i)=>{if((r.folder||'マイルーティン')===other){if(first<0)first=i;last=i;}});
+  const at=dir<0?first:last+1;rest.splice(at,0,...fRs);S.routines=rest;save();render();}
+async function renameFolder(fi){const folders=routineFolders();const f=folders[fi];
+  const nv=await uiPrompt('フォルダ名',f);if(nv===null)return;const nm=nv.trim();if(!nm||nm===f)return;
+  S.routines.forEach(r=>{if((r.folder||'マイルーティン')===f)r.folder=nm;});save();render();}
+function addRoutineToFolder(fi){const f=routineFolders()[fi];routineModal(null,null,f);}
+function routineModal(id,presetSlot,presetFolder){
   if(!id&&!presetSlot)routineAddAfter=null; // 右上「＋追加」など通常追加は末尾へ
   const r=id?S.routines.find(x=>x.id===id):null;
-  const slot0=r?r.slot:(presetSlot||'morning');
+  const slot0=r?r.slot:(presetSlot||'any');
   editLinks=(r?.links||[]).map(l=>({...l}));editImages=(r?.images||[]).slice();
   const days=r&&r.days?[...r.days]:[0,1,2,3,4,5,6];
   window._rdays=days;window._rnths=r&&r.nths?JSON.parse(JSON.stringify(r.nths)):[];window._rnthWd=null;
@@ -2443,10 +2463,13 @@ function routineModal(id,presetSlot){
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
     <div class="frow"><label>フォルダ（寝起き・仕事 など。今日はフォルダごとに選んで流し込みます）</label>
-      <input id="rmFolder" list="rmFolderList" value="${esc(r?.folder||'マイルーティン')}" placeholder="例）寝起きルーティン">
+      <input id="rmFolder" list="rmFolderList" value="${esc(r?.folder||presetFolder||'マイルーティン')}" placeholder="例）寝起きルーティン">
       <datalist id="rmFolderList">${routineFolders().map(f=>`<option value="${esc(f)}">`).join('')}</datalist></div>
-    <div class="frow f2"><div><label>時間帯（色・目安の区分）</label><select id="rmSlot">${Object.entries(SLOTS).map(([k,v])=>`<option value="${k}" ${slot0===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div></div>
+    <div class="frow"><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div>
+    <div class="frow"><label>マーク（頭に表示する線画・任意）</label>
+      <div class="icontabs" id="rmIconTabs"></div>
+      <div class="icongrid" id="rmIconGrid"></div>
+      <div style="margin-top:6px;"><button type="button" class="inlineadd" onclick="rmIconPick('')">マークなし</button></div></div>
     <div class="frow"><label>繰り返し</label>
       <select id="rmFreq" onchange="rSetFreq(this.value)">
         <option value="weekly" ${(r?.freq||'weekly')==='weekly'?'selected':''}>毎週（曜日で指定）</option>
@@ -2462,7 +2485,9 @@ function routineModal(id,presetSlot){
           <button type="button" class="inlineadd" onclick="rAddNth()">＋追加</button>
         </div></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmActive" style="width:auto;" ${!r||r.active?'checked':''}>
-      <span style="font-size:13px;">有効（今日のリストに表示する）</span></div>
+      <span style="font-size:13px;">有効（「ルーティンを選ぶ」に出す）</span></div>
+    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmRecord" style="width:auto;" ${(!r||r.recordDone!==false)?'checked':''}>
+      <span style="font-size:13px;">完了を「やったこと」に記録（家事・育児など。洗顔など個人的なものはOFF）</span></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmOptional" style="width:auto;" ${r?.optional?'checked':''}>
       <span style="font-size:13px;">「時間があれば」（余裕があるときだけやる。実行中に印が付きます）</span></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rmWeekOnce" style="width:auto;" ${r?.weekOnce?'checked':''}>
@@ -2475,7 +2500,13 @@ function routineModal(id,presetSlot){
   <div class="mbtns">
     ${r?`<button class="del" onclick="delRoutine('${r.id}')">削除</button><button onclick="dupRoutine('${r.id}')">複製</button>`:''}
     <button class="save" onclick="saveRoutine('${r?.id||''}')">保存</button>
-  </div>`);rNthRefresh();}
+  </div>`);rNthRefresh();
+  window._rmIcon=r?.mark||'';window._rmCat=(r?.mark&&ICONS[r.mark]?ICONS[r.mark].c:'家事');rmIconRefresh();}
+function rmIconRefresh(){const tabs=$('#rmIconTabs'),grid=$('#rmIconGrid');if(!tabs)return;
+  tabs.innerHTML=ICON_CATS.map(c=>`<button type="button" class="${window._rmCat===c?'on':''}" onclick="rmIconTab('${c}')">${c}</button>`).join('');
+  grid.innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._rmCat).map(([key])=>`<button type="button" class="${window._rmIcon===key?'on':''}" onclick="rmIconPick('${key}')">${icSvg(key)}</button>`).join('');}
+function rmIconTab(c){window._rmCat=c;rmIconRefresh();}
+function rmIconPick(key){window._rmIcon=key;if(key&&ICONS[key])window._rmCat=ICONS[key].c;rmIconRefresh();}
 function tglRDay(i,btn){const d=window._rdays;const p=d.indexOf(i);p>=0?d.splice(p,1):d.push(i);btn.classList.toggle('on');}
 function rSetFreq(v){$('#rmWeeklyRow').style.display=v==='weekly'?'block':'none';$('#rmMonthlyRow').style.display=v==='monthly'?'block':'none';}
 function rWdPick(i){window._rnthWd=i;$$('#rmNthWd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===i));}
@@ -2487,7 +2518,7 @@ function rDelNth(i){window._rnths.splice(i,1);rNthRefresh();}
 function rNthRefresh(){const el=$('#rmNthList');if(!el)return;
   el.innerHTML=window._rnths.map((o,i)=>`<span class="nc">${nthLabel(o)}<button type="button" onclick="rDelNth(${i})">✕</button></span>`).join('');}
 function moveRoutine(id,dir){const r=S.routines.find(x=>x.id===id);if(!r)return;
-  const list=S.routines.filter(x=>x.slot===r.slot).sort((a,b)=>a.order-b.order);
+  const list=S.routines.filter(x=>(x.folder||'マイルーティン')===(r.folder||'マイルーティン')).sort((a,b)=>a.order-b.order);
   list.forEach((x,i)=>x.order=i);
   const i=list.findIndex(x=>x.id===id),j=i+dir;if(j<0||j>=list.length)return;
   list[i].order=j;list[j].order=i;save();render();}
@@ -2496,7 +2527,9 @@ function saveRoutine(id){
   const freq=$('#rmFreq').value;
   if(freq==='weekly'&&!window._rdays.length){uiAlert('実行する曜日を選んでください');return;}
   if(freq==='monthly'&&!window._rnths.length){uiAlert('毎月の実行日（第◯曜）を1つ以上追加してください');return;}
-  snapUndo();const data={title,slot:$('#rmSlot').value,folder:($('#rmFolder').value.trim()||'マイルーティン'),estMin:+$('#rmEst').value||0,freq,
+  const old=id?S.routines.find(r=>r.id===id):null;
+  snapUndo();const data={title,slot:(old?old.slot:'any'),folder:($('#rmFolder').value.trim()||'マイルーティン'),estMin:+$('#rmEst').value||0,freq,
+    mark:window._rmIcon||'',recordDone:$('#rmRecord').checked,
     days:[...window._rdays].sort(),nths:JSON.parse(JSON.stringify(window._rnths)),
     active:$('#rmActive').checked,optional:$('#rmOptional').checked,weekOnce:$('#rmWeekOnce').checked,memo:$('#rmMemo').value,links:collectLinks(),images:editImages.slice()};
   if(id)Object.assign(S.routines.find(r=>r.id===id),data);
@@ -2840,7 +2873,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.58（2026-07-23）</b><br>
+  <div class="mini"><b>v1.59（2026-07-23）</b><br>
+  ・ルーティンタブを<b>フォルダ管理画面</b>に刷新（フォルダごとに整理・<b>トータル時間</b>表示・▲▼並べ替え・名前変更・フォルダに追加）。「📅曜日一覧」で全ルーティンを<b>曜日横断</b>で確認<br>
+  ・ルーティンに<b>マーク（線画）</b>設定を追加／<b>朝昼夜の区分を廃止</b>（色はフォルダごと・時間帯はフォルダ名で表現）<br>
+  ・ルーティンごとに<b>「やったこと」に記録する/しない</b>を設定（洗顔などはOFF、家事育児はON）<br>
+  <b>v1.58（2026-07-23）</b><br>
   ・予定名がはみ出す時は<b>…で省略</b>（枠からはみ出さない）<br>
   ・横向き等で<b>右側が見切れる／少し拡大される</b>のを改善（横方向の安全域＋横スクロール抑制）<br>
   ・下のタブ（フッター）が画面ごとに上下しないよう安定化（画面の高さ計算を最新方式に）<br>
