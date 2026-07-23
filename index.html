@@ -134,7 +134,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #daypop .dph b{font-size:15px;}
 #daypop .dph button{font-size:18px;color:var(--sub);}
 #daypop .dpbody{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
-#daypop .dpev{padding:7px 10px;border-radius:8px !important;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
+#daypop .dpev{padding:7px 10px;border-radius:8px !important;display:flex;flex-direction:column;gap:4px;}
+#daypop .dpevrow{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
+#daypop .dpevmemo{font-size:11px;line-height:1.45;opacity:.92;word-break:break-word;}
 #daypop .dpevt{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #daypop .dpevm{font-size:11px;opacity:.85;white-space:nowrap;font-variant-numeric:tabular-nums;}
 #daypop .dpmk{font-size:12.5px;display:flex;align-items:center;gap:6px;}
@@ -153,10 +155,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .evpopmemo{font-size:12px;line-height:1.5;color:var(--ink);word-break:break-word;}
 .evpopacts{display:flex;gap:6px;margin-top:2px;}
 .evpopacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:7px 4px;font-size:11.5px;}
-.tlnowbtn{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));float:right;margin:0 14px;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:58;}
+.tlnowbtns{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:flex-end;margin:0 14px;z-index:58;pointer-events:none;}
+.tlnowbtn{pointer-events:auto;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);}
 .tl{position:relative;flex:1;min-width:0;}
 .tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
 .tl .tlhr.m{border-top:1px dashed #D8DCE2;}
+.tl .tlhr.m5{border-top:1px dotted #EDEFF2;}
 .tl .tltask.shifted{border-left-style:dashed;}
 .tl .tlhrlab{position:absolute;left:0;width:40px;font-size:10px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums;}
 .tl .tlzone{position:absolute;left:44px;right:0;opacity:.55;}
@@ -1221,11 +1225,9 @@ function renderToday(){
     <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
     <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
       ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
-    ${bandPanelHtml(t)}
   </div>
   <div class="startrow">
     <button class="startBtn2" onclick="startFlow()">▶ ルーティン開始</button>
-    <button class="composeBtn ${dayLog(t).planRoutines?'on':''}" onclick="composeToday()">🧩 組む</button>
   </div>
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
@@ -1474,8 +1476,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const bottom=end;
   const H=Math.max(420,(bottom-w)*PX+8);
   let ticks='';
-  for(let h=Math.ceil(w/10)*10;h<=bottom;h+=10){const hr=h%60===0;
-    ticks+=`<div class="tlhr${hr?'':' m'}" style="top:${y(h)}px"></div>${hr?`<div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`:''}`;}
+  for(let h=Math.ceil(w/5)*5;h<=bottom;h+=5){const hr=h%60===0;const ten=h%10===0;
+    ticks+=`<div class="tlhr${hr?'':(ten?' m':' m5')}" style="top:${y(h)}px"></div>${hr?`<div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`:''}`;}
   const zoneH=zones.map(z=>`<div class="tlzone" style="top:${y(z.a)}px;height:${(z.b-z.a)*PX}px;background:${z.z}"></div><div class="tlzlab" style="top:${y(z.a)+2}px;color:${z.c}">${z.lab}</div>`).join('');
   const evH=evs.map(e=>{const a=A(hm2min(e.start)),b=e.end?A(hm2min(e.end)):a+30;const top=y(a),h=Math.max(18,(b-a)*PX);
     const bg=evColor(e),tc=evTextColor(bg);
@@ -1500,7 +1502,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>
       <button class="poolall" onclick="poolAllTomorrow()">→ 全部あすへ送る</button>`:''}
   </div>`;
-  const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・10分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
+  const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
   const actionBar=selCount?`<div class="tlbar">
     <span class="tlbn">${selCount}件選択</span>
@@ -1527,18 +1529,19 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   return `${hint}<div class="tlwrap">
     <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
     ${poolHtml}${evPop}</div>${actionBar}
-    ${t===todayStr()&&!flowList.length?`<button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button>`:''}
+    ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
+function tlScrollTop(){const el=$('.tlwrap');if(el){const r=el.getBoundingClientRect();window.scrollBy({top:r.top-120,behavior:'smooth'});}}
 /* タイムラインの空き部分をタップ→その時刻に予定/記録を追加（選択中はまず解除） */
 function tlEmptyTap(ev){if(placeToks)return;
   if(ev.target.closest('.tltask,.tlev,.tllog,.evpop'))return;
   if(tlSel.length||tlEvSel){tlClearSel();return;}
   const t=todayStr();const w=hm2min(dayWake(t));
   const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/TL_PX;
-  ax=Math.round(ax/10)*10;const mn=((ax%1440)+1440)%1440;const hm=min2hm(mn);
+  ax=Math.round(ax/5)*5;const mn=((ax%1440)+1440)%1440;const hm=min2hm(mn);
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${hm} に追加</div><div class="actsheet">
     <button onclick="closeSheet();eventModal(null,'${t}','${hm}')">📅 予定を追加（${hm}〜）</button>
@@ -1554,7 +1557,7 @@ function startPlace(toks){placeToks=Array.isArray(toks)?toks.slice():[toks];S.se
 function cancelPlace(){placeToks=null;render();}
 function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;
   const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/TL_PX;
-  ax=Math.round(ax/10)*10;ax=Math.max(w,Math.min(ax,end-5));
+  ax=Math.round(ax/5)*5;ax=Math.max(w,Math.min(ax,end-5));
   snapUndo();const dl=dayLog(t);dl.at=dl.at||{};
   placeToks.forEach(tk=>{const it=doItems(t).find(x=>x.type+'_'+x.obj.id===tk);const est=it?Math.max(5,(+it.obj.estMin)||10):15;
     dl.at[tk]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);}); // 複数は続けて配置（起床基準の軸で連続）
@@ -1565,11 +1568,11 @@ function tlUndone(tk){const t=todayStr();const type=tk[0],id=tk.slice(2);snapUnd
   if(type==='r'){const log=dayLog(t);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
   else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='todo';delete x.doneAt;delete x.doneMin;}}
   save();render();flashUndo('未完了に戻しました');}
-/* 未配置を「今」から順に自動配置（10分刻み・24時間軸） */
+/* 未配置を「今」から順に自動配置（5分刻み・24時間軸） */
 function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;const at=(dayLog(t).at)||{};
   const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
   if(!pool.length)return;snapUndo();
-  let ax=Math.max(w,Math.min(toAxis(curMin(),w),end-10));ax=Math.round(ax/10)*10;
+  let ax=Math.max(w,Math.min(toAxis(curMin(),w),end-10));ax=Math.round(ax/5)*5;
   const dl=dayLog(t);dl.at=dl.at||{};
   pool.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);dl.at[it.type+'_'+it.obj.id]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);});
   save();render();flashUndo(pool.length+'件を今から順に配置しました');}
@@ -2100,7 +2103,9 @@ function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr)
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpbody">
       ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
-      ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${evMk(e)}${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
+      ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()">
+        <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${evMk(e)}${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>
+        ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
       ${dues.map(x=>`<div class="dpdue">⏰ 期限：${esc(x.title)}</div>`).join('')}
     </div>
     <div class="dpacts">
@@ -2609,11 +2614,11 @@ function flowShow(keep){
 function flowPause(){if(flowSince){flowBase+=Date.now()-flowSince;flowSince=0;}else{flowSince=Date.now();}flowPersist();flowShow(true);}
 function flowMinimize(){clearInterval(flowTimer);$('#flow').classList.remove('show');flowPersist();render();}
 function flowResume(){if(!flowList.length)return;$('#flow').classList.add('show');flowShow(true);}
-function flowListHtml(){return `<div class="flist">${flowList.map((it,i)=>{const done=flowItemDone(it);const cur=i===flowIdx;
+function flowListHtml(){const t=todayStr();return `<div class="flist">${flowList.map((it,i)=>{const done=flowItemDone(it);const cur=i===flowIdx;const dm=done?doneMinOf(it,t):null;
   return `<div class="fli ${cur?'cur':''} ${done?'done':''}">
     <span class="flic" onclick="flowJump(${i})">${done?'✓':cur?'▶':'○'}</span>
     <span class="flit" onclick="flowJump(${i})">${it.type==='r'?'🔁':'📋'} ${esc(it.obj.title)}${it.type==='r'&&it.obj.optional?' <span style="color:#D8B65A;font-size:11px;">（時間があれば）</span>':''}</span>
-    <span class="flie">${fmtMin(it.obj.estMin)}${it.obj.links?.length?' 🔗':''}</span>
+    <span class="flie">${done?(dm!=null?'完了 '+min2hm(dm):'完了'):fmtMin(it.obj.estMin)}${it.obj.links?.length?' 🔗':''}</span>
     <span class="fliar"><button onclick="flowMoveItem(${i},-1)">▲</button><button onclick="flowMoveItem(${i},1)">▼</button></span></div>`;}).join('')}
   <button class="flireorder" onclick="flowGotoRoutineReorder()">ルーティンタブでまとめて並び替え →</button></div>`;}
 function flowMoveItem(i,dir){const j=i+dir;if(j<0||j>=flowList.length)return;
@@ -2631,23 +2636,24 @@ function flowEdit(){const it=flowList[flowIdx];const r=it.obj;editLinks=(r.links
     <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
 function applyFlowEdit(){const r=flowList[flowIdx].obj;r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;r.links=collectLinks();save();dlgEnd();flowShow(true);}
-function completeCurrentFlow(sec){
-  const it=flowList[flowIdx];const r=it.obj;const tok=it.type+'_'+r.id;
+function completeCurrentFlow(sec,dmin){
+  const it=flowList[flowIdx];const r=it.obj;const tok=it.type+'_'+r.id;const dm=dmin!=null?dmin:curMin();
   if(it.type==='r'){const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
-    dayLog(todayStr()).routines[r.id]={done:true,sec};r.stats={n:st.n+1,total:st.total+sec};
+    dayLog(todayStr()).routines[r.id]={done:true,sec,doneMin:dm};r.stats={n:st.n+1,total:st.total+sec};
     if(prevAvg!==null&&sec>0){if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
-  }else{r.status='done';r.doneAt=todayStr();}
+  }else{r.status='done';r.doneAt=todayStr();r.doneMin=dm;}
   sinkDoItem(tok);save();flowAdvance();}
-function flowDone(){completeCurrentFlow(Math.round(flowElapsed()/1000));}
+function flowDone(){completeCurrentFlow(Math.round(flowElapsed()/1000),curMin());}
 function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
   const mins=Math.max(0,Math.round(flowElapsed()/60000));
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">「${esc(r.title)}」を手動で完了
     <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 4px;">かかった時間（分）</label>
-    <input id="fmMin" class="bigmin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${mins||''}" placeholder="例）25" onfocus="this.select()" onkeydown="if(event.key==='Enter')saveManualDone()">
-    <div class="minchips">${[2,4,6,8,10,15,20,30,45,60].map(n=>`<button type="button" onclick="$('#fmMin').value=${n};$('#fmMin').focus()">${n}分</button>`).join('')}</div></div>
+    <input id="fmMin" class="bigmin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${mins||''}" placeholder="例）25" onfocus="this.select()">
+    <div class="minchips">${[2,4,6,8,10,15,20,30,45,60].map(n=>`<button type="button" onclick="$('#fmMin').value=${n};$('#fmMin').focus()">${n}分</button>`).join('')}</div>
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 4px;">完了した時刻</label>${timeInput('fmTime',min2hm(curMin()))}</div>
     <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveManualDone()">完了にする</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>{const v=$('#fmMin');if(v){v.focus();v.select();}},120);}
-function saveManualDone(){const min=parseInt($('#fmMin').value,10)||0;dlgEnd();completeCurrentFlow(min*60);}
+function saveManualDone(){const min=parseInt($('#fmMin').value,10)||0;const hm=$('#fmTime')?.value;const dmin=hm?hm2min(hm):curMin();dlgEnd();completeCurrentFlow(min*60,dmin);}
 function flowAdvance(){flowIdx++;
   if(flowIdx>=flowList.length){flowClose();return celebrateIfAll();}
   flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
@@ -2807,7 +2813,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.54（2026-07-23）</b><br>
+  <div class="mini"><b>v1.55（2026-07-23）</b><br>
+  ・今日タブの「朝昼夜の時間合計」欄と「組む」ボタンを削除<br>
+  ・月タップのポップに<b>メモ・リンク</b>も表示<br>
+  ・タイムラインを<b>5分刻み</b>に／今日タブに<b>「先頭へ」</b>ボタンを追加（「今へ」と並列）<br>
+  ・フロー中の完了に<b>完了時刻を表示</b>／「手動で完了」に<b>完了時刻の入力</b>を追加<br>
+  <b>v1.54（2026-07-23）</b><br>
   ・グループ編集の色選択に、各色の<b>使用中グループ名／未使用</b>を表示（どの色が空いているか一目）<br>
   <b>v1.53（2026-07-23）</b><br>
   ・予定に<b>マーク（線画）</b>を設定できるように（予定名の頭に表示）。<b>「マークのみ表示」</b>にすると名前を隠して線画だけ表示→タップで内容。週・日・月・タイムラインに反映<br>
@@ -2873,7 +2884,7 @@ function renderSettings(){
   <b>v1.36（2026-07-21）</b><br>
   ・iPhone（ダイナミックアイランド/時計）に画面上部が隠れないよう調整。上部に不透明の余白を設け、スクロール中もコンテンツが時計側に潜り込まないようにしました<br>
   <b>v1.35（2026-07-21）</b><br>
-  ・タイムラインを<b>「組み立て式」</b>に刷新：右の<b>未配置</b>から選び、左のタイムラインで時間をタップして置く（<b>10分刻み</b>）。置いたものが左に並びます。複数選んで「まとめて置く」も可<br>
+  ・タイムラインを<b>「組み立て式」</b>に刷新：右の<b>未配置</b>から選び、左のタイムラインで時間をタップして置く（<b>5分刻み</b>）。置いたものが左に並びます。複数選んで「まとめて置く」も可<br>
   ・開くと<b>常に「今」の位置</b>が最初に見えるように自動スクロール<br>
   ・予定は<b>タップで詳細＋操作</b>（編集／複製〈カレンダーで日付を選んでそのまま編集〉／削除）<br>
   ・ルーティンを<b>曜日・毎日で絞り込み</b>できるように<br>
