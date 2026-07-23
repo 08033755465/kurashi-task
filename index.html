@@ -388,7 +388,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* ===== modal ===== */
 #modalWrap{position:fixed;inset:0;background:rgba(21,23,26,.45);z-index:100;display:none;align-items:flex-end;justify-content:center;}
 #modalWrap.show{display:flex;}
-#modal{background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:0 0 calc(16px + env(safe-area-inset-bottom));}
+#modal{background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:0;}
 #modal .mh{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:2;}
 #modal .mh b{letter-spacing:.1em;font-size:15px;}
 #modal .mh button{font-size:22px;line-height:1;color:var(--sub);padding:2px 6px;}
@@ -396,7 +396,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .frow{margin-bottom:12px;}
 .f2{display:flex;gap:10px;}
 .f2>div{flex:1;}
-.mbtns{display:flex;gap:8px;padding:4px 16px 8px;}
+.mbtns{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--line);z-index:3;}
 .mbtns button{flex:1;padding:11px 0;font-size:13.5px;letter-spacing:.1em;border:1px solid var(--line);color:var(--sub);}
 .mbtns .save{background:var(--ink);color:#fff;border-color:var(--ink);flex:2;font-weight:700;}
 .mbtns .del{color:var(--danger);border-color:var(--danger);}
@@ -704,6 +704,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=> 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const escq=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m)}-${pad(d)}`;
 const dsOf=dt=>ds(dt.getFullYear(),dt.getMonth()+1,dt.getDate());
@@ -2405,10 +2406,13 @@ function moveRoutineBlock(dir){if(!routineSel.size)return;
   if(dir<0){if(lo<=0)return;const above=slotList[lo-1];slotList.splice(lo-1,hi-lo+2,...block,above);}
   else{if(hi>=slotList.length-1)return;const below=slotList[hi+1];slotList.splice(lo,hi-lo+2,below,...block);}
   slotList.forEach((x,i)=>x.order=i);_reorderFollow=`[data-rk="${[...routineSel][0]}"]`;save();render();}
-let routineFilter=null;let routineView='folder'; // 'folder'（フォルダ管理）/ 'week'（曜日一覧・横断）
+let routineFilter=null;let routineView='folder';let rClosed=new Set();let rWeekSel=null; // rWeekSel:null=全曜日
 function routineOnWeekday(r,w){if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
   return (r.nths||[]).some(o=>o.d===w);}
-function setRoutineView(v){routineView=v;routineActiveRow=null;render();}
+function setRoutineView(v){if(v==='folder'&&routineView==='folder'){rToggleAll();return;}routineView=v;routineActiveRow=null;render();}
+function rToggleFolder(f){rClosed.has(f)?rClosed.delete(f):rClosed.add(f);render();}
+function rToggleAll(){const folders=routineFolders();const allClosed=folders.length&&folders.every(f=>rClosed.has(f));if(allClosed)rClosed.clear();else rClosed=new Set(folders);render();}
+function setRWeek(w){rWeekSel=w;render();}
 function rMgmtRow(r){return `<div class="titem" data-lp="r_${r.id}" onclick="routineModal('${r.id}')" style="${pastelBg(r)}">
   <div class="bar" style="background:${r.active?bandColorOf({type:'r',obj:r}):'var(--line)'};width:5px;"></div>
   <div class="body"><div class="tt" style="${r.active?'':'color:var(--done);'}">${r.mark?`<span class="evmk">${icSvg(r.mark)}</span>`:''}${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}${r.recordDone===false?' <span class="rtag">記録しない</span>':''}</div>
@@ -2423,24 +2427,26 @@ function renderRoutines(){
         <div class="bar" style="background:${sel?'var(--accent)':bandColorOf({type:'r',obj:r})};width:5px;"></div>
         <div class="body"><div class="tt">${sel?'☑ ':'☐ '}${esc(r.title)}</div></div></div>`;}).join('')}
     ${routineSel.size?`<div class="reorderfab"><span>${routineSel.size}件を移動</span><button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button></div>`:''}`;}
+  const foldersAll=routineFolders();const allClosed=foldersAll.length&&foldersAll.every(f=>rClosed.has(f));
   const seg=`<div class="seg" style="margin:6px 16px 4px;">
-    <button class="${routineView==='folder'?'on':''}" onclick="setRoutineView('folder')">📁 フォルダ</button>
+    <button class="${routineView==='folder'?'on':''}" onclick="setRoutineView('folder')">${routineView==='folder'?(allClosed?'📁 名前一覧':'📂 全開'):'📁 フォルダ'}</button>
     <button class="${routineView==='week'?'on':''}" onclick="setRoutineView('week')">📅 曜日一覧</button></div>`;
   const head=`<div class="vhead"><h1>ルーティン</h1><span>
     <button class="act" onclick="enterReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="routineModal(null)">＋追加</button></span></div>${seg}`;
   if(routineView==='week'){const ws=S.settings.weekStart||0;const wd=[...Array(7)].map((_,i)=>(i+ws)%7);
-    return head+`<div class="mini">曜日ごとに、その日に予定されているルーティンを横断で確認できます。タップで内容を編集。</div>
-    ${wd.map(w=>{const rs=S.routines.filter(r=>r.active&&routineOnWeekday(r,w)).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
+    const wbar=`<div class="rfilter"><button class="${rWeekSel==null?'on':''}" onclick="setRWeek(null)">全曜日</button>
+      ${wd.map(w=>`<button class="${rWeekSel===w?'on':''}" onclick="setRWeek(${w})">${WD[w]}</button>`).join('')}</div>`;
+    const days=rWeekSel==null?wd:[rWeekSel];
+    return head+wbar+days.map(w=>{const rs=S.routines.filter(r=>r.active&&routineOnWeekday(r,w)).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
       return `<div class="rfold"><div class="rfoldh"><b>${WD[w]}曜</b><span class="rfmeta">${rs.length}件・計${fmtMin(tot)}</span></div>
-        ${rs.length?rs.map(rMgmtRow).join(''):'<div class="mini" style="padding:6px 16px;">なし</div>'}</div>`;}).join('')}`;}
+        ${rs.length?rs.map(rMgmtRow).join(''):'<div class="mini" style="padding:6px 16px;">なし</div>'}</div>`;}).join('');}
   // フォルダ管理
   const folders=routineFolders();
-  return head+`<div class="mini">フォルダごとにルーティンを整理。フォルダ名に「朝」「仕事」など自由に。▲▼で並べ替え、名前は「✎」。ルーティンをタップで詳細編集。</div>
-    ${folders.length?folders.map((f,fi)=>{const rs=S.routines.filter(r=>(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
-      return `<div class="rfold"><div class="rfoldh"><b>📁 ${esc(f)}</b><span class="rfmeta">${rs.length}件・計${fmtMin(tot)}</span>
+  return head+`<div class="mini">フォルダ名をタップで開閉。▲▼で並べ替え、名前は「✎」。ルーティンをタップで詳細編集。</div>
+    ${folders.length?folders.map((f,fi)=>{const rs=S.routines.filter(r=>(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);const open=!rClosed.has(f);
+      return `<div class="rfold"><div class="rfoldh"><b onclick="rToggleFolder('${escq(f)}')" style="cursor:pointer;">${open?'📂':'📁'} ${esc(f)}</b><span class="rfmeta" onclick="rToggleFolder('${escq(f)}')" style="cursor:pointer;">${rs.length}件・計${fmtMin(tot)}</span>
         <span class="rfacts"><button onclick="moveFolder(${fi},-1)">▲</button><button onclick="moveFolder(${fi},1)">▼</button><button onclick="renameFolder(${fi})">✎名</button></span></div>
-        ${rs.map(rMgmtRow).join('')}
-        <button class="rfadd" onclick="addRoutineToFolder(${fi})">＋ このフォルダにルーティンを追加</button></div>`;}).join('')
+        ${open?rs.map(rMgmtRow).join('')+`<button class="rfadd" onclick="addRoutineToFolder(${fi})">＋ このフォルダにルーティンを追加</button>`:''}</div>`;}).join('')
       :'<div class="mini">「＋追加」でルーティンを作成してください。</div>'}`;
 }
 function moveFolder(fi,dir){const folders=routineFolders();const f=folders[fi];const tj=fi+dir;if(tj<0||tj>=folders.length)return;
@@ -2873,7 +2879,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.59（2026-07-23）</b><br>
+  <div class="mini"><b>v1.60（2026-07-23）</b><br>
+  ・ルーティンのフォルダを<b>開閉</b>できるように（📂全開⇄📁名前一覧、フォルダ名タップで個別開閉・絵文字も切替）<br>
+  ・曜日一覧を<b>曜日ボタン（全曜日／日／月…）</b>で選んで表示する形に<br>
+  ・入力画面（ルーティン・タスク・予定）の<b>削除・複製・保存ボタンを下に固定</b>（スクロールせずすぐ押せる）<br>
+  <b>v1.59（2026-07-23）</b><br>
   ・ルーティンタブを<b>フォルダ管理画面</b>に刷新（フォルダごとに整理・<b>トータル時間</b>表示・▲▼並べ替え・名前変更・フォルダに追加）。「📅曜日一覧」で全ルーティンを<b>曜日横断</b>で確認<br>
   ・ルーティンに<b>マーク（線画）</b>設定を追加／<b>朝昼夜の区分を廃止</b>（色はフォルダごと・時間帯はフォルダ名で表現）<br>
   ・ルーティンごとに<b>「やったこと」に記録する/しない</b>を設定（洗顔などはOFF、家事育児はON）<br>
