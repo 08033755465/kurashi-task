@@ -373,6 +373,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
 .evbar{font-size:9.5px;line-height:1.5;padding:0 1px 0 3px;margin-top:1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;}
 .evbar.due{background:none !important;border:1px dashed var(--sub);color:var(--sub);}
+/* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
+.evbar.mkonly{background:none !important;border-left:none !important;padding:0 0 0 2px;font-weight:700;}
+.evbar.mkonly .evmk{width:15px;height:15px;vertical-align:-3px;margin-right:2px;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 
 /* week/day */
@@ -724,7 +727,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 
 /* ========================= state ========================= */
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.64';
+const APP_VERSION='v1.65';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2053,7 +2056,7 @@ function renderCal(){
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
       const evs=eventsOn(dstr),dues=dueTasksOn(dstr);
-      const items=[...evs.map(e=>({t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e)})),
+      const items=[...evs.map(e=>({t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly})),
                    ...dues.map(x=>({t:x.title,c:'',due:1,time:'',imp:0}))];
       const max=S.settings.monthMax||4;const shown=calMonthAll?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
@@ -2063,7 +2066,8 @@ function renderCal(){
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(calMonthAll&&it.time)?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:'';
-          return `<div class="evbar ${it.due?'due':''}" ${it.due?'':`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
+          const st=it.due?'':it.mo?`style="color:${it.line};"`:`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`;
+          return `<div class="evbar ${it.due?'due':''}${it.mo?' mkonly':''}" ${st}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
         ${!calMonthAll&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
       </div>`;}
     body=`<div id="calGrid" class="${calMonthAll?'allmode':''}">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -2923,7 +2927,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.64（2026-07-24）</b><br>
+  <div class="mini"><b>v1.65（2026-07-24）</b><br>
+  ・「マークのみ表示」の予定は、月カレンダーで<b>付箋（カラー帯）を出さず線画だけ</b>で表示するように<br>
+  <b>v1.64（2026-07-24）</b><br>
   ・月カレンダーの予定名・祝日名を<b>枠のギリギリまで表示</b>（…での省略をやめました）<br>
   <b>v1.63（2026-07-24）</b><br>
   ・「更新しても新しくならない」対策：設定に<b>バージョン表示</b>と<b>「最新に更新する」</b>ボタンを追加<br>
