@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#15171A">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -180,7 +183,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tlbar.ev{background:#3A3D42;}
 .tlbar .tlbn{font-size:12px;font-weight:700;display:block;margin-bottom:7px;opacity:.9;}
 .tlbar .tlbtns{display:flex;gap:6px;flex-wrap:wrap;}
-.tlbar .tlbtns button{flex:1 1 auto;min-width:62px;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px !important;padding:9px 6px;font-size:12.5px;font-weight:600;background:rgba(255,255,255,.06);}
+.tlbar .tlbtns button{flex:0 1 auto;min-width:62px;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px !important;padding:9px 6px;font-size:12.5px;font-weight:600;background:rgba(255,255,255,.06);}
 .tlbar .tlbtns button.cl{flex:0 0 auto;min-width:40px;}
 .tl .tltask.done{opacity:.42;background:#F4F5F7;box-shadow:none;z-index:1;}
 .tl .tltask.done .tltt{text-decoration:line-through;}
@@ -721,6 +724,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 
 /* ========================= state ========================= */
 const LSKEY='homehub_taskcal_v1';
+const APP_VERSION='v1.63';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1157,7 +1161,7 @@ let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v==='set')setPage='';
-  if(v!=='routine'){routineReorder=false;routineSel=new Set();routineActiveRow=null;}
+  if(v!=='routine'){routineReorder=false;routineSel=[];routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];tlSel=[];tlEvSel=null;placeToks=null;}
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;taskQuery='';}
   const toNow=(v==='today'&&S.settings.timeline); // 今日タブ(タイムライン)は「今」へ寄せる
@@ -1181,6 +1185,8 @@ function render(){
   if(_focusSearch){_focusSearch=false;const el=$('#taskSearch');if(el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
 }
 function toTop(){window.scrollTo(0,0);}
+/* キャッシュを避けて最新を読み込み直す */
+function forceReload(){const u=location.href.split('?')[0].split('#')[0];location.replace(u+'?v='+Date.now());}
 
 /* ========================= 今日 ========================= */
 function routineOccursOn(r,dstr){const dt=parseDs(dstr),wd=dt.getDay();
@@ -1526,6 +1532,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   // 右：未配置プール
   const poolHtml=`<div class="tlpool">
     <div class="tlpoolh">これから行う<br>ルーティン ${pool.length}件</div>
+    ${!placing&&(pool.length||placed.length)?`<button class="poolall" onclick="tlSelectAllRoutines()">${tlSel.length?'選択を解除':'ルーティンを全選択'}</button>`:''}
     ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing?placeToks.includes(tk):tlSel.includes(tk);
       return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
         <span class="pt">${sel?'✓ ':''}${it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
@@ -1535,14 +1542,16 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
+  const anyPinnedSel=tlSel.some(tk=>at[tk]!=null);
   const actionBar=selCount?`<div class="tlbar">
     <span class="tlbn">${selCount}件選択</span>
     <div class="tlbtns">
-      <button onclick="tlDoComplete()">✓ 完了</button>
-      <button onclick="tlDoPlace()">🕐 時間</button>
-      <button onclick="tlDoTomorrow()">→ 明日</button>
-      <button onclick="tlDoHide()">🗂 隠す</button>
-      ${one?`<button onclick="tlDoEdit()">✎ 編集</button>${dayLog(t).at&&dayLog(t).at[one]!=null?`<button onclick="tlDoUnpin()">⟲ 未配置</button>`:''}`:''}
+      <button onclick="tlDoComplete()">完了</button>
+      <button onclick="tlDoPlace()">時間</button>
+      ${anyPinnedSel?`<button onclick="tlDoUnpin()">未配置に</button>`:''}
+      <button onclick="tlDoRemoveToday()">今日から消す</button>
+      <button onclick="tlDoTomorrow()">明日へ</button>
+      ${one?`<button onclick="tlDoEdit()">編集</button>`:''}
       <button class="cl" onclick="tlClearSel()">✕</button>
     </div></div>`:'';
   const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
@@ -1633,7 +1642,22 @@ function tlDoTomorrow(){const n=tlSel.length;snapUndo();tlSel.forEach(applyTomor
 function tlDoHide(){const n=tlSel.length;snapUndo();tlSel.forEach(applyHideToday);tlSel=[];save();render();flashUndo(n+'件を今日は隠しました');}
 function tlDoEdit(){if(tlSel.length!==1)return;const tk=tlSel[0],type=tk[0],id=tk.slice(2);tlSel=[];
   type==='r'?routineModal(id):taskModal(id);}
-function tlDoUnpin(){if(tlSel.length!==1)return;const tk=tlSel[0];tlSel=[];unpinItem(tk);}
+function tlDoUnpin(){const n=tlSel.length;if(!n)return;const dl=dayLog(todayStr());snapUndo();
+  if(dl.at)tlSel.forEach(tk=>{delete dl.at[tk];});tlSel=[];save();render();flashUndo(n+'件を未配置に戻しました');}
+/* 今日から消す（ルーティン=今日の一覧から外す／タスク=今日の指定を解除。予定・タスク自体は消えません） */
+function tlDoRemoveToday(){const n=tlSel.length;if(!n)return;const t=todayStr();const dl=dayLog(t);snapUndo();
+  tlSel.forEach(tk=>{const type=tk[0],id=tk.slice(2);
+    if(dl.at)delete dl.at[tk];
+    if(type==='r'){dl.planRoutines=(dl.planRoutines||[]).filter(x=>x!==id);
+      dl.extraR=(dl.extraR||[]).filter(x=>x!==id);
+      if(dl.routines&&dl.routines[id])delete dl.routines[id];}
+    else{const x=S.tasks.find(v=>v.id===id);if(x){x.today=null;x.snooze=null;}}});
+  tlSel=[];save();render();flashUndo(n+'件を今日から外しました');}
+/* タイムライン＋未配置のルーティンをまとめて選択／解除 */
+function tlSelectAllRoutines(){const t=todayStr();
+  if(tlSel.length){tlSel=[];render();return;}
+  tlSel=doItems(t).filter(it=>it.type==='r'&&!flowItemDone(it)).map(it=>'r_'+it.obj.id);
+  tlEvSel=null;render();}
 /* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let todayReorder=false,todaySel=[];
 function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
@@ -1690,7 +1714,10 @@ function composeEditRoutine(id){routineModal(id);}
 function tglCompose(id,on){on?_composeSel.add(id):_composeSel.delete(id);}
 function composeAddToPlan(){const t=todayStr();const plan=new Set(dayLog(t).planRoutines||[]);_composeSel.forEach(id=>plan.add(id));dayLog(t).planRoutines=[...plan];delete dayLog(t).doOrder;save();}
 function composeAddOnly(){if(!_composeSel.size){closeModal();return;}composeAddToPlan();closeModal();render();toast('今日のルーティンに追加しました');}
-function composeFlow(){const sel=[..._composeSel];if(!sel.length){closeModal();return;}composeAddToPlan();closeModal();startPlace(sel.map(id=>'r_'+id));}
+function composeFlow(){if(!_composeSel.size){closeModal();return;}
+  // 表示している並び順（フォルダ内の順番）を保って配置する
+  const ordered=S.routines.filter(r=>_composeSel.has(r.id)).sort((a,b)=>a.order-b.order).map(r=>r.id);
+  composeAddToPlan();closeModal();startPlace(ordered.map(id=>'r_'+id));}
 async function savePatternFromSel(){if(!_composeSel.size){uiAlert('先にルーティンを選んでください');return;}
   const name=await uiPrompt('パターン名（例：平日の朝）');if(name===null)return;const nm=name.trim();if(!nm)return;
   S.patterns.push({id:uid(),name:nm,routineIds:[..._composeSel]});save();renderCompose();}
@@ -2373,15 +2400,15 @@ function dpRender(){const ws=S.settings.weekStart||0;const start=(new Date(_dpY,
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div></div>`);}
 
 /* ========================= ルーティン ========================= */
-let routineReorder=false,routineSel=new Set();
+let routineReorder=false,routineSel=[];
 function routineOrderedList(){const order={morning:0,day:1,night:2,any:3};const folders=routineFolders();const fi=r=>folders.indexOf(r.folder||'マイルーティン');
   return [...S.routines].sort((a,b)=>fi(a)-fi(b)||order[a.slot]-order[b.slot]||a.order-b.order);}
 let routineActiveRow=null,routineAddAfter=null;
-function enterReorder(){routineReorder=true;routineSel=new Set();routineActiveRow=null;render();}
-function exitReorder(){routineReorder=false;routineSel=new Set();render();}
+function enterReorder(){routineReorder=true;routineSel=[];routineActiveRow=null;render();}
+function exitReorder(){routineReorder=false;routineSel=[];render();}
 function setRoutineActive(id){routineActiveRow=(routineActiveRow===id?null:id);render();}
 function openRoutineEdit(id){routineActiveRow=null;routineModal(id);}
-function enterReorderWith(id){routineActiveRow=null;routineReorder=true;routineSel=new Set([id]);render();}
+function enterReorderWith(id){routineActiveRow=null;routineReorder=true;routineSel=[id];render();}
 function addRoutineAfter(id){routineActiveRow=null;routineAddAfter=id;const r=S.routines.find(x=>x.id===id);routineModal(null,r?r.slot:null);}
 function placeRoutineAfter(newId,afterId){const nw=S.routines.find(r=>r.id===newId);if(!nw)return;
   const arr=S.routines.filter(r=>(r.folder||'マイルーティン')===(nw.folder||'マイルーティン')&&r.id!==newId).sort((a,b)=>a.order-b.order);
@@ -2389,25 +2416,31 @@ function placeRoutineAfter(newId,afterId){const nw=S.routines.find(r=>r.id===new
   if(ai>=0)arr.splice(ai+1,0,nw);else arr.push(nw);
   arr.forEach((r,i)=>r.order=i);}
 const rFolderOf=r=>r.folder||'マイルーティン';
-function validContig(sel,list){if(!sel.size)return true;
-  const idxs=list.map((r,i)=>sel.has(r.id)?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
-  const fk=rFolderOf(list[idxs[0]]);
-  if(!idxs.every(i=>rFolderOf(list[i])===fk))return false;
-  for(let k=1;k<idxs.length;k++)if(idxs[k]!==idxs[k-1]+1)return false;
-  return true;}
-function tglRoutineSel(id){const list=routineOrderedList();
-  const cand=new Set(routineSel);cand.has(id)?cand.delete(id):cand.add(id);
-  routineSel=validContig(cand,list)&&cand.size?cand:new Set([id]);
-  if(routineSel.size)_reorderFollow=`[data-rk="${[...routineSel][0]}"]`;render();}
-function moveRoutineBlock(dir){if(!routineSel.size)return;
-  const r0=S.routines.find(r=>routineSel.has(r.id));
-  const slotList=S.routines.filter(x=>rFolderOf(x)===rFolderOf(r0)).sort((a,b)=>a.order-b.order);
-  slotList.forEach((x,i)=>x.order=i);
-  const idx=slotList.map((x,i)=>routineSel.has(x.id)?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
-  const lo=idx[0],hi=idx[idx.length-1];const block=slotList.slice(lo,hi+1);
-  if(dir<0){if(lo<=0)return;const above=slotList[lo-1];slotList.splice(lo-1,hi-lo+2,...block,above);}
-  else{if(hi>=slotList.length-1)return;const below=slotList[hi+1];slotList.splice(lo,hi-lo+2,below,...block);}
-  slotList.forEach((x,i)=>x.order=i);_reorderFollow=`[data-rk="${[...routineSel][0]}"]`;save();render();}
+/* タスクと同じ方式：選んだ順に番号 → ▲▼で微調整／決定で先頭の下にまとめる */
+function tglRoutineSel(id){const i=routineSel.indexOf(id);i>=0?routineSel.splice(i,1):routineSel.push(id);
+  if(routineSel.length)_reorderFollow=`[data-rk="${routineSel[0]}"]`;render();}
+function folderRoutineIds(fk){return S.routines.filter(x=>rFolderOf(x)===fk).sort((a,b)=>a.order-b.order).map(x=>x.id);}
+function commitRoutineOrder(ids){ids.forEach((id,i)=>{const r=S.routines.find(x=>x.id===id);if(r)r.order=i;});save();}
+function routineSelFolder(){const r0=S.routines.find(r=>r.id===routineSel[0]);return r0?rFolderOf(r0):null;}
+function moveRoutineBlock(dir){if(!routineSel.length)return;
+  const fk=routineSelFolder();if(!fk)return;
+  let ids=folderRoutineIds(fk);
+  const idx=routineSel.map(id=>ids.indexOf(id)).filter(i=>i>=0).sort((a,b)=>a-b);
+  if(idx.length!==routineSel.length){toast('同じフォルダの中だけ並び替えできます');return;}
+  for(let k=1;k<idx.length;k++)if(idx[k]!==idx[k-1]+1){toast('▲▼は連続した行のみ。バラバラのときは「決定」でまとめられます');return;}
+  const lo=idx[0],hi=idx[idx.length-1];const block=ids.slice(lo,hi+1);
+  if(dir<0){if(lo<=0)return;const above=ids[lo-1];ids.splice(lo-1,hi-lo+2,...block,above);}
+  else{if(hi>=ids.length-1)return;const below=ids[hi+1];ids.splice(lo,hi-lo+2,below,...block);}
+  _reorderFollow=`[data-rk="${routineSel[0]}"]`;commitRoutineOrder(ids);render();}
+function decideRoutine(){if(!routineSel.length)return;
+  const fk=routineSelFolder();if(!fk)return;
+  const orig=folderRoutineIds(fk);
+  const sel=routineSel.filter(id=>orig.includes(id));
+  if(sel.length!==routineSel.length){toast('同じフォルダの中だけ並び替えできます');return;}
+  const anchorIdx=orig.indexOf(sel[0]);
+  const before=orig.slice(0,anchorIdx).filter(id=>!sel.includes(id)).length;
+  const rest=orig.filter(id=>!sel.includes(id));rest.splice(before,0,...sel);
+  commitRoutineOrder(rest);routineSel=[];render();}
 let routineFilter=null;let routineView='folder';let rClosed=new Set();let rWeekSel=null; // rWeekSel:null=全曜日
 function routineOnWeekday(r,w){if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
   return (r.nths||[]).some(o=>o.d===w);}
@@ -2423,12 +2456,14 @@ function rMgmtRow(r){return `<div class="titem" data-lp="r_${r.id}" onclick="rou
 function renderRoutines(){
   if(routineReorder){const list=routineOrderedList();let cur='';
     return `<div class="vhead"><h1>ルーティンの並び替え</h1><span><button class="act" onclick="exitReorder()">完了</button></span></div>
-    <div class="mini">動かす行をタップで選択（となり合う行は複数選択）。右下の▲▼でまとめて移動します。</div>
-    ${list.map(r=>{const fk=r.folder||'マイルーティン';const h=fk!==cur?`<div class="sec-h">📁 ${esc(fk)}</div>`:'';cur=fk;const sel=routineSel.has(r.id);
-      return h+`<div class="titem ${sel?'rsel':''}" data-rk="${r.id}" onclick="tglRoutineSel('${r.id}')" style="${sel?'':pastelBg(r)}">
-        <div class="bar" style="background:${sel?'var(--accent)':bandColorOf({type:'r',obj:r})};width:5px;"></div>
-        <div class="body"><div class="tt">${sel?'☑ ':'☐ '}${esc(r.title)}</div></div></div>`;}).join('')}
-    ${routineSel.size?`<div class="reorderfab"><span>${routineSel.size}件を移動</span><button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button></div>`:''}`;}
+    <div class="mini">動かす行をタップ（選んだ順に番号）。<b>「決定」</b>で先頭の番号の下にまとめて並びます。▲▼は微調整用。並び替えは同じフォルダの中だけです。</div>
+    ${list.map(r=>{const fk=r.folder||'マイルーティン';const h=fk!==cur?`<div class="sec-h">📁 ${esc(fk)}</div>`:'';cur=fk;
+      const n=routineSel.indexOf(r.id);const isSel=n>=0;
+      return h+`<div class="rrow ${isSel?'sel':''}" data-rk="${r.id}" onclick="tglRoutineSel('${r.id}')">
+        <span class="rnum">${isSel?n+1:''}</span><span class="rttl">${esc(r.title)}</span></div>`;}).join('')}
+    ${routineSel.length?`<div class="reorderfab"><span>${routineSel.length}件</span>
+      <button onclick="moveRoutineBlock(-1)">▲</button><button onclick="moveRoutineBlock(1)">▼</button>
+      <button class="decide" onclick="decideRoutine()">決定</button></div>`:''}`;}
   const foldersAll=routineFolders();const allClosed=foldersAll.length&&foldersAll.every(f=>rClosed.has(f));
   const seg=`<div class="seg" style="margin:6px 16px 4px;">
     <button class="${routineView==='folder'?'on':''}" onclick="setRoutineView('folder')">${routineView==='folder'?(allClosed?'📁 名前一覧':'📂 全開'):'📁 フォルダ'}</button>
@@ -2792,7 +2827,9 @@ function renderSettings(){
        ['personal','個人・改善設定','通知先メール・改善メモ送信'],
        ['release','リリース情報','更新履歴'],
        ['help','使い方','初めての方へ・基本の流れ']]
-      .map(([k,t,d])=>`<div class="listrow" onclick="goSet('${k}')"><span class="seticon"><svg viewBox="0 0 24 24">${SETICON[k]}</svg></span><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>`;
+      .map(([k,t,d])=>`<div class="listrow" onclick="goSet('${k}')"><span class="seticon"><svg viewBox="0 0 24 24">${SETICON[k]}</svg></span><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>
+    <div class="mini" style="text-align:center;padding:14px 16px 4px;">現在のバージョン <b>${APP_VERSION}</b></div>
+    <div style="padding:0 16px 10px;text-align:center;"><button style="border:1px solid var(--line);padding:8px 16px;font-size:12.5px;" onclick="forceReload()">最新に更新する</button></div>`;
   if(P==='help')return back+`<div class="vhead"><h1>使い方</h1></div>
     <div class="helpwrap">
       <p>「くらしタスク」は、家事・育児・仕事のやることを<b>1日のタイムライン</b>で組み立てるアプリです。</p>
