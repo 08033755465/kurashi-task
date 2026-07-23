@@ -170,6 +170,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tlzlab{position:absolute;left:48px;font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.85;}
 .tl .tlev{position:absolute;left:46px;right:4px;background:#EEF1F6;font-size:10.5px;line-height:1.25;padding:2px 7px;overflow:hidden;white-space:nowrap;color:var(--ink);z-index:1;border-radius:6px !important;}
 .tl .tlev b{font-variant-numeric:tabular-nums;}
+/* 連結中の2件目以降：上をつなげて「ひと続き」に見せる */
+.tl .tltask.chained{border-top-left-radius:0 !important;border-top-right-radius:0 !important;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.tl .tltask.chained::before{content:'';position:absolute;left:-3px;top:-2px;width:3px;height:4px;background:var(--sub);opacity:.5;}
 .tl .tltask{position:absolute;left:46px;right:4px;background:#fff;border-left:3px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.10);font-size:11.5px;line-height:1.2;padding:0 8px;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:6px;z-index:2;border-radius:6px !important;}
 .tl .tltask .tltt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
 .tl .tltask .tltm{font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums;}
@@ -735,7 +738,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 /* 月カレンダーの予定の文字サイズ（表示設定） */
 const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},l:{n:'大',px:11},xl:{n:'特大',px:12.5}};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.67';
+const APP_VERSION='v1.68';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -905,6 +908,8 @@ function migrate(){const st=S.settings;
   if(st.showAdjShade===undefined)st.showAdjShade=true;
   st.monthMax=st.monthMax||4;
   if(!MONTH_FONTS[st.monthFont])st.monthFont='m';
+  if(!TL_ZOOMS[st.tlZoom])st.tlZoom=1;
+  if(st.chainFlow===undefined)st.chainFlow=true;
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
@@ -1467,6 +1472,26 @@ function moveDoItemBottom(tok){const t=todayStr();const toks=doItems(t).map(it=>
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;save();render();}
 /* ===== 時間ヘルパー & 朝昼夜の配分（#5）／縦タイムライン（#6） ===== */
 const TL_PX=1.5; // タイムラインの1分あたりの高さ(px)。24時間表記なので控えめに
+const TL_ZOOMS={1:'標準',1.6:'広め',2.4:'とても広い'};
+function tlPx(){const z=+(S.settings&&S.settings.tlZoom)||1;return TL_PX*(TL_ZOOMS[z]?z:1);}
+/* ===== 連結配置：前の終わり＝次の始まり。目安時間を変えると後ろが伸び縮みする ===== */
+function chainsOf(t){const dl=dayLog(t);if(!Array.isArray(dl.chains))dl.chains=[];return dl.chains;}
+function estTok(t,tk){const it=doItems(t).find(x=>x.type+'_'+x.obj.id===tk);return it?Math.max(2,(+it.obj.estMin)||10):15;}
+function chainClean(t){const dl=dayLog(t);const at=dl.at||{};
+  dl.chains=chainsOf(t).map(c=>c.filter(tk=>at[tk]!=null)).filter(c=>c.length>1);}
+function chainAdd(t,toks){if(!toks||toks.length<2)return;const dl=dayLog(t);
+  dl.chains=chainsOf(t).map(c=>c.filter(tk=>!toks.includes(tk))).filter(c=>c.length>1);
+  dl.chains.push(toks.slice());}
+/* anchorTok以降を詰め直す（anchor省略＝各グループの先頭から） */
+function chainRelink(t,anchorTok){if(S.settings.chainFlow===false)return;
+  const dl=dayLog(t);const at=dl.at||{};const w=hm2min(dayWake(t));chainClean(t);
+  chainsOf(t).forEach(c=>{
+    let i0=anchorTok?c.indexOf(anchorTok):0;if(i0<0)return;
+    if(at[c[i0]]==null)return;
+    let cur=toAxis(at[c[i0]],w)+estTok(t,c[i0]);
+    for(let i=i0+1;i<c.length;i++){at[c[i]]=((Math.round(cur)%1440)+1440)%1440;cur+=estTok(t,c[i]);}});}
+function chainHas(t,tk){return chainsOf(t).some(c=>c.includes(tk));}
+function chainPos(t,tk){for(const c of chainsOf(t)){const i=c.indexOf(tk);if(i>=0)return i;}return -1;}
 const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
 const curMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes();};
 function dayBounds(t){let w=hm2min(dayWake(t)),s=hm2min(daySleep(t));if(s<=w)s+=1440;return {w,s};}
@@ -1502,7 +1527,7 @@ function bandPanelHtml(t){const log=dayLog(t);const bands=bandsOf(t);
 let placeToks=null; // 配置中（未配置プールで選択中）の対象トークン配列
 /* B案: 左＝タイムライン（配置済みのみ）／右＝未配置プール。タップで選び、タイムラインをタップして配置 */
 function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end=w+1440;const s=toAxis(hm2min(daySleep(t)),w);
-  const PX=TL_PX,MINH=22;const MINMIN=MINH/PX;const y=mn=>(mn-w)*PX;const A=v=>toAxis(v,w);
+  const PX=tlPx(),MINH=18;const MINMIN=MINH/PX;const y=mn=>(mn-w)*PX;const A=v=>toAxis(v,w);
   const at=log.at||{};const tokOf=it=>it.type+'_'+it.obj.id;
   const placing=!!(placeToks&&placeToks.length);
   const zones=tlBands(t);
@@ -1534,7 +1559,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const logH=logs.slice().sort((a,b)=>A(a.at)-A(b.at)).map(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;const top=y(A(l.at));const h=Math.max(20,(l.dur||0)*PX);
     return `<div class="tllog" style="top:${top}px;min-height:${h-2}px;border-left-color:${k.c};" onclick="logEditor('${l.id}')"><span class="lgi">${k.i}</span><span class="lgx">${esc(l.text)}</span>${l.dur?`<span class="lgd">${fmtMin(l.dur)}</span>`:''}</div>`;}).join('');
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
-    const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}`;
+    const cp=chainPos(t,tk);
+    const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}${cp>0?' chained':''}`;
     return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTapTask('${tk}')`}"`}>
       <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
@@ -1592,7 +1618,7 @@ function tlEmptyTap(ev){if(placeToks)return;
   if(ev.target.closest('.tltask,.tlev,.tllog,.evpop'))return;
   if(tlSel.length||tlEvSel){tlClearSel();return;}
   const t=todayStr();const w=hm2min(dayWake(t));
-  const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/TL_PX;
+  const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/tlPx();
   ax=Math.round(ax/5)*5;const mn=((ax%1440)+1440)%1440;const hm=min2hm(mn);
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${hm} に追加</div><div class="actsheet">
@@ -1616,13 +1642,17 @@ function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
 function startPlace(toks){placeToks=Array.isArray(toks)?toks.slice():[toks];S.settings.timeline=true;save();render();}
 function cancelPlace(){placeToks=null;render();}
 function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;
-  const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/TL_PX;
-  ax=Math.round(ax/5)*5;ax=Math.max(w,Math.min(ax,end-5));
+  const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/tlPx();
+  ax=Math.round(ax/5)*5;ax=Math.max(w,Math.min(ax,end-5)); // 最初の1件だけ5分に丸め、あとは目安時間ちょうどで積む
   snapUndo();const dl=dayLog(t);dl.at=dl.at||{};
-  placeToks.forEach(tk=>{const it=doItems(t).find(x=>x.type+'_'+x.obj.id===tk);const est=it?Math.max(5,(+it.obj.estMin)||10):15;
-    dl.at[tk]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);}); // 複数は続けて配置（起床基準の軸で連続）
+  const toks=placeToks.slice();
+  toks.forEach(tk=>{dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=estTok(t,tk);});
+  if(S.settings.chainFlow!==false){
+    if(toks.length>1)chainAdd(t,toks);           // まとめて置いた分は連結グループに
+    else chainRelink(t,toks[0]);                 // 1件だけ動かしたら、その後ろが追従して伸び縮み
+  }
   placeToks=null;save();render();flashUndo('配置しました');}
-function unpinItem(tok){const dl=dayLog(todayStr());if(dl.at){snapUndo();delete dl.at[tok];save();render();flashUndo('未配置に戻しました');}}
+function unpinItem(tok){const t=todayStr();const dl=dayLog(t);if(dl.at){snapUndo();delete dl.at[tok];chainClean(t);chainRelink(t);save();render();flashUndo('未配置に戻しました');}}
 /* タイムラインの完了ゴーストをタップ→未完了に戻す（誤操作リカバリ・全タブ共通の考え方） */
 function tlUndone(tk){const t=todayStr();const type=tk[0],id=tk.slice(2);snapUndo();
   if(type==='r'){const log=dayLog(t);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
@@ -1634,7 +1664,10 @@ function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+144
   if(!pool.length)return;snapUndo();
   let ax=Math.max(w,Math.min(toAxis(curMin(),w),end-10));ax=Math.round(ax/5)*5;
   const dl=dayLog(t);dl.at=dl.at||{};
-  pool.forEach(it=>{const est=Math.max(5,(+it.obj.estMin)||10);dl.at[it.type+'_'+it.obj.id]=((ax%1440)+1440)%1440;ax+=Math.max(est,10);});
+  const toks=[];
+  pool.forEach(it=>{const tk=it.type+'_'+it.obj.id;const est=Math.max(2,(+it.obj.estMin)||10);
+    dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=est;toks.push(tk);});
+  if(S.settings.chainFlow!==false)chainAdd(t,toks);
   save();render();flashUndo(pool.length+'件を今から順に配置しました');}
 function poolAllTomorrow(){const t=todayStr();const at=(dayLog(t).at)||{};
   const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
@@ -1654,8 +1687,9 @@ function tlDoTomorrow(){const n=tlSel.length;snapUndo();tlSel.forEach(applyTomor
 function tlDoHide(){const n=tlSel.length;snapUndo();tlSel.forEach(applyHideToday);tlSel=[];save();render();flashUndo(n+'件を今日は隠しました');}
 function tlDoEdit(){if(tlSel.length!==1)return;const tk=tlSel[0],type=tk[0],id=tk.slice(2);tlSel=[];
   type==='r'?routineModal(id):taskModal(id);}
-function tlDoUnpin(){const n=tlSel.length;if(!n)return;const dl=dayLog(todayStr());snapUndo();
-  if(dl.at)tlSel.forEach(tk=>{delete dl.at[tk];});tlSel=[];save();render();flashUndo(n+'件を未配置に戻しました');}
+function tlDoUnpin(){const n=tlSel.length;if(!n)return;const t=todayStr();const dl=dayLog(t);snapUndo();
+  if(dl.at)tlSel.forEach(tk=>{delete dl.at[tk];});chainClean(t);chainRelink(t);
+  tlSel=[];save();render();flashUndo(n+'件を未配置に戻しました');}
 /* 今日から消す（ルーティン=今日の一覧から外す／タスク=今日の指定を解除。予定・タスク自体は消えません） */
 function tlDoRemoveToday(){const n=tlSel.length;if(!n)return;const t=todayStr();const dl=dayLog(t);snapUndo();
   tlSel.forEach(tk=>{const type=tk[0],id=tk.slice(2);
@@ -1664,6 +1698,7 @@ function tlDoRemoveToday(){const n=tlSel.length;if(!n)return;const t=todayStr();
       dl.extraR=(dl.extraR||[]).filter(x=>x!==id);
       if(dl.routines&&dl.routines[id])delete dl.routines[id];}
     else{const x=S.tasks.find(v=>v.id===id);if(x){x.today=null;x.snooze=null;}}});
+  chainClean(t);chainRelink(t);
   tlSel=[];save();render();flashUndo(n+'件を今日から外しました');}
 /* タイムライン＋未配置のルーティンをまとめて選択／解除 */
 function tlSelectAllRoutines(){const t=todayStr();
@@ -1992,6 +2027,7 @@ function saveTask(id){
     if(taskAddAfter){taskSort='manual';let ids=manualTaskIds().filter(i=>i!==newId);
       const ai=ids.indexOf(taskAddAfter);if(ai>=0)ids.splice(ai+1,0,newId);else ids.push(newId);
       commitTaskOrder(ids);taskAddAfter=null;}}
+  chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
   save();closeModal();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
   snapUndo();S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();render();flashUndo('タスクを削除しました');}
@@ -2600,6 +2636,7 @@ function saveRoutine(id){
   if(id)Object.assign(S.routines.find(r=>r.id===id),data);
   else{const newId=uid();S.routines.push({id:newId,...data,order:Date.now(),stats:{n:0,total:0}});
     if(routineAddAfter){placeRoutineAfter(newId,routineAddAfter);routineAddAfter=null;}}
+  chainRelink(todayStr()); // 目安時間が変わったら、連結した後ろの予定も伸び縮みさせる
   save();closeModal();render();flashUndo(id?'ルーティンを更新しました':'ルーティンを追加しました');}
 async function delRoutine(id){if(!await uiConfirm('このルーティンを削除しますか？','削除'))return;
   snapUndo();S.routines=S.routines.filter(r=>r.id!==id);save();closeModal();render();flashUndo('ルーティンを削除しました');}
@@ -2882,6 +2919,10 @@ function renderSettings(){
       <div class="mini" style="padding:7px 0 0;">見本：<span style="display:inline-block;background:var(--ink);color:#fff;padding:0 0 0 1px;font-size:${(MONTH_FONTS[s.monthFont]||MONTH_FONTS.m).px}px;line-height:1.45;">歯医者の定期検診</span></div></div>
     <div class="setrow"><div><div class="sl">前月・翌月を網かけ</div><div class="sd">当月以外の日をうすいグレーの網かけに</div></div>${tgl('showAdjShade')}</div>
     <div class="setrow"><div><div class="sl">時間帯で切り分け表示</div><div class="sd">午前/午後/夜で区切り＋🌙マーク（今日・日表示）</div></div>${tgl('showNight')}</div>
+    <div class="setrow" style="display:block;"><div class="sl">バーチカルの高さ（1分あたり）</div><div class="sd">広くすると短いルーティンも正しい長さで見えます</div>
+      <div class="seg" style="margin:9px 0 0;width:100%;">
+        ${Object.keys(TL_ZOOMS).map(z=>`<button style="flex:1;" class="${String(s.tlZoom||1)===z?'on':''}" onclick="S.settings.tlZoom=${z};save();render();">${TL_ZOOMS[z]}</button>`).join('')}</div></div>
+    <div class="setrow"><div><div class="sl">流し込みを連結する</div><div class="sd">前の終わり＝次の始まり。目安時間を変えると後ろが自動で伸び縮みします</div></div>${tgl('chainFlow')}</div>
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
     <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
     <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
@@ -2944,7 +2985,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.67（2026-07-24）</b><br>
+  <div class="mini"><b>v1.68（2026-07-24）</b><br>
+  ・流し込みを<b>連結配置</b>に（最初に置いた時間を起点に、<b>目安時間ちょうど</b>で後ろが続きます）<br>
+  ・目安時間を変えたり、先頭を別の時間に動かすと<b>後ろがまとめて伸び縮み</b>します<br>
+  ・表示設定に<b>「バーチカルの高さ」（標準／広め／とても広い）</b>を追加。短いルーティンも正しい長さで見えます<br>
+  ・表示設定の<b>「流し込みを連結する」</b>をOFFにすると、これまで通り1件ずつ独立して置けます<br>
+  <b>v1.67（2026-07-24）</b><br>
   ・月カレンダーの予定名は<b>1行のまま・…なし</b>に戻し、<b>上下と左の余白を最小化</b>（同じ文字サイズでも入る文字数が増えました）<br>
   ・表示設定に<b>「月カレンダーの文字サイズ」（特小／小／中／大／特大）</b>を追加。見本つきで選べます<br>
   <b>v1.66（2026-07-24）</b><br>
