@@ -268,6 +268,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* カレンダーの色付き予定ブロック（週ビュー等） */
 .cev{position:relative;padding:5px 8px 6px;margin-bottom:4px;display:flex;flex-direction:column;gap:2px;border-radius:7px !important;}
 .cev.imp{font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.16);}
+/* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
+.cev.mkonly{background:none !important;border-left:none !important;box-shadow:none !important;padding:3px 8px 4px 2px;}
+.cev.mkonly .cevt{font-size:15px;}
+.cev.mkonly .cevt .evmk{width:17px;height:17px;vertical-align:-4px;margin-right:0;}
 .cev .cevt{font-size:11.5px;line-height:1.25;word-break:break-word;font-weight:600;padding-right:12px;}
 .cev .cevm{font-size:9.5px;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:3px;opacity:.9;}
 .cevrep{position:absolute;top:4px;right:5px;opacity:.65;}
@@ -2017,12 +2021,13 @@ function scheduleListHtml(evs,wake){
   let cur=null,html='';
   sorted.forEach(e=>{const b=bandOf(e.start,wake);
     if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
-    const bg=evColor(e),tc=evTextColor(bg);
-    html+=`<div class="cev dcev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="eventTap('${e.id}')">
+    const mo=!!e.markOnly;const bg=evColor(e),tc=mo?evLine(e):evTextColor(bg);
+    const st=mo?`color:${tc};`:`background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};`;
+    html+=`<div class="cev dcev${e.important?' imp':''}${mo?' mkonly':''}" style="${st}" onclick="eventTap('${e.id}')">
       ${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}
       <div class="cevt">${evLabel(e)}</div>
-      <div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
-      ${e.memo?`<div class="cevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
+      <div class="cevm" style="color:${mo?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
+      ${e.memo?`<div class="cevmemo" style="color:${mo?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
   return html;}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
 function eventsOn(d){const ids=visibleGroups(calSel);
@@ -2088,7 +2093,9 @@ function renderCal(){
           ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
         <div class="wbody">
           ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>{const bg=evColor(e);const tc=evTextColor(bg);return `<div class="cev${e.important?' imp':''}" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${evLabel(e)}</div><div class="cevm" style="color:${tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
+          ${evs.map(e=>{const mo=!!e.markOnly;const bg=evColor(e);const tc=mo?evLine(e):evTextColor(bg);
+            const st=mo?`color:${tc};`:`background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};`;
+            return `<div class="cev${e.important?' imp':''}${mo?' mkonly':''}" style="${st}" onclick="event.stopPropagation();eventTap('${e.id}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${evLabel(e)}</div><div class="cevm" style="color:${mo?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
           ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
           ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
         </div></div>`;}).join('');
@@ -2928,7 +2935,7 @@ function renderSettings(){
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
   <div class="mini"><b>v1.65（2026-07-24）</b><br>
-  ・「マークのみ表示」の予定は、月カレンダーで<b>付箋（カラー帯）を出さず線画だけ</b>で表示するように<br>
+  ・「マークのみ表示」の予定は、<b>月・週・日すべてで付箋（カラー帯）を出さず線画だけ</b>で表示するように（線画の色は予定の色）<br>
   <b>v1.64（2026-07-24）</b><br>
   ・月カレンダーの予定名・祝日名を<b>枠のギリギリまで表示</b>（…での省略をやめました）<br>
   <b>v1.63（2026-07-24）</b><br>
