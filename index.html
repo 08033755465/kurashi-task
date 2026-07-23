@@ -188,7 +188,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl.placing .tltask,.tl.placing .tlev{pointer-events:none;opacity:.5;}
 /* 右：未配置プール */
 .tlpool{flex:0 0 118px;width:118px;position:sticky;top:calc(env(safe-area-inset-top) + 6px);align-self:flex-start;display:flex;flex-direction:column;gap:5px;}
-.tlpoolh{font-size:10.5px;font-weight:700;color:var(--sub);padding:0 2px;}
+.tlpoolh{font-size:10.5px;font-weight:700;color:var(--sub);padding:0 2px;line-height:1.3;}
+/* 今日のタスク チェックリスト */
+.tchk{display:flex;flex-direction:column;}
+.tchkr{display:flex;align-items:center;gap:9px;padding:6px 16px;border-bottom:1px solid var(--line2);}
+.tchkr.done{opacity:.5;}
+.tchkr.done .tct{text-decoration:line-through;}
+.tchkr .cb{flex:0 0 22px;width:22px;height:22px;border:1.5px solid var(--line);border-radius:5px !important;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.tchkr .cb svg{width:16px;height:16px;fill:none;stroke:var(--ink);stroke-width:2.5;}
+.tchkr .tct{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.tchkr .tcm{flex:0 0 auto;font-size:10.5px;color:var(--sub);font-variant-numeric:tabular-nums;}
 .poolitem{display:flex;flex-direction:column;gap:1px;padding:6px 7px;background:var(--card,#fff);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer;}
 .poolitem.sel{outline:2px solid var(--accent);background:#EEF3FF;}
 .poolitem .pt{font-size:11px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
@@ -1232,6 +1241,7 @@ function renderToday(){
     <button class="composeBtn" onclick="composeToday()">🔁 ルーティンを選ぶ${routines.length?`（${routines.length}）`:''}</button>
     <button class="startBtn2" onclick="startFlow()">▶ 開始</button>
   </div>
+  ${todayTaskChecklist(t)}
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
@@ -1464,7 +1474,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const all=doItems(t);
   const live=all.filter(it=>!flowItemDone(it));
   const placed=live.filter(it=>at[tokOf(it)]!=null).map(it=>({it,ax:A(at[tokOf(it)]),est:Math.max(5,(+it.obj.estMin)||10)})).sort((a,b)=>a.ax-b.ax);
-  const pool=live.filter(it=>at[tokOf(it)]==null);
+  const pool=live.filter(it=>it.type==='r'&&at[tokOf(it)]==null); // 右プールはルーティンのみ（タスクは開始ボタン下のチェックリスト）
   const nowM=curMin();const nowA=A(nowM);
   const logs=dayLogs(t);
   const blocks=[];
@@ -1497,13 +1507,13 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const poolMin=pool.reduce((n,it)=>n+Math.max(5,(+it.obj.estMin)||10),0);
   // 右：未配置プール
   const poolHtml=`<div class="tlpool">
-    <div class="tlpoolh">未配置 ${pool.length}件${poolMin?'・'+fmtMin(poolMin):''}</div>
+    <div class="tlpoolh">これから行う<br>ルーティン ${pool.length}件</div>
     ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing?placeToks.includes(tk):tlSel.includes(tk);
       return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
-        <span class="pt">${sel?'✓ ':''}${it.type==='r'?'🔁 ':''}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
-      :'<div class="poolempty">すべて配置済み🎉</div>'}
-    ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>
-      <button class="poolall" onclick="poolAllTomorrow()">→ 全部あすへ送る</button>`:''}
+        <span class="pt">${sel?'✓ ':''}🔁 ${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
+      :`<div class="poolempty">${dayLog(t).planRoutines?'すべて配置済み🎉':'まだ選んでいません'}</div>`}
+    <button class="poolall" onclick="composeToday()">🔁 ルーティンを選ぶ</button>
+    ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>`:''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
@@ -1553,6 +1563,14 @@ function tlEmptyTap(ev){if(placeToks)return;
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
+/* 開始ボタン下：今日のタスク（チェックボックス・小さめ） */
+function todayTaskChecklist(t){const tasks=todayTasks(t);if(!tasks.length)return '';
+  const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
+  return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
+    <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}">
+      <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
+      <div class="tct" onclick="taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
+      <div class="tcm">${at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':''}${x.estMin?fmtMin(x.estMin):''}</div></div>`).join('')}</div></div>`;}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
   i>=0?placeToks.splice(i,1):placeToks.push(tok);if(!placeToks.length)placeToks=null;render();}
@@ -2822,7 +2840,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.56（2026-07-23）</b><br>
+  <div class="mini"><b>v1.57（2026-07-23）</b><br>
+  ・今日タブのレイアウトを整理：右のプールは<b>「これから行うルーティン」</b>だけに、<b>開始ボタンの下に今日のタスク</b>（チェックで完了・小さめ）を配置<br>
+  <b>v1.56（2026-07-23）</b><br>
   ・ルーティンを<b>フォルダ分け</b>（寝起き・仕事 など）できるように。ルーティンタブもフォルダ表示に<br>
   ・今日のルーティンは<b>自動で出さず、その日に選んで反映</b>する方式に変更。今日タブ「🔁ルーティンを選ぶ」→フォルダごとにチェック（今日だけ外す／✎で内容編集）→「今日に反映」<br>
   <b>v1.55（2026-07-23）</b><br>
