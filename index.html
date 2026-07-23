@@ -754,8 +754,8 @@ function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(
 function evLine(e){return HUE(e&&e.hue!=null?hueOf(e):rootHueOf(e&&e.groupId)).v;}
 function evLineW(e){return e&&e.important?7:4;}
 function evMk(e){return e&&e.mark?`<span class="evmk">${icSvg(e.mark)}</span>`:'';}
-function evLabel(e){const mk=evMk(e);if(e&&e.markOnly)return (mk||'●')+(e&&e.important?'★':'');
-  return `${mk}${e&&e.important?'★ ':''}${esc(evTitle(e))}`;}
+function evLabel(e){const mk=evMk(e);if(e&&e.markOnly)return (mk||'●');
+  return `${mk}${esc(evTitle(e))}`;}
 function hueLabel(i){return (S.settings.hueLabels||[])[i]||'';}
 function setHueColor(i,which,val){const a=(S.settings.hueColors||[]).slice();a[i]={...(a[i]||{}),[which]:val};S.settings.hueColors=a;save();render();}
 function hueChanged(i){const o=(S.settings.hueColors||[])[i];return !!(o&&(o.p||o.v));}
@@ -1530,7 +1530,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
     const top=y(A(hm2min(e.start)));const bg=evColor(e),tc=evTextColor(bg);
     return `<div class="evpop" style="top:${Math.max(0,top-6)}px;">
-      <div class="evpoph" style="background:${bg};color:${tc};"><b>${evMk(e)}${e.important?'★ ':''}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
+      <div class="evpoph" style="background:${bg};color:${tc};"><b>${evMk(e)}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
       <div class="evpopb">
         <div class="evpopt">${CLOCKI}${evTimeText(e)}${e.repeat?' ・'+(REPEAT_LABEL[e.repeat]||''):''}</div>
         <div class="evpopcat"><span class="dot" style="background:${bg}"></span>${esc(groupPath(e.groupId))}</div>
@@ -2128,7 +2128,7 @@ function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr)
     <div class="dpbody">
       ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
       ${evs.length?evs.map(e=>{const bg=evColor(e),tc=evTextColor(bg);return `<div class="dpev" style="background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};" onpointerdown="event.stopPropagation()">
-        <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${evMk(e)}${e.important?'★':''}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>
+        <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}')"><span class="dpevt">${evMk(e)}${esc(evTitle(e))}</span><span class="dpevm">${evTimeText(e)}</span></div>
         ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
       ${dues.map(x=>`<div class="dpdue">⏰ 期限：${esc(x.title)}</div>`).join('')}
     </div>
