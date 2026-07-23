@@ -216,6 +216,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tllog .lgd{flex:0 0 auto;font-size:9.5px;color:var(--sub);}
 .tlwarn{margin:2px 16px 10px;padding:8px 11px;background:#FCECEA;border-left:3px solid var(--danger);font-size:12px;color:#8A2A24;line-height:1.5;}
 .bigmin{font-size:26px !important;font-weight:700;text-align:center;letter-spacing:.05em;padding:12px !important;}
+.minfield{font-size:18px;font-weight:600;text-align:center;padding:9px !important;}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;}
+.btnrow button{padding:9px 14px;border:1px solid var(--line);color:var(--sub);font-size:13px;border-radius:8px !important;background:var(--bg);}
+.btnrow button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+.minpick .minchips{margin-top:7px;}
 .minchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .minchips button{flex:1 1 auto;min-width:52px;border:1px solid var(--line);padding:9px 0;font-size:13px;}
 .minchips button:active{background:var(--ink);color:#fff;}
@@ -974,6 +979,9 @@ function tpClear(id){const el=$('#'+id);el.value='';
   if(el.onchange)el.onchange();}
 function tpSet(id,v){const[h,m]=(v||'').split(':');$('#'+id).value=v;if($('#'+id+'_h')){$('#'+id+'_h').value=h||'';$('#'+id+'_m').value=m||'';}}
 /* ===== 連続4桁タイム入力（開始→終了を続けてテンキー入力） ===== */
+/* 分の選択＋手動入力（2/4/6/8/10…分チップ＋数値入力） */
+function minPicker(id,val){return `<div class="minpick"><input id="${id}" class="minfield" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${val??''}" placeholder="分" onfocus="this.select()">
+  <div class="minchips">${[2,4,6,8,10,15,20,30,45,60,90].map(n=>`<button type="button" onclick="$('#${id}').value=${n}">${n}</button>`).join('')}</div></div>`;}
 function timeField(id,val,opts={}){
   return `<span class="tfrow">
     <input type="hidden" id="${id}" value="${val||''}">
@@ -1910,8 +1918,8 @@ function taskModal(id,presetDue,presetToday){
   openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
-    <div class="frow f2"><div><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
-      <div><label>所要時間（分）</label><input id="tmEst" type="number" inputmode="numeric" min="0" value="${x?.estMin??15}"></div></div>
+    <div class="frow"><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
+    <div class="frow"><label>所要時間（分）</label>${minPicker('tmEst',x?.estMin??15)}</div>
     <div class="frow"><label>重要度・緊急度（4つの箱）</label>
       <div class="quadsel" id="tmQuad">
         ${QUADS.map((q,i)=>`<button type="button" data-q="${i+1}" class="${(x?.quad||0)===i+1?'on':''}" style="border-color:${q.c};color:${q.c};" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${q.t}<small>${q.s}</small></button>`).join('')}
@@ -1919,11 +1927,11 @@ function taskModal(id,presetDue,presetToday){
     <div class="frow f2"><div><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
       <div><label>繰り返し</label><select id="tmRepeat">
         ${[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']].map(([v,l])=>`<option value="${v}" ${(x?.repeat||'')===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
-    <div class="frow f2"><div><label>状態</label><select id="tmSt" onchange="$('#tmWaitRow').style.display=this.value==='wait'?'block':'none'">
-      ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${(x?.status||'todo')===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div><label>いつやる</label><select id="tmToday"><option value="">—</option>
-        <option value="today" ${x?.today===todayStr()||(!x&&presetToday)?'selected':''}>☀ 今日やる</option>
-        <option value="tomorrow" ${x?.today===tomorrowStr()?'selected':''}>➡ 明日やる</option></select></div></div>
+    <div class="frow"><label>状態</label>
+      <div class="btnrow" id="tmStRow">${Object.entries(STATUS).map(([k,v])=>`<button type="button" data-v="${k}" class="${(x?.status||'todo')===k?'on':''}" onclick="pickBtn('tmStRow','tmSt','${k}')">${v}</button>`).join('')}</div>
+      <input type="hidden" id="tmSt" value="${x?.status||'todo'}"></div>
+    <div class="frow"><label>いつやる</label>
+      ${(()=>{const tv=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');return `<div class="btnrow" id="tmTodayRow">${[['','しない'],['today','今日やる'],['tomorrow','明日やる']].map(([v,l])=>`<button type="button" data-v="${v}" class="${tv===v?'on':''}" onclick="pickBtn('tmTodayRow','tmToday','${v}')">${l}</button>`).join('')}</div><input type="hidden" id="tmToday" value="${tv}">`;})()}</div>
     <div class="frow" id="tmWaitRow" style="display:${x?.status==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(x?.waitNote||'')}" placeholder="例）B様の返信待ち"></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="tmPin" style="width:auto;" ${x?.pin?'checked':''}>
       <span style="font-size:13px;">終わるまで毎日「今日」に表示（なるはや・期限なしタスク向け）</span></div>
@@ -1934,7 +1942,11 @@ function taskModal(id,presetDue,presetToday){
   <div class="mbtns">
     ${x?`<button class="del" onclick="delTask('${x.id}')">削除</button><button onclick="dupTask('${x.id}')">複製</button>`:''}
     <button class="save" onclick="saveTask('${x?.id||''}')">保存</button>
-  </div>`);}
+  </div>`);
+  setTimeout(()=>{const el=$('#tmTitle');if(el){el.focus();if(!x)el.scrollIntoView({block:'center'});}},120);}
+function pickBtn(rowId,hiddenId,val){const h=$('#'+hiddenId);if(h)h.value=val;
+  $$('#'+rowId+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===val));
+  if(hiddenId==='tmSt'){const w=$('#tmWaitRow');if(w)w.style.display=val==='wait'?'block':'none';}}
 function saveTask(id){
   const title=$('#tmTitle').value.trim();if(!title){uiAlert('タスク名を入力してください');return;}
   const quad=+($('#tmQuad button.on')?.dataset.q||0);
@@ -2468,10 +2480,11 @@ function routineModal(id,presetSlot,presetFolder){
   openModal(`<div class="mh"><b>${r?'ルーティン編集':'ルーティン追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
-    <div class="frow"><label>フォルダ（寝起き・仕事 など。今日はフォルダごとに選んで流し込みます）</label>
-      <input id="rmFolder" list="rmFolderList" value="${esc(r?.folder||presetFolder||'マイルーティン')}" placeholder="例）寝起きルーティン">
-      <datalist id="rmFolderList">${routineFolders().map(f=>`<option value="${esc(f)}">`).join('')}</datalist></div>
-    <div class="frow"><label>目安時間（分）</label><input id="rmEst" type="number" inputmode="numeric" min="0" value="${r?.estMin??15}"></div>
+    <div class="frow"><label>フォルダ（既存から選ぶ／新規作成）</label>
+      ${(()=>{const cur=r?.folder||presetFolder||'マイルーティン';const fs=routineFolders();if(!fs.includes(cur))fs.push(cur);
+        return `<select id="rmFolderSel" onchange="rmFolderChange(this)">${fs.map(f=>`<option value="${esc(f)}" ${cur===f?'selected':''}>${esc(f)}</option>`).join('')}<option value="__new__">＋ 新規フォルダを作成…</option></select>
+        <input type="hidden" id="rmFolder" value="${esc(cur)}">`;})()}</div>
+    <div class="frow"><label>目安時間（分）</label>${minPicker('rmEst',r?.estMin??15)}</div>
     <div class="frow"><label>マーク（頭に表示する線画・任意）</label>
       <div class="icontabs" id="rmIconTabs"></div>
       <div class="icongrid" id="rmIconGrid"></div>
@@ -2513,6 +2526,10 @@ function rmIconRefresh(){const tabs=$('#rmIconTabs'),grid=$('#rmIconGrid');if(!t
   grid.innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._rmCat).map(([key])=>`<button type="button" class="${window._rmIcon===key?'on':''}" onclick="rmIconPick('${key}')">${icSvg(key)}</button>`).join('');}
 function rmIconTab(c){window._rmCat=c;rmIconRefresh();}
 function rmIconPick(key){window._rmIcon=key;if(key&&ICONS[key])window._rmCat=ICONS[key].c;rmIconRefresh();}
+async function rmFolderChange(sel){if(sel.value==='__new__'){const nv=await uiPrompt('新しいフォルダ名','');const nm=(nv||'').trim();
+    if(!nm){sel.value=$('#rmFolder').value;return;}
+    const opt=document.createElement('option');opt.value=nm;opt.textContent=nm;sel.insertBefore(opt,sel.querySelector('option[value="__new__"]'));sel.value=nm;$('#rmFolder').value=nm;
+  }else $('#rmFolder').value=sel.value;}
 function tglRDay(i,btn){const d=window._rdays;const p=d.indexOf(i);p>=0?d.splice(p,1):d.push(i);btn.classList.toggle('on');}
 function rSetFreq(v){$('#rmWeeklyRow').style.display=v==='weekly'?'block':'none';$('#rmMonthlyRow').style.display=v==='monthly'?'block':'none';}
 function rWdPick(i){window._rnthWd=i;$$('#rmNthWd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===i));}
@@ -2879,7 +2896,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.60（2026-07-23）</b><br>
+  <div class="mini"><b>v1.61（2026-07-23）</b><br>
+  ・目安/所要時間を<b>分チップ（2/4/6/8/10…）＋手動入力</b>に（ルーティン・タスク共通）<br>
+  ・ルーティンのフォルダを<b>プルダウン選択＋新規作成</b>に（フォルダ間の移動がラク）<br>
+  ・タスク編集の<b>状態・いつやるをボタン式</b>に（押すだけ）。タスク追加は<b>開いてすぐ名前入力</b><br>
+  <b>v1.60（2026-07-23）</b><br>
   ・ルーティンのフォルダを<b>開閉</b>できるように（📂全開⇄📁名前一覧、フォルダ名タップで個別開閉・絵文字も切替）<br>
   ・曜日一覧を<b>曜日ボタン（全曜日／日／月…）</b>で選んで表示する形に<br>
   ・入力画面（ルーティン・タスク・予定）の<b>削除・複製・保存ボタンを下に固定</b>（スクロールせずすぐ押せる）<br>
