@@ -743,7 +743,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 /* 月カレンダーの予定の文字サイズ（表示設定） */
 const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},l:{n:'大',px:11},xl:{n:'特大',px:12.5}};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.70';
+const APP_VERSION='v1.71';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -915,6 +915,8 @@ function migrate(){const st=S.settings;
   if(!MONTH_FONTS[st.monthFont])st.monthFont='m';
   if(!TL_ZOOMS[st.tlZoom])st.tlZoom=1;
   if(st.chainFlow===undefined)st.chainFlow=true;
+  if(st.avoidEvents===undefined)st.avoidEvents=true;
+  if(!BACKFILL_MODES[st.backfillTarget])st.backfillTarget='placed';
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
@@ -1490,12 +1492,26 @@ function chainAdd(t,toks){if(!toks||toks.length<2)return;const dl=dayLog(t);
 /* anchorTok以降を詰め直す（anchor省略＝各グループの先頭から） */
 function chainRelink(t,anchorTok){if(S.settings.chainFlow===false)return;
   const dl=dayLog(t);const at=dl.at||{};const w=hm2min(dayWake(t));chainClean(t);
+  const spans=avoidOn()?busySpans(t):[];
   chainsOf(t).forEach(c=>{
     let i0=anchorTok?c.indexOf(anchorTok):0;if(i0<0)return;
     if(at[c[i0]]==null)return;
     let cur=toAxis(at[c[i0]],w)+estTok(t,c[i0]);
-    for(let i=i0+1;i<c.length;i++){at[c[i]]=((Math.round(cur)%1440)+1440)%1440;cur+=estTok(t,c[i]);}});}
+    for(let i=i0+1;i<c.length;i++){const est=estTok(t,c[i]);cur=avoidFwd(spans,cur,est);
+      at[c[i]]=((Math.round(cur)%1440)+1440)%1440;cur+=est;}});}
 function chainHas(t,tk){return chainsOf(t).some(c=>c.includes(tk));}
+/* ===== 予定を避けて置く ===== */
+function busySpans(t){const w=hm2min(dayWake(t));
+  return S.events.filter(e=>eventOccursOn(e,t)&&e.start).map(e=>{const a=toAxis(hm2min(e.start),w);
+    const b=e.end?toAxis(hm2min(e.end),w):a+30;return {a,b:Math.max(b,a+5)};}).sort((x,y)=>x.a-y.a);}
+/* 開始axから長さdurぶん、予定にかぶらない位置まで「後ろへ」ずらす */
+function avoidFwd(spans,ax,dur){if(!spans.length)return ax;
+  for(let g=0;g<60;g++){const hit=spans.find(s=>ax<s.b&&ax+dur>s.a);if(!hit)break;ax=hit.b;}
+  return ax;}
+/* 終了endAxから長さdurぶん、予定にかぶらない位置まで「前へ」ずらす（逆算用） */
+function avoidBack(spans,endAx,dur){if(!spans.length)return endAx;
+  for(let g=0;g<60;g++){const hit=spans.find(s=>endAx-dur<s.b&&endAx>s.a);if(!hit)return endAx;endAx=hit.a;}return endAx;}
+function avoidOn(){return S.settings.avoidEvents!==false;}
 /* ===== マイルストーン（この時間までに終わらせたい）＝終点から逆算して開始時刻を出す ===== */
 function goalsOf(t){const dl=dayLog(t);if(!Array.isArray(dl.goals))dl.goals=[];return dl.goals;}
 /* いちばん近い（これからの）目標時刻。過ぎていれば最後のもの */
@@ -1518,28 +1534,40 @@ function saveGoal(id){const t=todayStr();const title=$('#glTitle').value.trim()|
   dlgEnd();save();render();flashUndo('目標時刻をおきました');}
 function delGoal(id){const t=todayStr();snapUndo();dayLog(t).goals=goalsOf(t).filter(x=>x.id!==id);
   dlgEnd();save();render();flashUndo('目標時刻を削除しました');}
-/* 目標時刻から逆算：未配置のルーティンを「終わりが目標時刻ぴったり」になるよう並べる */
+/* 逆算の対象：placed=バーチカルに入れたもの（既定）／pool=未配置／all=両方 */
+const BACKFILL_MODES={placed:'バーチカルに入れたもの',pool:'まだ置いていないもの',all:'両方'};
+function backfillItems(t,goalAx){const at=(dayLog(t).at)||{};const w=hm2min(dayWake(t));
+  const mode=BACKFILL_MODES[S.settings.backfillTarget]?S.settings.backfillTarget:'placed';
+  const live=doItems(t).filter(it=>!flowItemDone(it));
+  const tk=it=>it.type+'_'+it.obj.id;
+  // 目標より前に置いてあるもの＋（連結しているなら）その仲間ひと続きぶん
+  const ids=new Set(live.filter(it=>at[tk(it)]!=null&&toAxis(at[tk(it)],w)<goalAx).map(tk));
+  chainsOf(t).forEach(c=>{if(c.some(x=>ids.has(x)))c.forEach(x=>{if(at[x]!=null)ids.add(x);});});
+  const placed=live.filter(it=>ids.has(tk(it))).sort((a,b)=>toAxis(at[tk(a)],w)-toAxis(at[tk(b)],w));
+  const pool=live.filter(it=>at[tk(it)]==null);
+  const list=mode==='pool'?pool:mode==='all'?placed.concat(pool):placed;
+  return list.map(tk);}
+/* 目標時刻から逆算：終わりが目標時刻ぴったりになるよう、後ろから詰めて並べる（予定は避ける） */
 function backfillToGoal(id){const t=todayStr();const g=goalsOf(t).find(x=>x.id===id);if(!g)return;
-  const at=(dayLog(t).at)||{};
-  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
-  if(!pool.length){toast('未配置のルーティン・タスクがありません');return;}
-  const toks=pool.map(it=>it.type+'_'+it.obj.id);
-  const total=toks.reduce((n,tk)=>n+estTok(t,tk),0);
-  const w=hm2min(dayWake(t));
-  let ax=toAxis(g.at,w)-total; // 終点から全部の合計を引く＝開始時刻
+  const w=hm2min(dayWake(t));const goalAx=toAxis(g.at,w);
+  const toks=backfillItems(t,goalAx);
+  if(!toks.length){toast('逆算するものがありません（設定「逆算の対象」も確認してください）');return;}
+  const spans=avoidOn()?busySpans(t):[];
   snapUndo();const dl=dayLog(t);dl.at=dl.at||{};
-  toks.forEach(tk=>{dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=estTok(t,tk);});
+  let end=goalAx;
+  for(let i=toks.length-1;i>=0;i--){const est=estTok(t,toks[i]);
+    end=avoidBack(spans,end,est);
+    dl.at[toks[i]]=((Math.round(end-est)%1440)+1440)%1440;end-=est;}
   if(S.settings.chainFlow!==false)chainAdd(t,toks);
   save();render();
-  const startA=toAxis(g.at,w)-total;const startM=((Math.round(startA)%1440)+1440)%1440;
-  const slack=Math.round(startA-toAxis(curMin(),w));
+  const startM=((Math.round(end)%1440)+1440)%1440;
+  const slack=Math.round(end-toAxis(curMin(),w));
   flashUndo(slack>=0?`${min2hm(startM)}に始めれば間に合います（余裕${fmtMin(slack)}）`
     :`${min2hm(startM)}開始が理想。今からだと${fmtMin(-slack)}足りません`);}
-/* 目標に対する「余裕/不足」を計算（未配置ぶんの合計で判定） */
-function goalSlack(t,g){const w=hm2min(dayWake(t));const at=(dayLog(t).at)||{};
-  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
-  const need=pool.reduce((n,it)=>n+Math.max(2,(+it.obj.estMin)||10),0);
-  const left=toAxis(g.at,w)-toAxis(curMin(),w);
+/* 目標に対する「余裕/不足」（逆算の対象ぶんの合計で判定） */
+function goalSlack(t,g){const w=hm2min(dayWake(t));const goalAx=toAxis(g.at,w);
+  const need=backfillItems(t,goalAx).reduce((n,tk)=>n+estTok(t,tk),0);
+  const left=goalAx-toAxis(curMin(),w);
   return {need,left,slack:left-need};}
 function goalTap(id){const t=todayStr();const g=goalsOf(t).find(x=>x.id===id);if(!g)return;
   const s=goalSlack(t,g);
@@ -1723,8 +1751,9 @@ function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayS
   const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/tlPx();
   ax=Math.round(ax/5)*5;ax=Math.max(w,Math.min(ax,end-5)); // 最初の1件だけ5分に丸め、あとは目安時間ちょうどで積む
   snapUndo();const dl=dayLog(t);dl.at=dl.at||{};
-  const toks=placeToks.slice();
-  toks.forEach(tk=>{dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=estTok(t,tk);});
+  const toks=placeToks.slice();const spans=avoidOn()?busySpans(t):[];
+  toks.forEach(tk=>{const est=estTok(t,tk);ax=avoidFwd(spans,ax,est);
+    dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=est;});
   if(S.settings.chainFlow!==false){
     if(toks.length>1)chainAdd(t,toks);           // まとめて置いた分は連結グループに
     else chainRelink(t,toks[0]);                 // 1件だけ動かしたら、その後ろが追従して伸び縮み
@@ -1742,8 +1771,9 @@ function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+144
   if(!pool.length)return;snapUndo();
   let ax=Math.max(w,Math.min(toAxis(curMin(),w),end-10));ax=Math.round(ax/5)*5;
   const dl=dayLog(t);dl.at=dl.at||{};
-  const toks=[];
+  const toks=[];const spans=avoidOn()?busySpans(t):[];
   pool.forEach(it=>{const tk=it.type+'_'+it.obj.id;const est=Math.max(2,(+it.obj.estMin)||10);
+    ax=avoidFwd(spans,ax,est);
     dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=est;toks.push(tk);});
   if(S.settings.chainFlow!==false)chainAdd(t,toks);
   save();render();flashUndo(pool.length+'件を今から順に配置しました');}
@@ -1835,25 +1865,32 @@ function decideToday(){const sel=todaySel.slice();if(!sel.length)return;
 /* ===== 今日のルーティンを組む（パターン保存・適用） ===== */
 let _composeSel=new Set();
 function routineFolders(){const seen=[];S.routines.forEach(r=>{const f=r.folder||'マイルーティン';if(!seen.includes(f))seen.push(f);});return seen;}
-let _composeFolder=null;
+let _composeFolder=null,_composeAll=false; // _composeAll=true で曜日を無視して全部出す
 function composeToday(){_composeFolder=null;_composeSel=new Set();renderCompose();}
+function composeFilter(r){const t=todayStr();return r.active&&(_composeAll||routineDueOn(r,t));}
+function tglComposeAll(){_composeAll=!_composeAll;
+  if(_composeFolder)_composeSel=new Set(S.routines.filter(r=>composeFilter(r)&&(r.folder||'マイルーティン')===_composeFolder).map(r=>r.id));
+  renderCompose();}
 function renderCompose(){
-  if(!_composeFolder){const folders=routineFolders();
+  const t=todayStr();const wd=WD[parseDs(t).getDay()];
+  const swBtn=`<button class="poolall" style="margin:6px 0 0;width:100%;" onclick="tglComposeAll()">${_composeAll?`▸ ${wd}曜のぶんだけ表示`:'▸ 曜日にかかわらず全部表示'}</button>`;
+  if(!_composeFolder){const folders=routineFolders().filter(f=>S.routines.some(r=>composeFilter(r)&&(r.folder||'マイルーティン')===f));
     openModal(`<div class="mh"><b>ルーティンを流し込む</b><button onclick="closeModal()">✕</button></div>
-    <div class="mbody"><div class="mini">フォルダを選んでください。</div>
-    ${folders.length?folders.map(f=>{const rs=S.routines.filter(r=>r.active&&(r.folder||'マイルーティン')===f);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
+    <div class="mbody"><div class="mini">${_composeAll?'すべてのルーティンを表示しています。':`今日（<b>${wd}曜</b>）にやるルーティンだけ表示しています。`}フォルダを選んでください。</div>
+    ${folders.length?folders.map(f=>{const rs=S.routines.filter(r=>composeFilter(r)&&(r.folder||'マイルーティン')===f);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);
       return `<div class="listrow" style="cursor:pointer;" onclick="composePickFolder('${escq(f)}')"><span class="lt">${esc(f)}</span><span class="ls">${rs.length}件・${fmtMin(tot)}　▸</span></div>`;}).join('')
-      :'<div class="mini">「ルーティン」タブでフォルダとルーティンを作成してください。</div>'}
-    </div>`);return;}
-  const f=_composeFolder;const rs=S.routines.filter(r=>r.active&&(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);
+      :`<div class="mini">今日（${wd}曜）にやるルーティンはありません。</div>`}
+    ${swBtn}</div>`);return;}
+  const f=_composeFolder;const rs=S.routines.filter(r=>composeFilter(r)&&(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);
   openModal(`<div class="mh"><b><button onclick="composeToday()" style="color:var(--accent);font-size:18px;">‹</button> ${esc(f)}</b><button onclick="closeModal()">✕</button></div>
-  <div class="mbody"><div class="mini">流し込むルーティンを選び（不要なものはチェックを外す）、「流し込む」→タイムラインで<b>時間をタップ</b>して置きます。</div>
+  <div class="mbody"><div class="mini">${_composeAll?'すべて表示中。':`今日（<b>${wd}曜</b>）にやるぶんだけ。`}不要なものはチェックを外して「流し込む」→タイムラインで<b>時間をタップ</b>して置きます。</div>
   ${rs.map(r=>`<label class="listrow" style="cursor:pointer;gap:10px;"><input type="checkbox" style="width:auto;" ${_composeSel.has(r.id)?'checked':''} onchange="tglCompose('${r.id}',this.checked)">
     <span class="lt">${r.mark?`<span class="evmk">${icSvg(r.mark)}</span> `:''}${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}</span><span class="ls">目安${fmtMin(r.estMin)}</span>
     <button class="chip" style="flex:0 0 auto;" onclick="event.preventDefault();composeEditRoutine('${r.id}')">✎</button></label>`).join('')}
+  ${rs.length?'':`<div class="mini">このフォルダに今日（${wd}曜）のルーティンはありません。</div>`}${swBtn}
   </div>
   <div class="mbtns"><button onclick="composeAddOnly()">今日に入れる（後で配置）</button><button class="save" onclick="composeFlow()">流し込む（時間を選ぶ）</button></div>`);}
-function composePickFolder(f){_composeFolder=f;_composeSel=new Set(S.routines.filter(r=>r.active&&(r.folder||'マイルーティン')===f).map(r=>r.id));renderCompose();}
+function composePickFolder(f){_composeFolder=f;_composeSel=new Set(S.routines.filter(r=>composeFilter(r)&&(r.folder||'マイルーティン')===f).map(r=>r.id));renderCompose();}
 function composeEditRoutine(id){routineModal(id);}
 function tglCompose(id,on){on?_composeSel.add(id):_composeSel.delete(id);}
 function composeAddToPlan(){const t=todayStr();const plan=new Set(dayLog(t).planRoutines||[]);_composeSel.forEach(id=>plan.add(id));dayLog(t).planRoutines=[...plan];delete dayLog(t).doOrder;save();}
@@ -2594,6 +2631,13 @@ function decideRoutine(){if(!routineSel.length)return;
 let routineFilter=null;let routineView='folder';let rClosed=new Set();let rWeekSel=null; // rWeekSel:null=全曜日
 function routineOnWeekday(r,w){if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
   return (r.nths||[]).some(o=>o.d===w);}
+/* その日にやる予定のルーティンか（毎週＝曜日一致／毎月＝第N曜も判定） */
+function routineDueOn(r,d){const dt=parseDs(d);const w=dt.getDay();
+  if((r.freq||'weekly')==='weekly')return (r.days||[]).includes(w);
+  const day=dt.getDate();const nth=Math.floor((day-1)/7)+1;
+  const lastDay=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();
+  const isLast=day+7>lastDay;
+  return (r.nths||[]).some(o=>o.d===w&&(o.n===nth||(o.n===-1&&isLast)));}
 function setRoutineView(v){if(v==='folder'&&routineView==='folder'){rToggleAll();return;}routineView=v;routineActiveRow=null;render();}
 function rToggleFolder(f){rClosed.has(f)?rClosed.delete(f):rClosed.add(f);render();}
 function rToggleAll(){const folders=routineFolders();const allClosed=folders.length&&folders.every(f=>rClosed.has(f));if(allClosed)rClosed.clear();else rClosed=new Set(folders);render();}
@@ -3020,6 +3064,10 @@ function renderSettings(){
       <div class="seg" style="margin:9px 0 0;width:100%;">
         ${Object.keys(TL_ZOOMS).map(z=>`<button style="flex:1;" class="${String(s.tlZoom||1)===z?'on':''}" onclick="S.settings.tlZoom=${z};save();render();">${TL_ZOOMS[z]}</button>`).join('')}</div></div>
     <div class="setrow"><div><div class="sl">流し込みを連結する</div><div class="sd">前の終わり＝次の始まり。目安時間を変えると後ろが自動で伸び縮みします</div></div>${tgl('chainFlow')}</div>
+    <div class="setrow"><div><div class="sl">予定を避けて置く</div><div class="sd">流し込み・逆算のとき、カレンダーの予定と重ならないようずらします</div></div>${tgl('avoidEvents')}</div>
+    <div class="setrow" style="display:block;"><div class="sl">逆算の対象</div><div class="sd">⚑目標時刻から逆算するとき、どれを並べ直すか</div>
+      <div class="seg" style="margin:9px 0 0;width:100%;">
+        ${Object.keys(BACKFILL_MODES).map(k=>`<button style="flex:1;font-size:11px;padding:6px 4px;" class="${(s.backfillTarget||'placed')===k?'on':''}" onclick="S.settings.backfillTarget='${k}';save();render();">${BACKFILL_MODES[k]}</button>`).join('')}</div></div>
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
     <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
     <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
@@ -3082,7 +3130,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.70（2026-07-24）</b><br>
+  <div class="mini"><b>v1.71（2026-07-24）</b><br>
+  ・ルーティンの流し込みが<b>その日の曜日のぶんだけ</b>に（毎日・毎週◯曜・第N曜を判定）。「曜日にかかわらず全部表示」に切り替えもできます<br>
+  ・流し込み・逆算・連結のとき<b>カレンダーの予定を避けて</b>置くように（設定「予定を避けて置く」でOFFも可）<br>
+  ・逆算の対象を<b>「バーチカルに入れたもの」</b>に変更（連結でひと続きのぶんは丸ごと対象）。設定「逆算の対象」で<b>未配置のみ／両方</b>にも変えられます<br>
+  <b>v1.70（2026-07-24）</b><br>
   ・<b>目標時刻（マイルストーン）</b>を追加。バーチカルの空きをタップ →「⚑ ○○までに終わらせたい」で旗を立てられます<br>
   ・旗をタップ →「<b>ここから逆算して並べる</b>」で、未配置ぶんが<b>終わりが目標時刻ぴったり</b>になるよう並び、<b>何時に始めればいいか</b>が出ます<br>
   ・旗には<b>「余裕○分／不足○分」</b>を常時表示（不足すると旗が赤くなります）<br>
