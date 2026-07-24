@@ -170,6 +170,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tlzlab{position:absolute;left:48px;font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.85;}
 .tl .tlev{position:absolute;left:46px;right:4px;background:#EEF1F6;font-size:10.5px;line-height:1.25;padding:2px 7px;overflow:hidden;white-space:nowrap;color:var(--ink);z-index:1;border-radius:6px !important;}
 .tl .tlev b{font-variant-numeric:tabular-nums;}
+/* マイルストーン（この時間までに終わらせたい）＝逆算の終点 */
+.tl .tlgoal{position:absolute;left:0;right:0;height:0;border-top:2px dashed #2F6FED;z-index:6;}
+.tl .tlgoal .tlgl{position:absolute;right:4px;top:-16px;background:#2F6FED;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;white-space:nowrap;border-radius:9px !important;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.tl .tlgoal.bad{border-top-color:var(--danger);}
+.tl .tlgoal.bad .tlgl{background:var(--danger);}
 /* 連結中の2件目以降：上をつなげて「ひと続き」に見せる */
 .tl .tltask.chained{border-top-left-radius:0 !important;border-top-right-radius:0 !important;box-shadow:0 1px 3px rgba(0,0,0,.06);}
 .tl .tltask.chained::before{content:'';position:absolute;left:-3px;top:-2px;width:3px;height:4px;background:var(--sub);opacity:.5;}
@@ -738,7 +743,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 /* 月カレンダーの予定の文字サイズ（表示設定） */
 const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},l:{n:'大',px:11},xl:{n:'特大',px:12.5}};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.69';
+const APP_VERSION='v1.70';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1491,6 +1496,63 @@ function chainRelink(t,anchorTok){if(S.settings.chainFlow===false)return;
     let cur=toAxis(at[c[i0]],w)+estTok(t,c[i0]);
     for(let i=i0+1;i<c.length;i++){at[c[i]]=((Math.round(cur)%1440)+1440)%1440;cur+=estTok(t,c[i]);}});}
 function chainHas(t,tk){return chainsOf(t).some(c=>c.includes(tk));}
+/* ===== マイルストーン（この時間までに終わらせたい）＝終点から逆算して開始時刻を出す ===== */
+function goalsOf(t){const dl=dayLog(t);if(!Array.isArray(dl.goals))dl.goals=[];return dl.goals;}
+/* いちばん近い（これからの）目標時刻。過ぎていれば最後のもの */
+function nextGoal(t){const w=hm2min(dayWake(t));const gs=goalsOf(t).slice().sort((a,b)=>toAxis(a.at,w)-toAxis(b.at,w));
+  const now=toAxis(curMin(),w);return gs.find(g=>toAxis(g.at,w)>=now)||gs[gs.length-1];}
+function goalModal(id,mn){const t=todayStr();const g=id?goalsOf(t).find(x=>x.id===id):null;
+  const at=g?g.at:(mn!=null?mn:curMin());
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;">⚑ この時間までに終わらせたい
+    <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 2px;">名前</label>
+    <input id="glTitle" value="${esc(g?g.title:'')}" placeholder="例）家を出る／保育園に着く">
+    <div class="minchips" style="margin-top:6px;">${['家を出る','保育園に送る','仕事開始','夕食','お風呂','寝かしつけ'].map(n=>`<button type="button" onclick="$('#glTitle').value='${n}'">${n}</button>`).join('')}</div>
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 2px;">その時刻</label>${timeInput('glAt',min2hm(at))}</div>
+    <div class="db">${g?`<button onclick="delGoal('${g.id}')" style="color:var(--danger);">削除</button>`:''}<button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveGoal(${g?`'${g.id}'`:'null'})">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');setTimeout(()=>$('#glTitle')?.focus(),80);}
+function saveGoal(id){const t=todayStr();const title=$('#glTitle').value.trim()||'ここまで';
+  const hm=$('#glAt')?.value;const at=hm?hm2min(hm):curMin();snapUndo();
+  const gs=goalsOf(t);
+  if(id){const g=gs.find(x=>x.id===id);if(g){g.title=title;g.at=at;}}
+  else gs.push({id:uid(),title,at});
+  dlgEnd();save();render();flashUndo('目標時刻をおきました');}
+function delGoal(id){const t=todayStr();snapUndo();dayLog(t).goals=goalsOf(t).filter(x=>x.id!==id);
+  dlgEnd();save();render();flashUndo('目標時刻を削除しました');}
+/* 目標時刻から逆算：未配置のルーティンを「終わりが目標時刻ぴったり」になるよう並べる */
+function backfillToGoal(id){const t=todayStr();const g=goalsOf(t).find(x=>x.id===id);if(!g)return;
+  const at=(dayLog(t).at)||{};
+  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
+  if(!pool.length){toast('未配置のルーティン・タスクがありません');return;}
+  const toks=pool.map(it=>it.type+'_'+it.obj.id);
+  const total=toks.reduce((n,tk)=>n+estTok(t,tk),0);
+  const w=hm2min(dayWake(t));
+  let ax=toAxis(g.at,w)-total; // 終点から全部の合計を引く＝開始時刻
+  snapUndo();const dl=dayLog(t);dl.at=dl.at||{};
+  toks.forEach(tk=>{dl.at[tk]=((Math.round(ax)%1440)+1440)%1440;ax+=estTok(t,tk);});
+  if(S.settings.chainFlow!==false)chainAdd(t,toks);
+  save();render();
+  const startA=toAxis(g.at,w)-total;const startM=((Math.round(startA)%1440)+1440)%1440;
+  const slack=Math.round(startA-toAxis(curMin(),w));
+  flashUndo(slack>=0?`${min2hm(startM)}に始めれば間に合います（余裕${fmtMin(slack)}）`
+    :`${min2hm(startM)}開始が理想。今からだと${fmtMin(-slack)}足りません`);}
+/* 目標に対する「余裕/不足」を計算（未配置ぶんの合計で判定） */
+function goalSlack(t,g){const w=hm2min(dayWake(t));const at=(dayLog(t).at)||{};
+  const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
+  const need=pool.reduce((n,it)=>n+Math.max(2,(+it.obj.estMin)||10),0);
+  const left=toAxis(g.at,w)-toAxis(curMin(),w);
+  return {need,left,slack:left-need};}
+function goalTap(id){const t=todayStr();const g=goalsOf(t).find(x=>x.id===id);if(!g)return;
+  const s=goalSlack(t,g);
+  const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">⚑ ${esc(g.title)}（${min2hm(g.at)}）</div>
+    <div class="mini" style="padding:0 4px 8px;">未配置ぶん ${fmtMin(s.need)}／${min2hm(g.at)}まで ${s.left>0?fmtMin(s.left):'時間切れ'}${s.left>0?`・${s.slack>=0?'余裕 '+fmtMin(s.slack):'不足 '+fmtMin(-s.slack)}`:''}</div>
+    <div class="actsheet">
+    <button onclick="closeSheet();backfillToGoal('${g.id}')">⏱ ここから逆算して並べる（開始時刻を出す）</button>
+    <button onclick="closeSheet();goalModal('${g.id}')">✎ 名前・時刻を変える</button>
+    <button onclick="closeSheet();delGoal('${g.id}')">🗑 削除</button></div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function chainPos(t,tk){for(const c of chainsOf(t)){const i=c.indexOf(tk);if(i>=0)return i;}return -1;}
 const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
 const curMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes();};
@@ -1570,6 +1632,11 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}${cp>0?' chained':''}`;
     return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTapTask('${tk}')`}"`}>
       <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+  const goalH=goalsOf(t).slice().sort((a,b)=>A(a.at)-A(b.at)).map(g=>{const s=goalSlack(t,g);
+    const bad=s.need>0&&(s.left<=0||s.slack<0);
+    const tail=s.need>0?(s.left<=0?'・時間切れ':(s.slack>=0?'・余裕'+fmtMin(s.slack):'・不足'+fmtMin(-s.slack))):'';
+    return `<div class="tlgoal${bad?' bad':''}" style="top:${y(A(g.at))}px" ${placing?'':`onclick="event.stopPropagation();goalTap('${g.id}')"`}>
+      <span class="tlgl">⚑ ${esc(g.title)} ${min2hm(g.at)}${tail}</span></div>`;}).join('');
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
   const overAny=placed.some(p=>p.ax+p.est>end);
@@ -1584,6 +1651,8 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       :`<div class="poolempty">${dayLog(t).planRoutines?'すべて配置済み🎉':'まだ選んでいません'}</div>`}
     <button class="poolall" onclick="composeToday()">🔁 ルーティンを選ぶ</button>
     ${pool.length&&!placing?`<button class="poolall" onclick="autoPlacePool()">⚡ 今から順に自動配置</button>`:''}
+    ${!placing?(goalsOf(t).length?`<button class="poolall" onclick="goalTap('${nextGoal(t).id}')">⚑ ${esc(nextGoal(t).title)}から逆算</button>`
+      :`<button class="poolall" onclick="goalModal(null)">⚑ 目標時刻をおく</button>`):''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
   const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
@@ -1613,7 +1682,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
         <div class="evpopacts"><button onclick="eventModal('${e.id}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}');tlEvSel=null;">🗑</button></div>
       </div></div>`;})():'';
   return `${hint}<div class="tlwrap">
-    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${nowLine}</div>
+    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}</div>
     ${poolHtml}${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
@@ -1623,7 +1692,7 @@ function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect
 function tlScrollTop(){const el=$('.tlwrap');if(el){const r=el.getBoundingClientRect();window.scrollBy({top:r.top-120,behavior:'smooth'});}}
 /* タイムラインの空き部分をタップ→その時刻に予定/記録を追加（選択中はまず解除） */
 function tlEmptyTap(ev){if(placeToks)return;
-  if(ev.target.closest('.tltask,.tlev,.tllog,.evpop'))return;
+  if(ev.target.closest('.tltask,.tlev,.tllog,.evpop,.tlgoal'))return;
   if(tlSel.length||tlEvSel){tlClearSel();return;}
   const t=todayStr();const w=hm2min(dayWake(t));
   const r=ev.currentTarget.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/tlPx();
@@ -1631,7 +1700,8 @@ function tlEmptyTap(ev){if(placeToks)return;
   const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${hm} に追加</div><div class="actsheet">
     <button onclick="closeSheet();eventModal(null,'${t}','${hm}')">📅 予定を追加（${hm}〜）</button>
-    <button onclick="closeSheet();addTodayLogAt('event',${mn})">📝 記録を追加（${hm}）</button></div>`;
+    <button onclick="closeSheet();addTodayLogAt('event',${mn})">📝 記録を追加（${hm}）</button>
+    <button onclick="closeSheet();goalModal(null,${mn})">⚑ ${hm} までに終わらせたい（逆算）</button></div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
@@ -3012,7 +3082,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.69（2026-07-24）</b><br>
+  <div class="mini"><b>v1.70（2026-07-24）</b><br>
+  ・<b>目標時刻（マイルストーン）</b>を追加。バーチカルの空きをタップ →「⚑ ○○までに終わらせたい」で旗を立てられます<br>
+  ・旗をタップ →「<b>ここから逆算して並べる</b>」で、未配置ぶんが<b>終わりが目標時刻ぴったり</b>になるよう並び、<b>何時に始めればいいか</b>が出ます<br>
+  ・旗には<b>「余裕○分／不足○分」</b>を常時表示（不足すると旗が赤くなります）<br>
+  <b>v1.69（2026-07-24）</b><br>
   ・完了したものも<b>重ならずに全部表示</b>（同じ時刻にまとめて完了しても、順に下へずれて並びます。はみ出す分はバーチカルが下に伸びます）<br>
   ・完了は<b>「開始した時刻」から「かかった時間」ぶんの帯</b>で表示するように（実際に動いていた時間帯が見えます）<br>
   ・バーチカルで1件選ぶと<b>「時間を入れて完了」</b>が出ます → <b>開始した時刻（テンキー）＋かかった時間（分チップ）</b>を入れて完了に<br>
