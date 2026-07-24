@@ -738,7 +738,7 @@ function fmtDateJa(s){const d=parseDs(s);return `${d.getMonth()+1}/${d.getDate()
 /* 月カレンダーの予定の文字サイズ（表示設定） */
 const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},l:{n:'大',px:11},xl:{n:'特大',px:12.5}};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.68';
+const APP_VERSION='v1.69';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1502,6 +1502,9 @@ function bandsOf(t){const {w,s}=dayBounds(t);const pm=hm2min(S.settings.pmStart)
           {k:'night',lab:'夜',c:SLOT_COLOR.night,z:BAND_Z.night,a:cl(ns),b:s}];}
 function doneMinOf(it,t){if(it.type==='r')return dayLog(t).routines[it.obj.id]?.doneMin ?? null;
   return (it.obj.doneAt===t?(it.obj.doneMin??null):null);}
+/* 実際にかかった時間（分）。記録がなければ0 */
+function actMinOf(it,t){const sec=it.type==='r'?dayLog(t).routines[it.obj.id]?.sec:it.obj.doneSec;
+  return sec?Math.max(2,Math.round(sec/60)):0;}
 /* タイムラインは起床から24時間表記。起床前(深夜)は+1440して下側へ回す */
 function toAxis(mn,w){mn=((mn%1440)+1440)%1440;return mn>=w?mn:mn+1440;}
 function tlBands(t){const w=hm2min(dayWake(t)),end=w+1440;const A=v=>toAxis(v,w);
@@ -1539,16 +1542,20 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const nowM=curMin();const nowA=A(nowM);
   const logs=dayLogs(t);
   const blocks=[];
-  // 重ならないよう、配置済みを時刻順に「後ろへずらして」表示（かぶって消えるのを防ぐ）
-  let prevEnd=-Infinity;
-  placed.forEach(p=>{const vis=Math.max(p.est,MINMIN);const top=Math.max(p.ax,prevEnd);
-    blocks.push({it:p.it,est:p.est,top,h:vis*PX,over:top+p.est>end,pinned:true,shifted:top>p.ax+0.5});
-    prevEnd=top+vis;});
+  // 未完了・完了をまとめて時刻順に並べ、重なるぶんは後ろへずらす（かぶって消えるのを防ぐ）
+  const rows=placed.map(p=>({it:p.it,est:p.est,ax:p.ax,pinned:true}));
   if(S.settings.showDoneTL!==false)all.filter(it=>flowItemDone(it)).forEach(it=>{const dm=doneMinOf(it,t);if(dm==null)return;
-    const est=Math.max(5,(+it.obj.estMin)||10);const vis=Math.max(est,MINMIN);
-    blocks.push({it,est,top:A(dm),h:vis*PX,done:true});});
+    const est=actMinOf(it,t)||Math.max(5,(+it.obj.estMin)||10);
+    rows.push({it,est,ax:Math.max(0,A(dm)-est),done:true});}); // 完了は「開始〜完了」の帯として置く
+  rows.sort((a,b)=>a.ax-b.ax);
+  let prevEnd=-Infinity;
+  rows.forEach(r=>{const vis=Math.max(r.est,MINMIN);const top=Math.max(r.ax,prevEnd);
+    blocks.push({it:r.it,est:r.est,top,h:vis*PX,over:top+r.est>end,pinned:r.pinned,done:r.done,shifted:top>r.ax+0.5});
+    prevEnd=top+vis;});
   const bottom=end;
-  const H=Math.max(420,(bottom-w)*PX+8);
+  // ずらしたぶんがはみ出すときは、バーチカル自体を下に伸ばして全部見えるようにする
+  const lastEnd=blocks.length?Math.max(...blocks.map(b=>b.top+b.h/PX)):bottom;
+  const H=Math.max(420,(Math.max(bottom,lastEnd+10)-w)*PX+8);
   let ticks='';
   for(let h=Math.ceil(w/5)*5;h<=bottom;h+=5){const hr=h%60===0;const ten=h%10===0;
     ticks+=`<div class="tlhr${hr?'':(ten?' m':' m5')}" style="top:${y(h)}px"></div>${hr?`<div class="tlhrlab" style="top:${y(h)-6}px">${min2hm(h)}</div>`:''}`;}
@@ -1587,6 +1594,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       <button onclick="tlDoComplete()">完了</button>
       <button onclick="tlDoPlace()">時間</button>
       ${anyPinnedSel?`<button onclick="tlDoUnpin()">未配置に</button>`:''}
+      ${one?`<button onclick="tlDoTimeDone()">時間を入れて完了</button>`:''}
       <button onclick="tlDoRemoveToday()">今日から消す</button>
       <button onclick="tlDoTomorrow()">明日へ</button>
       ${one?`<button onclick="tlDoEdit()">編集</button>`:''}
@@ -1687,6 +1695,25 @@ function tlDoTomorrow(){const n=tlSel.length;snapUndo();tlSel.forEach(applyTomor
 function tlDoHide(){const n=tlSel.length;snapUndo();tlSel.forEach(applyHideToday);tlSel=[];save();render();flashUndo(n+'件を今日は隠しました');}
 function tlDoEdit(){if(tlSel.length!==1)return;const tk=tlSel[0],type=tk[0],id=tk.slice(2);tlSel=[];
   type==='r'?routineModal(id):taskModal(id);}
+/* 開始した時刻＋かかった時間を入れて完了にする（あとから記録する用） */
+function tlDoTimeDone(){if(tlSel.length!==1)return;openTimeDone(tlSel[0]);}
+function openTimeDone(tk){const t=todayStr();const it=doItems(t).find(x=>x.type+'_'+x.obj.id===tk);if(!it)return;
+  const est=Math.max(2,(+it.obj.estMin)||10);
+  const at=(dayLog(t).at||{})[tk];
+  const start=at!=null?at:((curMin()-est)+1440)%1440;
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;"><b>${esc(it.obj.title)}</b> を完了にする
+    <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 2px;">開始した時刻</label>${timeInput('tdStart',min2hm(start))}
+    <label style="font-size:12px;color:var(--sub);display:block;margin:6px 0 2px;">かかった時間</label>${minPicker('tdMin',est)}</div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTimeDone('${tk}')">完了にする</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function saveTimeDone(tk){const t=todayStr();const hm=$('#tdStart')?.value;const min=Math.max(0,parseInt($('#tdMin')?.value,10)||0);
+  const start=hm?hm2min(hm):curMin();const dm=((start+min)%1440+1440)%1440;
+  const type=tk[0],id=tk.slice(2);snapUndo();
+  if(type==='r'){const r=S.routines.find(x=>x.id===id);const st=(r&&r.stats)||{n:0,total:0};
+    dayLog(t).routines[id]={done:true,sec:min*60,doneMin:dm};
+    if(r)r.stats={n:st.n+1,total:st.total+min*60};}
+  else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='done';x.doneAt=t;x.doneMin=dm;x.doneSec=min*60;advanceRepeatTask(x);}}
+  sinkDoItem(tk);chainClean(t);dlgEnd();tlSel=[];save();render();flashUndo(min2hm(start)+'から'+fmtMin(min)+'で完了にしました');checkCelebrate();}
 function tlDoUnpin(){const n=tlSel.length;if(!n)return;const t=todayStr();const dl=dayLog(t);snapUndo();
   if(dl.at)tlSel.forEach(tk=>{delete dl.at[tk];});chainClean(t);chainRelink(t);
   tlSel=[];save();render();flashUndo(n+'件を未配置に戻しました');}
@@ -2769,7 +2796,7 @@ function flowShow(keep){
       <button onclick="flowPrev()" ${flowIdx===0?'disabled style="opacity:.35"':''}>◀ 前へ</button>
       <button onclick="flowHardSkip()">次へスキップ ▶</button>
     </div>
-    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowManualDone()">⌨ 手動で完了</button></div>
+    <div class="fbtns3"><button onclick="flowLog()">＋ 別のことを記録</button><button onclick="flowManualDone()">⌨ 開始時間を入れて完了</button></div>
     <div class="fbtns"><button class="ok" onclick="flowDone()">${doneNow?'次へ →':'完了 → 次へ'}</button></div>`;
   clearInterval(flowTimer);
   flowTimer=setInterval(()=>{const el=$('#fwatch');if(el&&flowSince)el.textContent=fmtWatch(flowElapsed());},250);}
@@ -2803,19 +2830,19 @@ function completeCurrentFlow(sec,dmin){
   if(it.type==='r'){const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
     dayLog(todayStr()).routines[r.id]={done:true,sec,doneMin:dm};r.stats={n:st.n+1,total:st.total+sec};
     if(prevAvg!==null&&sec>0){if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
-  }else{r.status='done';r.doneAt=todayStr();r.doneMin=dm;}
+  }else{r.status='done';r.doneAt=todayStr();r.doneMin=dm;r.doneSec=sec;}
   sinkDoItem(tok);save();flowAdvance();}
 function flowDone(){completeCurrentFlow(Math.round(flowElapsed()/1000),curMin());}
 function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
-  const mins=Math.max(0,Math.round(flowElapsed()/60000));
-  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">「${esc(r.title)}」を手動で完了
-    <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 4px;">かかった時間（分）</label>
-    <input id="fmMin" class="bigmin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${mins||''}" placeholder="例）25" onfocus="this.select()">
-    <div class="minchips">${[2,4,6,8,10,15,20,30,45,60].map(n=>`<button type="button" onclick="$('#fmMin').value=${n};$('#fmMin').focus()">${n}分</button>`).join('')}</div>
-    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 4px;">完了した時刻</label>${timeInput('fmTime',min2hm(curMin()))}</div>
+  const mins=Math.max(0,Math.round(flowElapsed()/60000))||Math.max(2,(+r.estMin)||10);
+  const start=((curMin()-mins)+1440)%1440;
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;"><b>${esc(r.title)}</b> を手動で完了
+    <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 2px;">開始した時刻</label>${timeInput('fmStart',min2hm(start))}
+    <label style="font-size:12px;color:var(--sub);display:block;margin:6px 0 2px;">かかった時間</label>${minPicker('fmMin',mins)}</div>
     <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveManualDone()">完了にする</button></div>`;
-  $('#dlgWrap').classList.add('show');setTimeout(()=>{const v=$('#fmMin');if(v){v.focus();v.select();}},120);}
-function saveManualDone(){const min=parseInt($('#fmMin').value,10)||0;const hm=$('#fmTime')?.value;const dmin=hm?hm2min(hm):curMin();dlgEnd();completeCurrentFlow(min*60,dmin);}
+  $('#dlgWrap').classList.add('show');}
+function saveManualDone(){const min=Math.max(0,parseInt($('#fmMin').value,10)||0);const hm=$('#fmStart')?.value;
+  const start=hm?hm2min(hm):curMin();const dmin=((start+min)%1440+1440)%1440;dlgEnd();completeCurrentFlow(min*60,dmin);}
 function flowAdvance(){flowIdx++;
   if(flowIdx>=flowList.length){flowClose();return celebrateIfAll();}
   flowBase=0;flowSince=Date.now();flowPersist();flowShow(true);}
@@ -2985,7 +3012,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.68（2026-07-24）</b><br>
+  <div class="mini"><b>v1.69（2026-07-24）</b><br>
+  ・完了したものも<b>重ならずに全部表示</b>（同じ時刻にまとめて完了しても、順に下へずれて並びます。はみ出す分はバーチカルが下に伸びます）<br>
+  ・完了は<b>「開始した時刻」から「かかった時間」ぶんの帯</b>で表示するように（実際に動いていた時間帯が見えます）<br>
+  ・バーチカルで1件選ぶと<b>「時間を入れて完了」</b>が出ます → <b>開始した時刻（テンキー）＋かかった時間（分チップ）</b>を入れて完了に<br>
+  ・フロー中の「手動で完了」も<b>開始した時刻＋かかった時間</b>の入力に変更（ボタン名は「⌨ 開始時間を入れて完了」）<br>
+  <b>v1.68（2026-07-24）</b><br>
   ・流し込みを<b>連結配置</b>に（最初に置いた時間を起点に、<b>目安時間ちょうど</b>で後ろが続きます）<br>
   ・目安時間を変えたり、先頭を別の時間に動かすと<b>後ろがまとめて伸び縮み</b>します<br>
   ・表示設定に<b>「バーチカルの高さ」（標準／広め／とても広い）</b>を追加。短いルーティンも正しい長さで見えます<br>
