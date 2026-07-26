@@ -33,6 +33,8 @@ body{
 #app{max-width:960px;margin:0 auto;min-height:100dvh;padding-bottom:calc(50px + env(safe-area-inset-bottom));padding-top:max(env(safe-area-inset-top),6px);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);box-sizing:border-box;}
 /* 上部（時計・ダイナミックアイランド）にコンテンツが潜り込まないよう不透明マスク */
 #safetop{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:70;pointer-events:none;}
+#syncdot{position:fixed;left:8px;bottom:calc(52px + env(safe-area-inset-bottom));font-size:10px;color:var(--sub);z-index:49;opacity:.7;display:none;}
+#syncdot.err{color:var(--danger);opacity:1;}
 button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:9px 10px;width:100%;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);}
@@ -718,6 +720,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
 </nav>
 
+<div id="syncdot" onclick="pullState(true)"></div>
 <div id="modalWrap" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
 <div id="dlgWrap"><div id="dlg"></div></div>
 <div id="colorSheet"></div>
@@ -747,7 +750,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.74';
+const APP_VERSION='v1.75';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1090,7 +1093,7 @@ let _dirty=false; // この端末に未同期の変更があるか（編集し�
 function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
 function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
 function syncBase(){return SYNC.url.replace(/\/+$/,'')+'/rest/v1/kurashi_state';}
-function scheduleSync(){if(!syncReady())return;clearTimeout(syncTimer);syncTimer=setTimeout(pushState,2500);}
+function scheduleSync(){if(!syncReady())return;clearTimeout(syncTimer);syncTimer=setTimeout(pushState,1200);}
 async function pushState(){if(!syncReady())return;
   try{
     const res=await fetch(syncBase(),{method:'POST',
@@ -1100,28 +1103,56 @@ async function pushState(){if(!syncReady())return;
     _dirty=false; // アップ完了＝この端末の変更はクラウドに反映済み
     syncState={msg:'同期済み',t:Date.now(),err:''};
   }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
-  if(view==='set')render();}
-async function pullState(manual){if(!syncReady())return;
+  updateSyncDot();if(view==='set'&&!adoptBusy())render();}
+// 同期インジケーター（左下）。エラー時のみ常時表示、正常時は同期直後だけ薄く出す
+let _syncDotTimer=null;
+function updateSyncDot(){const el=$('#syncdot');if(!el)return;
+  if(!syncReady()){el.style.display='none';return;}
+  const err=!!syncState.err;
+  el.className=err?'err':'';
+  el.textContent=err?'⚠ 同期エラー（タップで再試行）':'☁︎ 同期済み';
+  el.style.display='block';
+  clearTimeout(_syncDotTimer);
+  if(!err)_syncDotTimer=setTimeout(()=>{const e=$('#syncdot');if(e)e.style.display='none';},1800);}
+// 取り込み（クラウド→この端末）を見送るべき状況＝編集中に画面が飛ぶのを防ぐ
+function adoptBusy(){
+  if(typeof document==='undefined')return false;
+  const mw=$('#modalWrap'),dw=$('#dlgWrap');
+  if(mw&&mw.classList.contains('show'))return true;
+  if(dw&&dw.classList.contains('show'))return true;
+  if(typeof placeToks!=='undefined'&&placeToks&&placeToks.length)return true;
+  if((typeof routineReorder!=='undefined'&&routineReorder)||(typeof taskReorder!=='undefined'&&taskReorder)||(typeof todayReorder!=='undefined'&&todayReorder))return true;
+  if(typeof tlSel!=='undefined'&&tlSel&&tlSel.length)return true;
+  const ae=document.activeElement;
+  if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.isContentEditable))return true;
+  return false;}
+let _pulling=false;
+async function pullState(manual){if(!syncReady()||_pulling)return;_pulling=true;
   try{
     // この端末に未同期の変更があるとき＝編集した端末を優先してアップ（削除も確実に反映）
-    if(_dirty){await pushState();if(view==='set')render();return;}
+    if(_dirty){await pushState();if(view==='set'&&!adoptBusy())render();return;}
+    // 編集UIが開いている間は取り込みを見送る（手動同期は除く）
+    if(!manual&&adoptBusy()){syncState={msg:'編集中は保留',t:Date.now(),err:''};if(view==='set'&&!adoptBusy())render();return;}
     const res=await fetch(syncBase()+`?room=eq.${encodeURIComponent(SYNC.room)}&select=data,updated_at`,{headers:syncHeaders()});
     if(!res.ok)throw new Error('HTTP '+res.status);
     const rows=await res.json();
     if(!rows.length){await pushState();return;} // クラウド未作成→現在の状態を上げる
     const rT=new Date(rows[0].updated_at).getTime()||0;
+    // 取得中に編集し始めていたら反映しない（画面が飛ばないように）
+    if(_dirty||(!manual&&adoptBusy())){syncState={msg:'保留',t:Date.now(),err:''};return;}
     // 未編集の端末はクラウドに合わせる（時刻が違えば必ず取り込む＝削除の復活を防ぐ）
-    if(rT!==(S.updatedAt||0)){S=rows[0].data||S;S.updatedAt=rT;_dirty=false;migrate();
-      localStorage.setItem(LSKEY,JSON.stringify(S));render();}
+    if(rT!==(S.updatedAt||0)){const sy=window.scrollY;S=rows[0].data||S;S.updatedAt=rT;_dirty=false;migrate();
+      localStorage.setItem(LSKEY,JSON.stringify(S));render();window.scrollTo(0,sy);updateSyncDot();}
     syncState={msg:'同期済み',t:Date.now(),err:''};
-  }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
-  if(view==='set')render();}
+  }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};updateSyncDot();}
+  finally{_pulling=false;if(view==='set'&&!adoptBusy())render();}}
 function saveSyncCfg(){
   SYNC={url:$('#syUrl').value.trim(),key:$('#syKey').value.trim(),room:$('#syRoom').value.trim()};
   localStorage.setItem(SYNCKEY,JSON.stringify(SYNC));
   if(syncReady()){syncState={msg:'接続確認中…',t:0,err:''};pullState(true);}
   render();}
-setInterval(()=>pullState(),5*60*1000);
+// 表示中は数秒ごとにクラウドと突き合わせ＝ほぼリアルタイム連動。非表示中や編集中は自動でお休み
+setInterval(()=>{if(syncReady()&&!document.hidden)pullState();},4000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullState();});
 
 /* ========================= 暦（祝日・六曜・一粒万倍日） ========================= */
@@ -3156,7 +3187,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.74（2026-07-26）</b><br>
+  <div class="mini"><b>v1.75（2026-07-26）</b><br>
+  ・<b>同期をほぼリアルタイムに</b>：画面を開いている間は数秒ごとにクラウドと突き合わせ（別端末の変更が数秒で反映）<br>
+  ・<b>編集中は取り込みを保留</b>して、入力や並び替えの途中で画面が飛ぶ／戻る不安定さを解消<br>
+  ・左下に<b>同期インジケーター</b>を追加（同期時に「☁︎ 同期済み」、エラー時は赤で表示・タップで再試行）<br>
+  <b>v1.74（2026-07-26）</b><br>
   ・タイムラインの<b>「今へ／先頭へ」ボタンが効かない不具合を修正</b><br>
   ・タスクを<b>完了しても消えず</b>、今日の下の方にグレーで<b>「◯時完了」つきで残る</b>ように（何度でも戻せます）<br>
   ・<b>先日付のタスクを完了しても、その日付から消えません</b>。今日にもグレーで残り、先の日付には<b>「◯/◯ ◯時完了」</b>と表示。どちらからでも戻せます<br>
