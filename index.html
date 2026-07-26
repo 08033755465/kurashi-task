@@ -746,7 +746,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.72';
+const APP_VERSION='v1.73';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -942,7 +942,7 @@ function migrate(){const st=S.settings;
   (S.marks||[]).forEach(k=>{if(!ICONS[k.icon])k.icon='gift';});}
 function load(){try{const r=localStorage.getItem(LSKEY);S=r?JSON.parse(r):defaultState();}catch(e){S=defaultState();}
   migrate();}
-function save(){S.updatedAt=Date.now();localStorage.setItem(LSKEY,JSON.stringify(S));scheduleSync();}
+function save(){S.updatedAt=Date.now();_dirty=true;localStorage.setItem(LSKEY,JSON.stringify(S));scheduleSync();}
 function group(id){return S.groups.find(g=>g.id===id)||{name:'—',color:'#B5BAC4'};}
 function groupPath(id){const g=S.groups.find(x=>x.id===id);if(!g)return'—';return g.parentId?groupPath(g.parentId)+' ▸ '+g.name:g.name;}
 function dayLog(d){if(!S.dayLog[d])S.dayLog[d]={routines:{}};return S.dayLog[d];}
@@ -1079,6 +1079,7 @@ async function addGroupInline(selId){
 const SYNCKEY='homehub_sync_cfg';
 let SYNC={};try{SYNC=JSON.parse(localStorage.getItem(SYNCKEY)||'{}');}catch(e){}
 let syncTimer=null,syncState={msg:'未設定',t:0,err:''};
+let _dirty=false; // この端末に未同期の変更があるか（編集した端末を優先し、削除の復活を防ぐ）
 function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
 function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
 function syncBase(){return SYNC.url.replace(/\/+$/,'')+'/rest/v1/kurashi_state';}
@@ -1089,20 +1090,22 @@ async function pushState(){if(!syncReady())return;
       headers:{...syncHeaders(),'Prefer':'resolution=merge-duplicates'},
       body:JSON.stringify([{room:SYNC.room,data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()}])});
     if(!res.ok)throw new Error('HTTP '+res.status);
+    _dirty=false; // アップ完了＝この端末の変更はクラウドに反映済み
     syncState={msg:'同期済み',t:Date.now(),err:''};
   }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
   if(view==='set')render();}
 async function pullState(manual){if(!syncReady())return;
   try{
+    // この端末に未同期の変更があるとき＝編集した端末を優先してアップ（削除も確実に反映）
+    if(_dirty){await pushState();if(view==='set')render();return;}
     const res=await fetch(syncBase()+`?room=eq.${encodeURIComponent(SYNC.room)}&select=data,updated_at`,{headers:syncHeaders()});
     if(!res.ok)throw new Error('HTTP '+res.status);
     const rows=await res.json();
-    if(rows.length){
-      const rT=new Date(rows[0].updated_at).getTime()||0;
-      if(rT>(S.updatedAt||0)){S=rows[0].data||S;S.updatedAt=rT;migrate();
-        localStorage.setItem(LSKEY,JSON.stringify(S));render();}
-      else if((S.updatedAt||0)>rT){await pushState();return;}
-    }else{await pushState();return;}
+    if(!rows.length){await pushState();return;} // クラウド未作成→現在の状態を上げる
+    const rT=new Date(rows[0].updated_at).getTime()||0;
+    // 未編集の端末はクラウドに合わせる（時刻が違えば必ず取り込む＝削除の復活を防ぐ）
+    if(rT!==(S.updatedAt||0)){S=rows[0].data||S;S.updatedAt=rT;_dirty=false;migrate();
+      localStorage.setItem(LSKEY,JSON.stringify(S));render();}
     syncState={msg:'同期済み',t:Date.now(),err:''};
   }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
   if(view==='set')render();}
@@ -1194,7 +1197,11 @@ function switchView(v){
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;taskQuery='';}
   const toNow=(v==='today'&&S.settings.timeline); // 今日タブ(タイムライン)は「今」へ寄せる
   if(toNow)_tlPendingScroll=true;
-  view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();if(!toNow)toTop();}
+  view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();if(!toNow)toTop();
+  maybePull();}
+// タブ移動のたびに（多くても10秒に1回）クラウドの最新を取り込む＝別端末の変更・削除がすぐ反映される
+let _lastPull=0;
+function maybePull(){if(!syncReady())return;const now=Date.now();if(now-_lastPull<10000)return;_lastPull=now;pullState();}
 let _tlPendingScroll=false,_reorderFollow=null,_focusSearch=false;
 function render(){
   const el=$('#view');const sy=window.scrollY;
@@ -3140,7 +3147,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.72（2026-07-24）</b><br>
+  <div class="mini"><b>v1.73（2026-07-26）</b><br>
+  ・<b>同期の不具合を修正</b>：ある端末で削除・変更したのに、別の端末で元に戻ってしまうこと（削除の復活）を解消。編集した端末を優先し、編集していない端末はクラウドに合わせるようにしました<br>
+  ・<b>タブを切り替えるたびに最新を取り込む</b>ように（別端末の変更・削除がすぐ反映されます）<br>
+  <b>v1.72（2026-07-24）</b><br>
   ・<b>設定→表示設定→「月カレンダーの予定の見せ方」</b>を追加。<b>予定名・マークのみ（デフォルト）／時間も常に表示／ALL（全部ひらく）</b>から選べます<br>
   <b>v1.71（2026-07-24）</b><br>
   ・ルーティンの流し込みが<b>その日の曜日のぶんだけ</b>に（毎日・毎週◯曜・第N曜を判定）。「曜日にかかわらず全部表示」に切り替えもできます<br>
