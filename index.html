@@ -750,7 +750,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.75';
+const APP_VERSION='v1.76';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1496,6 +1496,9 @@ const CHK='<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>';
 const CLOCKI='<svg class="cki" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>';
 const REFRESHI='<svg class="cki" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v3h-3"/></svg>';
 function evTimeText(e){return e.start?(e.start+(e.end?' – '+e.end:'')):'終日';}
+/* 月カレンダーの時刻＝hh/mmの2行。分が00のときはhhのみ */
+function monthEvTime(time){const hh=time.slice(0,2),mm=time.slice(3);
+  return mm==='00'?`<span class="evfrac"><span>${hh}</span></span>`:`<span class="evfrac"><span>${hh}</span><span>${mm}</span></span>`;}
 const SLOT_COLOR={morning:'#E0A94A',day:'#E08A5E',night:'#8E7BC8',any:'#B5BAC4'};
 const BAND_Z={morning:'#F7E6C2',day:'#F8DCCB',night:'#E7DEF6'};
 function folderHue(f){return hashStr(f||'マイルーティン')%HUES12.length;}
@@ -2298,7 +2301,7 @@ function renderCal(){
           ${rk?`<span class="rk ${rk==='大安'?'taian':''}">${rk}</span>`:''}${ich?'<span class="ich">万倍</span>':''}</div>
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
         ${mks.length?`<div class="marks">${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
-        ${shown.map(it=>{const tf=(showTime&&it.time)?(allMode?`<span class="evfrac"><span>${it.time.slice(0,2)}</span><span>${it.time.slice(3)}</span></span>`:`<span class="evtm">${it.time}</span>`):'';
+        ${shown.map(it=>{const tf=(showTime&&it.time)?monthEvTime(it.time):'';
           const st=it.due?'':it.mo?`style="color:${it.line};"`:`style="background:${it.c};color:${evTextColor(it.c)};border-left:${it.imp?4:3}px solid ${it.line};"`;
           return `<div class="evbar ${it.due?'due':''}${it.mo?' mkonly':''}" ${st}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
         ${!allMode&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
@@ -3187,7 +3190,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.75（2026-07-26）</b><br>
+  <div class="mini"><b>v1.76（2026-07-26）</b><br>
+  ・月カレンダーの時刻表示を<b>hh／mmの2行</b>に（分が<b>00のときは時だけ</b>表示・「時間も常に表示」「ALL」共通）<br>
+  <b>v1.75（2026-07-26）</b><br>
   ・<b>同期をほぼリアルタイムに</b>：画面を開いている間は数秒ごとにクラウドと突き合わせ（別端末の変更が数秒で反映）<br>
   ・<b>編集中は取り込みを保留</b>して、入力や並び替えの途中で画面が飛ぶ／戻る不安定さを解消<br>
   ・左下に<b>同期インジケーター</b>を追加（同期時に「☁︎ 同期済み」、エラー時は赤で表示・タップで再試行）<br>
