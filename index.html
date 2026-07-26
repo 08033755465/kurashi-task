@@ -402,6 +402,32 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .evbar.mkonly{background:none !important;padding:0 0 0 1px;font-weight:700;}
 .evbar.mkonly .evmk{width:1.55em;height:1.55em;vertical-align:-.35em;margin-right:2px;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
+/* 週表示＝Googleカレンダー方式 */
+.wkcal{border-top:1px solid var(--line2);}
+.wkrow{display:flex;}
+.wkhead{position:sticky;top:0;background:var(--bg);z-index:6;border-bottom:1px solid var(--line);}
+.wkcorner{flex:0 0 30px;}
+.wkhcell{flex:1;min-width:0;text-align:center;padding:5px 0 4px;border-left:1px solid var(--line2);cursor:pointer;}
+.wkhcell .wkdw{font-size:9px;color:var(--sub);line-height:1.2;}
+.wkhcell .wkdn{font-size:14px;font-weight:700;line-height:1.4;display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;}
+.wkhcell.sun .wkdw,.wkhcell.sun .wkdn{color:var(--sun);}
+.wkhcell.sat .wkdw,.wkhcell.sat .wkdn{color:var(--sat);}
+.wkhcell.today .wkdn{background:#2F6FED;color:#fff;border-radius:50% !important;}
+.wkallday{border-bottom:1px solid var(--line);}
+.wkallday .wkgut2{flex:0 0 30px;font-size:8px;color:var(--sub);display:flex;align-items:center;justify-content:center;}
+.wkad{flex:1;min-width:0;border-left:1px solid var(--line2);padding:2px 1px;display:flex;flex-wrap:wrap;gap:1px;min-height:16px;align-content:flex-start;cursor:pointer;}
+.wkadchip{font-size:8px;line-height:1.4;padding:0 3px;border-radius:3px !important;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:clip;}
+.wkbody{position:relative;display:flex;}
+.wkgutter{flex:0 0 30px;position:relative;}
+.wkgutter .wkhrlab{position:absolute;right:3px;font-size:8.5px;color:var(--sub);transform:translateY(-50%);font-variant-numeric:tabular-nums;}
+.wkcol{flex:1;min-width:0;position:relative;border-left:1px solid var(--line2);cursor:pointer;}
+.wkcol.today{background:rgba(47,111,237,.045);}
+.wkhr{position:absolute;left:0;right:0;border-top:1px solid var(--line2);}
+.wkev{position:absolute;overflow:hidden;border-radius:4px !important;padding:1px 3px;box-shadow:0 1px 2px rgba(0,0,0,.12);cursor:pointer;}
+.wkev .wkevt{font-size:8.5px;font-weight:700;line-height:1.15;white-space:normal;word-break:break-word;overflow:hidden;}
+.wkev.mkonly,.wkev.plain{background:none !important;box-shadow:none;}
+.wknow{position:absolute;left:0;right:0;border-top:2px solid #E5484D;z-index:4;}
+.wknow::before{content:'';position:absolute;left:-2px;top:-3px;width:5px;height:5px;border-radius:50% !important;background:#E5484D;}
 .scopebtns{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
 .scopebtns button{padding:12px;border:1px solid var(--line);font-size:14px;text-align:left;border-radius:10px !important;}
 .scopebtns button:active{background:var(--line2);}
@@ -762,7 +788,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.78';
+const APP_VERSION='v1.79';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2273,6 +2299,14 @@ function scheduleListHtml(evs,wake,dstr){
       ${e.memo?`<div class="cevmemo" style="color:${mo?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
   return html;}
 function setMonthFont(k){if(!MONTH_FONTS[k])return;S.settings.monthFont=k;save();render();}
+/* 週表示（Googleカレンダー方式）：重なる予定をレーンに割り振る */
+function weekLayout(evs,minMin,PXM){
+  const items=evs.filter(e=>e.start).map(e=>{const s=hm2min(e.start);const en=e.end?hm2min(e.end):s+30;return {e,s,en:Math.max(en,s+15)};}).sort((a,b)=>a.s-b.s||a.en-b.en);
+  const res=[];let cluster=[],clusterEnd=-1;
+  const flush=()=>{if(!cluster.length)return;const lanes=[];cluster.forEach(it=>{let l=lanes.findIndex(end=>end<=it.s);if(l<0){l=lanes.length;lanes.push(0);}lanes[l]=it.en;it.lane=l;});const n=lanes.length;cluster.forEach(it=>it.lanes=n);res.push(...cluster);cluster=[];};
+  items.forEach(it=>{if(cluster.length&&it.s>=clusterEnd){flush();clusterEnd=-1;}cluster.push(it);clusterEnd=Math.max(clusterEnd,it.en);});
+  flush();
+  return res.map(it=>({e:it.e,top:(it.s-minMin)*PXM,h:Math.max(15,(it.en-it.s)*PXM),lane:it.lane,lanes:it.lanes}));}
 function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
@@ -2334,23 +2368,33 @@ function renderCal(){
     const start=new Date(base);start.setDate(base.getDate()-((base.getDay()-ws+7)%7));
     const end=new Date(start);end.setDate(start.getDate()+6);
     head=`${start.getMonth()+1}/${start.getDate()} 〜 ${end.getMonth()+1}/${end.getDate()}`;
-    body=[...Array(7)].map((_,i)=>{const c=new Date(start);c.setDate(start.getDate()+i);
-      const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dstr=dsOf(c);
-      const hol=holidayName(y,m,d);const evs=eventsOn(dstr),dues=dueTasksOn(dstr),mks=marksOn(m,d);
-      const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
-      return `<div class="wrow ${dstr===todayStr()?'wtoday':''}" onclick="calGoto('${dstr}')">
-        <div class="wd" ${bg?`style="background:${bg}"`:''}>
-          <div class="n ${hol||c.getDay()===0?'sun':''}" style="${c.getDay()===6?'color:var(--sat);':''}${hol||c.getDay()===0?'color:var(--sun);':''}">${d}</div>
-          <div class="r">${WD[c.getDay()]}${S.settings.showRokuyo?'・'+rokuyo(y,m,d):''}</div>
-          ${dstr===todayStr()?'<div class="wtodaytag">今日</div>':''}${hol?`<div class="h">${esc(hol)}</div>`:''}</div>
-        <div class="wbody">
-          ${mks.map(k=>`<div class="wev"><span style="color:${k.color};width:14px;height:14px;flex:0 0 14px;">${icSvg(k.icon)}</span><span>${esc(k.name)}</span></div>`).join('')}
-          ${evs.map(e=>{const mo=!!e.markOnly;const bg=evColor(e);const tc=mo?evLine(e):evTextColor(bg);
-            const st=mo?`color:${tc};`:`background:${bg};color:${tc};border-left:${evLineW(e)}px solid ${evLine(e)};`;
-            return `<div class="cev${e.important?' imp':''}${mo?' mkonly':''}" style="${st}" onclick="event.stopPropagation();eventTap('${e.id}','${dstr}')">${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}<div class="cevt">${evLabel(e)}</div><div class="cevm" style="color:${mo?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}</div></div>`;}).join('')}
-          ${dues.map(x=>`<div class="wev"><span class="t">期限</span><span style="color:var(--sub);">${esc(x.title)}</span></div>`).join('')}
-          ${!evs.length&&!dues.length&&!mks.length?'<span style="color:var(--line);font-size:12px;">—</span>':''}
-        </div></div>`;}).join('');
+    const todayS=todayStr();
+    const dayData=[...Array(7)].map((_,i)=>{const c=new Date(start);c.setDate(start.getDate()+i);
+      const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dstr=dsOf(c);const evs=eventsOn(dstr);
+      return {c,dstr,y,m,d,dow:c.getDay(),timed:evs.filter(e=>e.start),allday:evs.filter(e=>!e.start),
+        dues:dueTasksOn(dstr),mks:marksOn(m,d),hol:holidayName(y,m,d)};});
+    let minMin=7*60,maxMin=21*60;
+    dayData.forEach(dd=>dd.timed.forEach(e=>{const s=hm2min(e.start);const en=e.end?hm2min(e.end):s+60;minMin=Math.min(minMin,s);maxMin=Math.max(maxMin,en);}));
+    minMin=Math.max(0,Math.floor(minMin/60)*60);maxMin=Math.min(1440,Math.ceil(maxMin/60)*60);
+    if(maxMin-minMin<360)maxMin=Math.min(1440,minMin+360);
+    const PXM=0.95,H=(maxMin-minMin)*PXM,nowM=curMin();
+    let hlab='',hline='';for(let h=minMin;h<=maxMin;h+=60){const top=(h-minMin)*PXM;hlab+=`<div class="wkhrlab" style="top:${top}px">${pad(Math.floor(h/60)%24)}</div>`;hline+=`<div class="wkhr" style="top:${top}px"></div>`;}
+    const header=`<div class="wkrow wkhead"><div class="wkcorner"></div>${dayData.map(dd=>{const isT=dd.dstr===todayS;
+      return `<div class="wkhcell ${dd.hol||dd.dow===0?'sun':''} ${dd.dow===6?'sat':''} ${isT?'today':''}" onclick="calGoto('${dd.dstr}')"><div class="wkdw">${WD[dd.dow]}</div><div class="wkdn">${dd.d}</div></div>`;}).join('')}</div>`;
+    const alldayRow=`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map(dd=>{
+      const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
+        ...dd.allday.map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}')">${esc(evTitle(e))}</span>`),
+        ...dd.dues.map(x=>`<span class="wkadchip" style="border:1px dashed var(--sub);color:var(--sub);">${esc(x.title)}</span>`)];
+      return `<div class="wkad" onclick="eventModal(null,'${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
+    const cols=dayData.map(dd=>{const isT=dd.dstr===todayS;
+      const blocks=weekLayout(dd.timed,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e);const w=100/o.lanes,l=o.lane*w;
+        let cls='wkev',st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
+        if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
+        return `<div class="${cls}" style="${st}" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}')"><div class="wkevt">${e.start} ${evLabel(e)}</div></div>`;}).join('');
+      const now=isT&&nowM>=minMin&&nowM<=maxMin?`<div class="wknow" style="top:${(nowM-minMin)*PXM}px"></div>`:'';
+      return `<div class="wkcol ${isT?'today':''}" onclick="calGoto('${dd.dstr}')">${hline}${blocks}${now}</div>`;}).join('');
+    body=`<div class="wkcal">${header}${alldayRow}<div class="wkbody" style="height:${H}px"><div class="wkgutter">${hlab}</div>${cols}</div></div>
+      <div class="mini">日付をタップでその日を開く／終日欄をタップで予定追加。時間指定の予定はブロックで表示。重なりは横並びになります。</div>`;
   }else{
     const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
     head=`${m}月`;
@@ -3241,7 +3285,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.78（2026-07-27）</b><br>
+  <div class="mini"><b>v1.79（2026-07-27）</b><br>
+  ・<b>週表示をGoogleカレンダー方式</b>に刷新：7日×時間軸のグリッドで、時間指定の予定をブロック表示。<b>今日の現在時刻ライン</b>・<b>重なりは横並び</b>・終日欄つき<br>
+  <b>v1.78（2026-07-27）</b><br>
   ・<b>繰り返し予定の編集</b>で範囲を選べるように：<b>「この予定のみ／この予定以降／すべて」</b>。選んだ範囲だけに変更が反映されます<br>
   <b>v1.77（2026-07-27）</b><br>
   ・月カレンダー：時刻を<b>太字で見やすく</b>／<b>親グループのライン色を廃止</b>（付箋カラーのみ）<br>
