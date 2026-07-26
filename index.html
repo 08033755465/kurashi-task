@@ -22,8 +22,9 @@
   --wait:#D98324; --done:#9AA1AD; --sat:#3D6FD8; --sun:#C9403C;
 }
 *{margin:0;padding:0;box-sizing:border-box;border-radius:0 !important;}
-html,body{height:100%;max-width:100%;overflow-x:hidden;}
+html{max-width:100%;overflow-x:hidden;}
 body{
+  min-height:100dvh;max-width:100%;overflow-x:hidden;
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
   color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
@@ -746,7 +747,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.73';
+const APP_VERSION='v1.74';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -967,12 +968,18 @@ function dayStart(d){return dayLog(d).startAt||dayWake(d);}
 function availOf(d){let m=hm2min(daySleep(d))-hm2min(dayStart(d));if(m<=0)m+=1440;return m;}
 /* 今日に表示するタスク: 今日指定 ＋ 毎日表示(pin)。「今日は隠す」(snooze)は除外 */
 function todayTasks(t){return S.tasks.filter(x=>{
+  if(x.status==='done'&&x.doneAt===t)return true; // 今日完了したものは（先日付・繰り越し含め）今日にグレーで残す
   if(x.snooze===t)return false;
   if(x.today===t)return true;
   if(x.pin&&(x.status!=='done'||x.doneAt===t))return true;
   if(x.today&&x.today<t&&x.status!=='done')return true; // 昨日までの繰り越しも今日に合体
   return false;});}
 function isCarried(x){return !!(x.today&&x.today<todayStr()&&x.status!=='done');}
+/* 完了ラベル。forDate と別の日に完了していれば「M/D h:mm完了」、同日なら「h:mm完了」 */
+function doneLabel(x,forDate){if(x.status!=='done'||!x.doneAt)return '';
+  const sameDay=x.doneAt===forDate;let s='';
+  if(!sameDay){const d=parseDs(x.doneAt);s=(d.getMonth()+1)+'/'+d.getDate()+' ';}
+  return s+(x.doneMin!=null?min2hm(x.doneMin)+' ':'')+'完了';}
 const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.quad||9)-(b.quad||9)||a.qOrder-b.qOrder||a.priority-b.priority;
 /* ===== テンキー対応タイムピッカー（数字タップ→テンキー、▲▼で微調整・分は15分刻み） ===== */
 function timeInput(id,val,opts={}){
@@ -1292,8 +1299,8 @@ function renderToday(){
     <div class="row"><span>残り作業 <b>${fmtMin(restMin)}</b> ／ 使える <b>${fmtMin(avail)}</b></span>
       <span class="nums ${free<0?'neg':''}">${free<0?'▲'+fmtMin(-free)+'超過':'空き '+fmtMin(free)}</span></div>
     <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
-    <div class="row" style="margin:7px 0 0;"><span>${dayLog(t).startAt?`活動開始 <b>${dayLog(t).startAt}</b>・`:`起床 <b>${dayWake(t)}</b>・`}就寝 <b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button></span>
-      ${bed>0?`<span class="nums">就寝まで ${fmtMin(bed)}</span>`:''}</div>
+    <div class="row" style="margin:7px 0 0;"><span>活動 <b>${dayWake(t)}</b>〜<b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button>${t===todayStr()?`<button class="availEdit" style="margin-left:6px;" onclick="startNow()">今から開始</button>`:''}</span>
+      ${bed>0?`<span class="nums">終了まで ${fmtMin(bed)}</span>`:''}</div>
   </div>
   <div class="startrow">
     <button class="composeBtn" onclick="composeToday()">🔁 ルーティンを選ぶ${routines.length?`（${routines.length}）`:''}</button>
@@ -1368,22 +1375,23 @@ async function endTaskToday(tok){const id=tok.slice(2);const x=S.tasks.find(t=>t
 function linkChips(links){if(!links||!links.length)return'';
   return `<div class="linkchips">${links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${esc(l.label||l.url)}</a>`).join('')}</div>`;}
 function editDayTimes(){const t=todayStr();const now=new Date();const nowHm=pad(now.getHours())+':'+pad(now.getMinutes());
-  openModal(`<div class="mh"><b>今日の時間</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh"><b>活動時間（開始・終了）</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
-    <div class="frow f2"><div><label>起床</label>${timeInput('dtWake',dayWake(t))}</div>
-      <div><label>就寝</label>${timeInput('dtSleep',daySleep(t))}</div></div>
-    <div class="frow"><label>活動開始（ここから就寝までを「使える時間」に）</label>
-      <div style="display:flex;gap:8px;align-items:center;">${timeInput('dtStart',dayLog(t).startAt||dayWake(t))}
-        <button class="inlineadd" onclick="tpSet('dtStart','${nowHm}')">今から（${nowHm}）</button></div></div>
+    <div class="frow f2"><div><label>開始</label>${timeInput('dtWake',dayWake(t))}</div>
+      <div><label>終了</label>${timeInput('dtSleep',daySleep(t))}</div></div>
+    <div style="display:flex;gap:8px;margin:2px 0 8px;">
+      <button class="inlineadd" onclick="tpSet('dtWake','${nowHm}')">開始を今に（${nowHm}）</button>
+      <button class="inlineadd" onclick="tpSet('dtSleep','${nowHm}')">終了を今に（${nowHm}）</button></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="dtDef" style="width:auto;">
-      <span style="font-size:13px;">起床・就寝を既定値としても保存する</span></div>
-    <div class="mini" style="padding:0;">朝に今日を組むときは「活動開始」を今の時刻にすると、残り時間の計算が実態に合います（起床のままでもOK）。</div>
+      <span style="font-size:13px;">この開始・終了を毎日の初期値にする</span></div>
+    <div class="mini" style="padding:0;">「開始〜終了」がこの日の<b>使える時間</b>になり、バーチカルの範囲にもなります。時間管理として、開始・終了はいつでも動かせます（「今から開始」で開始を今の時刻に）。</div>
   </div>
-  <div class="mbtns"><button class="del" onclick="clearDayStart()">開始をリセット</button><button class="save" onclick="saveDayTimes()">保存</button></div>`);}
-function clearDayStart(){const t=todayStr();delete dayLog(t).startAt;save();closeModal();render();}
+  <div class="mbtns"><button class="del" onclick="resetDayTimes()">既定に戻す</button><button class="save" onclick="saveDayTimes()">保存</button></div>`);}
+function startNow(){const t=todayStr();const now=new Date();dayLog(t).wake=pad(now.getHours())+':'+pad(now.getMinutes());delete dayLog(t).startAt;save();render();toast('活動開始を今にしました');}
+function resetDayTimes(){const t=todayStr();const log=dayLog(t);delete log.wake;delete log.sleep;delete log.startAt;save();closeModal();render();}
 function saveDayTimes(){const t=todayStr();const log=dayLog(t);
   log.wake=$('#dtWake').value||S.settings.wakeDef;log.sleep=$('#dtSleep').value||S.settings.sleepDef;
-  const st=$('#dtStart').value;log.startAt=(st&&st!==log.wake)?st:undefined;
+  delete log.startAt;
   if($('#dtDef').checked){S.settings.wakeDef=log.wake;S.settings.sleepDef=log.sleep;}
   save();closeModal();render();}
 function snoozeTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -1474,7 +1482,7 @@ function doItemRowDense(it,t,tok){
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${done?CHK:''}</div>
     <div class="dt" onclick="setAnchor('${tok}');taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.status==='wait'?'<span class="wtag">待</span>':''}${x.memo?' 📝':''}${x.images&&x.images.length?' 📷':''}</div>
     <span class="typetag t">タスク</span>
-    <div class="dtime">${x.estMin?fmtMin(x.estMin):''}</div></div>`;}
+    <div class="dtime">${done?doneLabel(x,t):(x.estMin?fmtMin(x.estMin):'')}</div></div>`;}
 function doItemRow(it,t){
   const tok=it.type+'_'+it.obj.id;
   if(S.settings.dense)return doItemRowDense(it,t,tok);
@@ -1677,7 +1685,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     return `<div class="tlgoal${bad?' bad':''}" style="top:${y(A(g.at))}px" ${placing?'':`onclick="event.stopPropagation();goalTap('${g.id}')"`}>
       <span class="tlgl">⚑ ${esc(g.title)} ${min2hm(g.at)}${tail}</span></div>`;}).join('');
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
-  const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>就寝 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
+  const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>終了 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
   const overAny=placed.some(p=>p.ax+p.est>end);
   const poolMin=pool.reduce((n,it)=>n+Math.max(5,(+it.obj.estMin)||10),0);
   // 右：未配置プール
@@ -1724,7 +1732,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}</div>
     ${poolHtml}${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
-    ${overAny?`<div class="tlwarn">⚠ 就寝（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
+    ${overAny?`<div class="tlwarn">⚠ 終了（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
@@ -1752,7 +1760,7 @@ function todayTaskChecklist(t){const tasks=todayTasks(t);if(!tasks.length)return
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}">
       <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
       <div class="tct" onclick="taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
-      <div class="tcm">${at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':''}${x.estMin?fmtMin(x.estMin):''}</div></div>`).join('')}</div></div>`;}
+      <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div></div>`).join('')}</div></div>`;}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
   i>=0?placeToks.splice(i,1):placeToks.push(tok);if(!placeToks.length)placeToks=null;render();}
@@ -2323,7 +2331,8 @@ function advanceRepeatTask(x){if(!x.repeat)return false;
   const at=dayLog(t).at;if(at)delete at['t_'+x.id];
   toast(`完了！${base!==t?`（${md}分）`:''}次回は ${fmtDateJa(nd)} に繰り返します🔁`);return true;}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done')x.status='todo';else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
+  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;}
+  else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
@@ -2333,7 +2342,7 @@ function dayScheduleHtml(dstr){
   const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}">
     <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="dtb" onclick="taskModal('${x.id}')"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
-    <div class="dtm"><span class="gmark" style="${markCss(x.groupId)}"></span> ${esc(group(x.groupId).name)}${x.estMin?' ・'+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}</div></div></div>`).join('');
+    <div class="dtm"><span class="gmark" style="${markCss(x.groupId)}"></span> ${esc(group(x.groupId).name)}${x.estMin?' ・'+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}${x.status==='done'?' ・'+doneLabel(x,dstr):''}</div></div></div>`).join('');
   return `<div class="daycols">
     <div class="daycol"><div class="dch"><b>予定</b><button onclick="eventModal(null,'${dstr}')">＋</button></div>
       ${evs.length?tl:'<div class="dempty">予定なし</div>'}</div>
@@ -2904,7 +2913,7 @@ function flowShow(keep){
   $('#flow').innerHTML=`
     <div class="fh"><span>${flowIdx+1} / ${flowList.length}${doneNow?' ・完了済み':''}</span>
       <span><button onclick="flowToggleList()">${flowListOpen?'⏱ 実行に戻る':'☰ 一覧'}</button><button onclick="flowMinimize()">最小化 ⌄</button><button onclick="flowClose()">終了 ✕</button></span></div>
-    <div class="fstats"><span>残り <b>${rem.length}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>就寝まで <b>${fmtMin(bed)}</b></span></div>
+    <div class="fstats"><span>残り <b>${rem.length}</b>件・目安 <b>${fmtMin(remEst)}</b></span><span>終了まで <b>${fmtMin(bed)}</b></span></div>
     <div class="fmain">
       ${flowListOpen?flowListHtml():`
       <div class="slot">${label}</div>
@@ -3031,7 +3040,7 @@ function renderSettings(){
   if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ</span></div><div class="setmenu">
     ${[['event','予定・カテゴリ・色設定','グループと色・誕生日・マーク・テンプレ・カラーパレット'],
        ['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
-       ['time','時間関連設定','起床/就寝・夜の開始・通知時刻'],
+       ['time','時間関連設定','活動の開始/終了・夜の開始・通知時刻'],
        ['data','同期・データ','クラウド同期・バックアップ'],
        ['personal','個人・改善設定','通知先メール・改善メモ送信'],
        ['release','リリース情報','更新履歴'],
@@ -3091,9 +3100,9 @@ function renderSettings(){
     <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>
     <div class="setrow"><div><div class="sl">タイムラインに完了を薄く残す</div><div class="sd">その日にやったことの実績を時刻の位置に表示</div></div>${tgl('showDoneTL')}</div>`;
   if(P==='time')return back+`<div class="vhead"><h1>時間関連設定</h1></div>
-    <div class="setrow"><div><div class="sl">起床時刻（既定）</div><div class="sd">「使える時間」を起床〜就寝から自動計算</div></div>
+    <div class="setrow"><div><div class="sl">活動の開始（既定）</div><div class="sd">「使える時間」を開始〜終了から自動計算</div></div>
       ${timeInput('setWk',s.wakeDef,{onchange:"S.settings.wakeDef=this.value;save();"})}</div>
-    <div class="setrow"><div><div class="sl">就寝時刻（既定）</div><div class="sd">その日だけの変更は「今日」画面から</div></div>
+    <div class="setrow"><div><div class="sl">活動の終了（既定）</div><div class="sd">その日だけの変更は「今日」画面から</div></div>
       ${timeInput('setSl',s.sleepDef,{onchange:"S.settings.sleepDef=this.value;save();"})}</div>
     <div class="setrow"><div><div class="sl">午後の開始時刻</div><div class="sd">これ以降を「午後」に（午前と切り分け）</div></div>
       ${timeInput('setPm',s.pmStart,{onchange:"S.settings.pmStart=this.value;save();"})}</div>
@@ -3147,7 +3156,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.73（2026-07-26）</b><br>
+  <div class="mini"><b>v1.74（2026-07-26）</b><br>
+  ・タイムラインの<b>「今へ／先頭へ」ボタンが効かない不具合を修正</b><br>
+  ・タスクを<b>完了しても消えず</b>、今日の下の方にグレーで<b>「◯時完了」つきで残る</b>ように（何度でも戻せます）<br>
+  ・<b>先日付のタスクを完了しても、その日付から消えません</b>。今日にもグレーで残り、先の日付には<b>「◯/◯ ◯時完了」</b>と表示。どちらからでも戻せます<br>
+  ・時間を「起床／就寝」でなく<b>「活動の開始〜終了」</b>に変更。<b>「今から開始」</b>でいつでも起点を今にでき、時間管理として使えます（バーチカル＝予定・時間・記録）<br>
+  <b>v1.73（2026-07-26）</b><br>
   ・<b>同期の不具合を修正</b>：ある端末で削除・変更したのに、別の端末で元に戻ってしまうこと（削除の復活）を解消。編集した端末を優先し、編集していない端末はクラウドに合わせるようにしました<br>
   ・<b>タブを切り替えるたびに最新を取り込む</b>ように（別端末の変更・削除がすぐ反映されます）<br>
   <b>v1.72（2026-07-24）</b><br>
@@ -3663,13 +3677,13 @@ function checkBedtimePlan(){if($('#modalWrap').classList.contains('show'))return
 function bedtimePlanModal(day){const d=parseDs(day);const md=`${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`;
   openModal(`<div class="mh"><b>🌙 ${md}の準備</b><button onclick="closeBedPlan('${day}')">✕</button></div>
     <div class="mbody">
-      <div class="mini" style="padding:0 0 10px;">就寝時刻を過ぎています。<b>${md}の起床・就寝</b>を決めておくと、明日のタイムラインの見通しが立ちます。</div>
-      <div class="frow f2"><div><label>起床</label>${timeInput('bpWake',dayWake(day))}</div>
-        <div><label>就寝</label>${timeInput('bpSleep',daySleep(day))}</div></div>
+      <div class="mini" style="padding:0 0 10px;">活動の終了時刻を過ぎています。<b>${md}の活動 開始・終了</b>を決めておくと、明日のタイムラインの見通しが立ちます。</div>
+      <div class="frow f2"><div><label>開始</label>${timeInput('bpWake',dayWake(day))}</div>
+        <div><label>終了</label>${timeInput('bpSleep',daySleep(day))}</div></div>
     </div>
     <div class="mbtns"><button onclick="closeBedPlan('${day}')">あとで</button><button class="save" onclick="saveBedPlan('${day}')">これで設定</button></div>`);}
 function saveBedPlan(day){const w=$('#bpWake').value||S.settings.wakeDef,s=$('#bpSleep').value||S.settings.sleepDef;
-  const dl=dayLog(day);dl.wake=w;dl.sleep=s;S._bedPlanFor=day;save();closeModal();render();toast('起床・就寝を設定しました🌙');}
+  const dl=dayLog(day);dl.wake=w;dl.sleep=s;S._bedPlanFor=day;save();closeModal();render();toast('活動 開始・終了を設定しました🌙');}
 function closeBedPlan(day){S._bedPlanFor=day;save();closeModal();}
 /* ========================= 起動 ========================= */
 load();save();
