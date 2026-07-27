@@ -331,6 +331,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .dpgrid .dpw{text-align:center;font-size:10px;color:var(--sub);padding:2px 0;}
 .dpgrid button{aspect-ratio:1;font-size:13px;border:1px solid var(--line);}
 .dpgrid button:active{background:var(--accent);color:#fff;}
+.dpgrid button.on{background:var(--accent);color:#fff;font-weight:700;}
 .startBtn{display:block;width:calc(100% - 32px);margin:14px 16px 4px;background:var(--ink);color:#fff;padding:13px 0;font-size:15px;font-weight:700;letter-spacing:.2em;}
 .startBtn:active{opacity:.8;}
 .startrow{display:flex;gap:8px;padding:12px 16px 0;}
@@ -594,6 +595,13 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* color popover (bottom sheet) */
 #colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;}
 #colorSheet.show{display:block;}
+/* セル直下に出る色分けポップ */
+#cellpop{position:fixed;z-index:130;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.28);padding:8px;display:none;}
+#cellpop .cpsw{display:flex;gap:5px;}
+#cellpop .cpsw button{width:32px;height:32px;border:1px solid var(--line);border-radius:7px !important;}
+#cellpop .cpsw .clear{background:var(--bg);font-size:9px;color:var(--sub);}
+#cellpop .cpmore{margin-top:7px;width:100%;padding:8px;font-size:12px;color:var(--accent);border:1px solid var(--line);border-radius:8px !important;}
+.cell.selc{box-shadow:inset 0 0 0 2px #2F6FED;}
 #colorSheet .t{font-size:12px;color:var(--sub);letter-spacing:.1em;margin-bottom:10px;}
 #colorSheet .sw{display:flex;gap:8px;}
 #colorSheet .sw button{flex:1;height:44px;border:1px solid var(--line);font-size:10px;color:var(--sub);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;}
@@ -769,6 +777,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 <div id="modalWrap" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
 <div id="dlgWrap"><div id="dlg"></div></div>
 <div id="colorSheet"></div>
+<div id="cellpop"></div>
 <div id="flowbar"></div>
 <div id="flow"></div>
 <div id="lightbox" onclick="if(event.target===this)closeLightbox()"></div>
@@ -796,7 +805,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.85';
+const APP_VERSION='v1.86';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1295,6 +1304,7 @@ let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 {const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
 function switchView(v){
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
+  if(v!=='cal'){cellSelMode=false;cellSel=new Set();}
   if(v==='set')setPage='';
   if(v!=='routine'){routineReorder=false;routineSel=[];routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];tlSel=[];tlEvSel=null;placeToks=null;}
@@ -2372,7 +2382,7 @@ function renderCal(){
       const allMode=calMonthAll||evMode==='all';const showTime=allMode||evMode==='time';
       const max=S.settings.monthMax||4;const shown=allMode?items:items.slice(0,max);
       const bg=S.dayColors[dstr]!==undefined?PASTELS[S.dayColors[dstr]].c:'';
-      cells+=`<div class="cell ${out?'out':''} ${out&&S.settings.showAdjShade?'shade':''} ${dstr===todayStr()?'today':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
+      cells+=`<div class="cell ${out?'out':''} ${out&&S.settings.showAdjShade?'shade':''} ${dstr===todayStr()?'today':''}${cellSel.has(dstr)?' selc':''}" data-d="${dstr}" ${bg?`style="background:${bg}"`:''}>
         <div class="top"><span class="dn ${hol||dow===0?'sun':dow===6?'sat':''}">${d}</span>
           ${rk?`<span class="rk ${rk==='大安'?'taian':''}">${rk}</span>`:''}${ich?'<span class="ich">万倍</span>':''}</div>
         ${hol?`<div class="holname">${esc(hol)}</div>`:''}
@@ -2508,7 +2518,7 @@ function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr)
     </div>
     <div class="dpacts">
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
-      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();openColorSheet('${dstr}')">🎨 色分け</button>
+      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')">🎨 色分け</button>
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 この日を開く</button></div>
     <div class="dphint">長押しでこの日のページへ</div>
   </div>`;
@@ -2520,6 +2530,7 @@ function dpPressStart(dstr){clearTimeout(_dpPress);_dpPress=setTimeout(()=>{clos
 function dpPressEnd(){clearTimeout(_dpPress);}
 /* 長押し→色（タップでは発動しない。移動・スクロール・指を離すと確実にキャンセル） */
 let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressLp=null,lpSuppress=false,pressDocBound=false;
+let cellSel=new Set(),cellSelMode=false; // 複数セル選択で「まとめて色分け」
 function endPressTimer(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
 function attachCellPress(){
   if(!pressDocBound){pressDocBound=true;
@@ -2529,7 +2540,7 @@ function attachCellPress(){
     },{passive:true});
     document.addEventListener('pointerup',()=>{
       const had=!!pressTimer;endPressTimer();
-      if(had&&pressCell&&!pressFired)openDayPopup(pressCell.dataset.d);
+      if(had&&pressCell&&!pressFired){if(cellSelMode)toggleCellSel(pressCell.dataset.d);else openDayPopup(pressCell.dataset.d);}
       pressCell=null;pressLp=null;pressStart=null;setTimeout(()=>{pressFired=false;},0);});
     document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressLp=null;pressStart=null;});
     window.addEventListener('scroll',()=>endPressTimer(),{passive:true});
@@ -2542,7 +2553,7 @@ function attachCellPress(){
       endPressTimer();pressFired=false;pressCell=kind==='cell'?el:null;pressLp=kind==='lp'?el:null;pressStart=[e.clientX,e.clientY];
       pressTimer=setTimeout(()=>{pressTimer=null;pressFired=true;
         try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}
-        if(kind==='cell')openColorSheet(el.dataset.d);
+        if(kind==='cell'){if(cellSelMode)toggleCellSel(el.dataset.d);else openCellColorPop(el.dataset.d,el);}
         else{lpSuppress=true;openItemColorSheet(el.dataset.lp);}},600);
     });};
   $$('.cell').forEach(el=>bind(el,'cell'));
@@ -2605,16 +2616,33 @@ async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);cons
   else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
     x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);advanceRepeatTask(x);}save();render();if(!done)checkCelebrate();}}
-function openColorSheet(dstr){
-  const sheet=$('#colorSheet');
-  sheet.innerHTML=`<div class="t">${fmtDateJa(dstr)} の色分け</div><div class="sw">
-    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
-    <button class="clear" onclick="setDayColor('${dstr}',null)">なし</button></div>`;
-  sheet.classList.add('show');
-  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+/* (a) 単日の色分け＝押したセルの下に小さくポップ表示 */
+function openCellColorPop(dstr,el){const pop=$('#cellpop');
+  pop.innerHTML=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
+    <button class="clear" onclick="setDayColor('${dstr}',null)">なし</button></div>
+    <button class="cpmore" onclick="enterCellSel('${dstr}')">▤ 他の日もまとめて色分け</button>`;
+  pop.style.display='block';
+  const r=el.getBoundingClientRect();const pw=pop.offsetWidth,ph=pop.offsetHeight;
+  let left=r.left;if(left+pw>window.innerWidth-6)left=window.innerWidth-pw-6;left=Math.max(6,left);
+  let top=r.bottom+4;if(top+ph>window.innerHeight-6)top=r.top-ph-4; // 下に入らなければ上へ
+  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
+  const close=e=>{if(!pop.contains(e.target)){pop.style.display='none';document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function setDayColor(d,i){if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;
-  save();$('#colorSheet').classList.remove('show');render();attachCellPress();}
+  save();$('#cellpop').style.display='none';render();attachCellPress();}
+/* (b) 複数セル選択→まとめて色分け */
+function enterCellSel(d){$('#cellpop').style.display='none';cellSelMode=true;cellSel=new Set(d?[d]:[]);render();attachCellPress();openMultiColorSheet();}
+function exitCellSel(){cellSelMode=false;cellSel=new Set();$('#colorSheet').classList.remove('show');render();attachCellPress();}
+function toggleCellSel(d){cellSel.has(d)?cellSel.delete(d):cellSel.add(d);render();attachCellPress();openMultiColorSheet();}
+function openMultiColorSheet(){const sheet=$('#colorSheet');
+  sheet.innerHTML=`<div class="t">${cellSel.size}日を選択中（セルをタップで追加／解除）</div><div class="sw">
+    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setMultiColor(${i})" title="${p.n}"></button>`).join('')}
+    <button class="clear" onclick="setMultiColor(null)">なし</button></div>
+    <div class="actsheet" style="margin-top:8px;"><button onclick="exitCellSel()">✓ 完了（選択をやめる）</button></div>`;
+  sheet.classList.add('show');}
+function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選んでください');return;}
+  cellSel.forEach(d=>{if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;});
+  save();render();attachCellPress();openMultiColorSheet();toast((i===null?'色を消しました':'色をつけました')+'（'+cellSel.size+'日）');}
 
 /* ===== event modal ===== */
 function eventModal(id,presetDate,presetStart,occDate){
@@ -2763,10 +2791,26 @@ function eventTap(id,occDate){const e=S.events.find(x=>x.id===id);if(!e)return;c
   sheet.classList.add('show');
   const close=e2=>{if(!sheet.contains(e2.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
-function dupEventPick(id){const e=S.events.find(v=>v.id===id);datePickModal(ds=>dupEventTo(id,ds),e?.date);}
-function dupEventTo(id,date){const e=S.events.find(v=>v.id===id);if(!e)return;
-  const copy={...JSON.parse(JSON.stringify(e)),id:uid(),date,repeat:''};S.events.push(copy);
-  save();eventModal(copy.id);} // 複製してそのまま編集画面へ
+/* 複製＝複製先の日付を複数選べる。1日ならそのまま編集、複数ならまとめて複製 */
+let _dupSel=new Set(),_dupId=null;
+function dupEventPick(id){const e=S.events.find(v=>v.id===id);if(!e)return;_dupId=id;_dupSel=new Set();const d=parseDs(e.date);_dpY=d.getFullYear();_dpX=d.getMonth();dupPickRender();}
+function dupToggle(ds){_dupSel.has(ds)?_dupSel.delete(ds):_dupSel.add(ds);dupPickRender();}
+function dupNav(k){_dpX+=k;if(_dpX<0){_dpX=11;_dpY--;}if(_dpX>11){_dpX=0;_dpY++;}dupPickRender();}
+function dupPickRender(){const e=S.events.find(v=>v.id===_dupId);const ws=S.settings.weekStart||0;const start=(new Date(_dpY,_dpX,1).getDay()-ws+7)%7;const dim=new Date(_dpY,_dpX+1,0).getDate();let cells='';
+  for(let i=0;i<start;i++)cells+='<span></span>';
+  for(let dn=1;dn<=dim;dn++){const ds=`${_dpY}-${pad(_dpX+1)}-${pad(dn)}`;cells+=`<button class="${_dupSel.has(ds)?'on':''}" onclick="dupToggle('${ds}')">${dn}</button>`;}
+  const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
+  openModal(`<div class="mh"><b>「${esc(evTitle(e))}」を複製</b><button onclick="closeModal()">✕</button></div>
+    <div class="mbody"><div class="dpnav"><button onclick="dupNav(-1)">‹</button><span>${_dpY}年${_dpX+1}月</span><button onclick="dupNav(1)">›</button></div>
+    <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
+    <div class="mini">複製先の日付をタップ（<b>複数OK</b>）。1日なら選んでそのまま内容編集、複数ならまとめて複製します。</div></div>
+    <div class="mbtns"><button onclick="closeModal()">やめる</button><button class="save" onclick="dupDo()">${_dupSel.size?_dupSel.size+'日に複製':'複製する'}</button></div>`);}
+function dupDo(){if(!_dupSel.size){toast('複製先の日付を選んでください');return;}const e=S.events.find(v=>v.id===_dupId);if(!e){closeModal();return;}
+  snapUndo();const dates=[..._dupSel].sort();let firstId=null;
+  dates.forEach(date=>{const copy={...JSON.parse(JSON.stringify(e)),id:uid(),date,repeat:'',exdates:[],until:undefined};S.events.push(copy);if(!firstId)firstId=copy.id;});
+  save();
+  if(dates.length===1)eventModal(firstId); // 1日ならそのまま編集画面へ
+  else{closeModal();render();attachCellPress();flashUndo(dates.length+'日に複製しました');}}
 let _dpY,_dpX,_dpCb;
 function datePickModal(cb,init){const d=init?new Date(init+'T00:00'):new Date();_dpY=d.getFullYear();_dpX=d.getMonth();_dpCb=cb;dpRender();}
 function dpNav(k){_dpX+=k;if(_dpX<0){_dpX=11;_dpY--;}if(_dpX>11){_dpX=0;_dpY++;}dpRender();}
@@ -3335,7 +3379,11 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.85（2026-07-27）</b><br>
+  <div class="mini"><b>v1.86（2026-07-27）</b><br>
+  ・カレンダーの<b>長押し色分け</b>ポップを、画面下部ではなく<b>押した日付セルの下</b>に表示<br>
+  ・月カレンダーで<b>複数の日をまとめて色分け</b>できるように（「他の日もまとめて」→日付をタップで複数選択→色をタップ）<br>
+  ・<b>予定の複製で複製先の日付を複数選べる</b>ように（1日なら選んでそのまま編集、複数ならまとめて複製）<br>
+  <b>v1.85（2026-07-27）</b><br>
   ・<b>繰り返し予定の削除</b>でも範囲を選べるように：<b>「この予定のみ／この予定以降／すべて削除」</b><br>
   <b>v1.84（2026-07-27）</b><br>
   ・<b>各カラーにカテゴリ名を割り当て</b>できるように（設定→予定・カテゴリ設定→カラーパレットの各色に名前を入力）。<b>同じ名前を複数の色に付ける重複もOK</b>。付けた名前は予定・グループの色選びに表示されます<br>
