@@ -790,7 +790,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.80';
+const APP_VERSION='v1.81';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -830,7 +830,8 @@ function HUE(i){const d=HUES12[i]||{n:'',p:'#CCCCCC',v:'#888888'};const o=(S.set
 function hueOf(e){if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
-function evColor(e){const h=HUE(hueOf(e));return (e&&e.important)?h.v:h.p;}
+/* 本体（付箋）＝子グループのパステル。重要でも彩度は上げない（彩度アップは親ラインで表現） */
+function evColor(e){return HUE(hueOf(e)).p;}
 /* 親（最上位グループ）の色＝縦ライン、子（その予定のグループ）の色＝本体 */
 function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(gid||'')%HUES12.length;
   let guard=0;while(g.parentId&&guard++<20){const p=S.groups.find(x=>x.id===g.parentId);if(!p)break;g=p;}
@@ -2619,7 +2620,7 @@ function eventModal(id,presetDate,presetStart,occDate){
     <div class="frow"><label>色（未選択＝グループの色。この予定だけ変えたいとき選択）</label>
       <div class="huepick" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span style="font-size:9px;color:#888;">G</span></button>${HUES12.map((_,i)=>{const h=HUE(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`;}).join('')}</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
-      <span style="font-size:13px;">★ 重要な予定（同じ色のポップ〔彩度高め〕で目立たせる）</span></div>
+      <span style="font-size:13px;">★ 重要な予定（枠を太くして目立たせる）</span></div>
     <div class="frow"><label>マーク（予定名の頭に表示・任意）</label>
       <div class="icontabs" id="emIconTabs"></div>
       <div class="icongrid" id="emIconGrid"></div>
@@ -3191,7 +3192,7 @@ function renderSettings(){
       <h3>📅 予定・記録</h3>
       <p>予定は「＋追加」や、タイムラインの<b>空き時間をタップ</b>して追加。予定を<b>タップ</b>すると右に詳細（メモ・リンク）がひらきます。「📝記録」でその日の出来事・行った場所も残せます。</p>
       <h3>🎨 色（カテゴリ）</h3>
-      <p>予定・カテゴリは<b>12色</b>から選べます。設定→予定・カテゴリ設定で「この色は仕事／家族」など<b>名前</b>を付けられます（TimeTree式）。<b>★重要</b>にすると同じ色が濃く目立ちます。</p>
+      <p>予定・カテゴリは<b>12色</b>から選べます。設定→予定・カテゴリ設定で「この色は仕事／家族」など<b>名前</b>を付けられます（TimeTree式）。本体は子グループのパステル、親グループは彩度高めの色ラインで表示されます。</p>
       <h3>🔁 ルーティン／タスク</h3>
       <p>毎日・毎週くり返すことは「<b>ルーティン</b>」。1回きりの用事は「<b>タスク</b>」。タスクにも<b>繰り返し</b>を設定でき、完了すると次回に送られます。</p>
       <h3>📱 スマホに入れる</h3>
@@ -3255,11 +3256,11 @@ function renderSettings(){
     <div class="sec-h">カラーパレット（12色・テスト期間中は編集可）</div>
     <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="huerow">
       <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="パステル">
-      <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="ポップ（★重要）">
+      <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="ポップ（親グループのライン色）">
       <span class="huse">${users.length?users.map(g=>esc(g.name)).join('・'):'<span class="unused">未使用</span>'}</span>
       <button class="huereset ${ch?'':'off'}" onclick="resetHue(${i})" title="この色を初期値に戻す">↺</button></div>`;}).join('')}</div>
     <div style="padding:2px 16px 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
-    <div class="mini">左の2つ＝<b>パステル／ポップ</b>の色（タップで変更）、右＝<b>その色を使っているグループ</b>。ふだんはパステル、<b>★重要</b>で同じ色のポップ表示。<b>テスト期間中は自由に調整OK</b>です。</div>
+    <div class="mini">左の2つ＝<b>パステル／ポップ</b>の色（タップで変更）、右＝<b>その色を使っているグループ</b>。予定の本体は<b>子グループのパステル</b>、<b>親グループはポップ（彩度高め）</b>で色ラインに表示。子の色を変えたらそちらを優先します。<b>テスト期間中は自由に調整OK</b>です。</div>
     <div class="setrow" style="cursor:pointer;" onclick="manageTmpl()"><div><div class="sl">よく使う予定（テンプレ）</div><div class="sd">${S.templates.length}件</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="linkList()"><div><div class="sl">よく使うリンク</div><div class="sd">${S.links.length}件・今日の画面から素早く開ける</div></div><span style="color:var(--sub);">▸</span></div>`;
   if(P==='data')return back+`<div class="vhead"><h1>同期・データ</h1></div>
@@ -3288,7 +3289,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.80（2026-07-27）</b><br>
+  <div class="mini"><b>v1.81（2026-07-27）</b><br>
+  ・色の考え方を整理：<b>「重要」で彩度は上げません</b>（本体は子グループのパステルのまま）。<b>親グループを彩度高め</b>の色ラインで表現し、<b>子の色をユーザーが変えたらそちらを優先</b>。重要は枠の太さで区別します<br>
+  <b>v1.80（2026-07-27）</b><br>
   ・週表示の予定ブロックに<b>タイトル＋開始〜終了時刻</b>を表示（参考イメージに合わせて見やすく）<br>
   <b>v1.79（2026-07-27）</b><br>
   ・<b>週表示をGoogleカレンダー方式</b>に刷新：7日×時間軸のグリッドで、時間指定の予定をブロック表示。<b>今日の現在時刻ライン</b>・<b>重なりは横並び</b>・終日欄つき<br>
