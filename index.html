@@ -243,7 +243,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #undobar button{color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:16px !important;padding:6px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
 /* 配色パレット選択 */
 .huelegend{display:flex;flex-direction:column;gap:6px;padding:2px 16px 6px;}
+.hueitem{display:flex;flex-direction:column;gap:2px;}
 .huerow{display:flex;align-items:center;gap:8px;}
+.huerow .hlabin{flex:1;min-width:0;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);background:var(--card,#fff);color:var(--ink);}
+.huse2{font-size:10.5px;color:var(--sub);padding-left:2px;}
 .huerow .hcp{width:34px;height:30px;flex:0 0 34px;padding:2px;border:1px solid var(--line);border-radius:6px !important;background:none;cursor:pointer;}
 .huerow .hlab{flex:1;min-width:0;font-size:12.5px;padding:6px 8px;}
 .huerow .huse{flex:1;min-width:0;font-size:11.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -793,7 +796,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.83';
+const APP_VERSION='v1.84';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2638,7 +2641,7 @@ function eventModal(id,presetDate,presetStart,occDate){
       <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
     <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
     <div class="frow"><label>色（未選択＝グループの色。この予定だけ変えたいとき選択）</label>
-      <div class="huepick" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span style="font-size:9px;color:#888;">G</span></button>${HUES12.map((_,i)=>{const h=HUE(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span></button>`;}).join('')}</div></div>
+      <div class="huepick labeled" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span class="pop" style="background:#ccc;"></span><span class="hpl">グループの色</span></button>${HUES12.map((_,i)=>{const h=HUE(i);const lab=hueLabel(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${esc(lab||h.n)}"><span class="pop" style="background:${h.v}"></span><span class="hpl">${esc(lab||h.n)}</span></button>`;}).join('')}</div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
       <span style="font-size:13px;">★ 重要な予定（枠を太くして目立たせる）</span></div>
     <div class="frow"><label>マーク（予定名の頭に表示・任意）</label>
@@ -3280,13 +3283,15 @@ function renderSettings(){
       <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
       <div class="mini" style="padding:5px 0 0;">「あざやか」＝彩度高め／「くすみ」＝やわらかい落ち着いた色。予定の付箋すべてに反映されます。</div></div>
     <div class="sec-h">カラーパレット（12色・テスト期間中は編集可）</div>
-    <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="huerow">
-      <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="パステル">
-      <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="ポップ（親グループのライン色）">
-      <span class="huse">${users.length?users.map(g=>esc(g.name)).join('・'):'<span class="unused">未使用</span>'}</span>
-      <button class="huereset ${ch?'':'off'}" onclick="resetHue(${i})" title="この色を初期値に戻す">↺</button></div>`;}).join('')}</div>
+    <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="hueitem">
+      <div class="huerow">
+        <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="色（パステル）">
+        <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="濃い色（マーク・夜ライン用）">
+        <input type="text" class="hlabin" value="${esc(hueLabel(i))}" placeholder="${users.length?esc(users.map(g=>g.name).join('・')):'カテゴリ名（任意・重複OK）'}" onchange="setHueLabel(${i},this.value);render()">
+        <button class="huereset ${ch?'':'off'}" onclick="resetHue(${i})" title="この色を初期値に戻す">↺</button></div>
+      ${users.length?`<div class="huse2">グループ：${users.map(g=>esc(g.name)).join('・')}</div>`:''}</div>`;}).join('')}</div>
     <div style="padding:2px 16px 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
-    <div class="mini">左の2つ＝<b>パステル／ポップ</b>の色（タップで変更）、右＝<b>その色を使っているグループ</b>。予定の本体は<b>子グループのパステル</b>、<b>親グループはポップ（彩度高め）</b>で色ラインに表示。子の色を変えたらそちらを優先します。<b>テスト期間中は自由に調整OK</b>です。</div>
+    <div class="mini">左の2つ＝<b>色</b>（タップで変更）、右の欄に<b>カテゴリ名</b>を入力できます（例：仕事／家族／通院。同じ色を複数カテゴリで<b>重複してOK</b>）。付けた名前は予定の色を選ぶときに表示されます。<b>テスト期間中は自由に調整OK</b>です。</div>
     <div class="setrow" style="cursor:pointer;" onclick="manageTmpl()"><div><div class="sl">よく使う予定（テンプレ）</div><div class="sd">${S.templates.length}件</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="linkList()"><div><div class="sl">よく使うリンク</div><div class="sd">${S.links.length}件・今日の画面から素早く開ける</div></div><span style="color:var(--sub);">▸</span></div>`;
   if(P==='data')return back+`<div class="vhead"><h1>同期・データ</h1></div>
@@ -3315,7 +3320,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.83（2026-07-27）</b><br>
+  <div class="mini"><b>v1.84（2026-07-27）</b><br>
+  ・<b>各カラーにカテゴリ名を割り当て</b>できるように（設定→予定・カテゴリ設定→カラーパレットの各色に名前を入力）。<b>同じ名前を複数の色に付ける重複もOK</b>。付けた名前は予定・グループの色選びに表示されます<br>
+  <b>v1.83（2026-07-27）</b><br>
   ・<b>夜の予定</b>の表示を変更：月アイコンをやめ、<b>付箋の下部にうっすらグレーライン</b>で夜を表現<br>
   ・<b>予定の色トーン</b>を追加：<b>あざやか（彩度高め）／標準／くすみ</b>から選べます（設定→予定・カテゴリ設定）<br>
   <b>v1.82（2026-07-27）</b><br>
@@ -3761,8 +3768,8 @@ function groupModal(id,presetParent){
       <option value="">なし（最上位）</option>
       ${S.groups.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${parent===x.id?'selected':''}>${esc(groupPath(x.id))}</option>`).join('')}</select></div>
     <div class="frow"><label>色（予定と共通の12色パレット）</label><div class="huepick labeled" id="gmColor">
-      ${HUES12.map((_,i)=>{const h=HUE(i);const users=S.groups.filter(x=>x.id!==id&&groupHue(x.id)===i);return `<button type="button" data-h="${i}" class="${curHue===i?'on':''}" style="background:${h.p}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')" title="${h.n}"><span class="pop" style="background:${h.v}"></span><span class="hpl ${users.length?'used':'unused'}">${users.length?'使用中：'+esc(users.map(u=>u.name).join('・')):'未使用'}</span></button>`;}).join('')}</div>
-      <div class="mini" style="padding:4px 0 0;">各色に<b>使用中のグループ名</b>を表示（未使用も分かります）。同じ色を複数グループで使ってもOK。</div></div>
+      ${HUES12.map((_,i)=>{const h=HUE(i);const lab=hueLabel(i);const users=S.groups.filter(x=>x.id!==id&&groupHue(x.id)===i);const cap=lab||(users.length?'使用中：'+users.map(u=>u.name).join('・'):'未使用');return `<button type="button" data-h="${i}" class="${curHue===i?'on':''}" style="background:${h.p}" onclick="$$('#gmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')" title="${esc(lab||h.n)}"><span class="pop" style="background:${h.v}"></span><span class="hpl ${lab||users.length?'used':'unused'}">${esc(cap)}</span></button>`;}).join('')}</div>
+      <div class="mini" style="padding:4px 0 0;">各色の<b>カテゴリ名</b>（設定→カラーパレットで付与）や使用中のグループを表示。同じ色を複数で使ってもOK。</div></div>
     ${g&&g.parentId?`<div class="mini" style="padding:0 0 8px;">マークの見え方：<span class="gmark" style="width:14px;height:14px;${markCss(g.id)}"></span>（親の色＋自分の色）</div>`:''}
   </div>
   <div class="mbtns">${g?`<button class="del" onclick="delGroup('${g.id}')">削除</button>`:''}
