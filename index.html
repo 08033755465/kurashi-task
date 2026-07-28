@@ -237,6 +237,9 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .btnrow{display:flex;flex-wrap:wrap;gap:6px;}
 .btnrow button{padding:9px 14px;border:1px solid var(--line);color:var(--sub);font-size:13px;border-radius:8px !important;background:var(--bg);}
 .btnrow button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+/* 4つの部屋（色付きボタン）＝選択中は色を保ったまま黒枠で示す */
+.btnrow.quadc button{color:var(--ink);}
+.btnrow.quadc button.on{color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);}
 .minpick .minchips{margin-top:7px;}
 .minchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .minchips button{flex:1 1 auto;min-width:52px;border:1px solid var(--line);padding:9px 0;font-size:13px;}
@@ -815,7 +818,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.88';
+const APP_VERSION='v1.89';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2258,13 +2261,15 @@ function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
 function quickAddPop(){
   const gid=lastTaskGroupId();
-  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">⚡ タスクをさっと追加
+  const QP=['#FBE3E8','#FCE4CF','#FBF6D3','#E4F3D9']; // 薄ピンク→薄オレンジ→薄黄→薄黄緑
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">✅ タスク追加
     <input id="qaTitle" placeholder="タスク名を入力…" style="width:100%;margin-top:10px;font-size:16px;padding:11px 10px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)qaSave(false)">
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">グループ</label>
     <select id="qaGroup" style="width:100%;">${S.groups.map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
-    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">優先度</label>
-    <div class="btnrow" id="qaPrioRow">${[[1,'高'],[2,'中'],[3,'低']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v===2?'on':''}" onclick="pickBtn('qaPrioRow','qaPrio','${v}')">${l}</button>`).join('')}</div>
-    <input type="hidden" id="qaPrio" value="2">
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">4つの部屋</label>
+    <div class="btnrow quadc" id="qaQuadRow">${QUADS.map((q,i)=>`<button type="button" data-v="${i+1}" style="background:${QP[i]};" onclick="pickBtn('qaQuadRow','qaQuad','${i+1}')">${q.t}</button>`).join('')}
+      <button type="button" data-v="0" class="on" style="background:var(--bg);" onclick="pickBtn('qaQuadRow','qaQuad','0')">未分類</button></div>
+    <input type="hidden" id="qaQuad" value="0">
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">いつやる</label>
     <div class="btnrow" id="qaWhenRow">${[['today','今日'],['tomorrow','明日'],['','いつか']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v==='today'?'on':''}" onclick="pickBtn('qaWhenRow','qaWhen','${v}')">${l}</button>`).join('')}</div>
     <input type="hidden" id="qaWhen" value="today"></div>
@@ -2273,12 +2278,13 @@ function quickAddPop(){
   const el=$('#qaTitle');if(el)el.focus();}
 function qaSave(detail){
   const title=($('#qaTitle')?.value||'').trim();
-  const gid=$('#qaGroup').value;const pr=+($('#qaPrio')?.value||2);const when=$('#qaWhen')?.value??'today';
+  const gid=$('#qaGroup').value;const quad=+($('#qaQuad')?.value||0);const when=$('#qaWhen')?.value??'today';
+  const pr=quad===1?1:quad===4?3:2; // 4つの部屋→並び用の優先度（保存時と同じ変換）
   if(!title){
     if(detail){dlgEnd();taskModal(null,'',when==='today');return;}
     toast('タスク名を入力してください');$('#qaTitle')?.focus();return;}
   snapUndo();const id=uid();
-  S.tasks.push({id,title,groupId:gid,estMin:15,quad:0,qOrder:0,priority:pr,due:'',repeat:'',status:'todo',waitNote:'',
+  S.tasks.push({id,title,groupId:gid,estMin:15,quad,qOrder:0,priority:pr,due:'',repeat:'',status:'todo',waitNote:'',
     today:when==='today'?todayStr():when==='tomorrow'?tomorrowStr():null,
     memo:'',links:[],images:[],pin:false,snooze:null,order:Date.now(),createdAt:todayStr()});
   S.settings.lastTaskGroup=gid;save();
@@ -2513,13 +2519,14 @@ function advanceRepeatTask(x){if(!x.repeat)return false;
   toast(`完了！${fmtDateJa(nd)} にまた表示します🔁`);return true;}
 /* 日付が変わったら、完了済みの繰り返しタスクを未完了に戻す（＝翌日また入る） */
 function resetRepeatDone(){const t=todayStr();let n=0;
-  S.tasks.forEach(x=>{if(x.repeat&&x.status==='done'&&x.doneAt&&x.doneAt<t){
+  S.tasks.forEach(x=>{if((x.repeat||x.pin)&&x.status==='done'&&x.doneAt&&x.doneAt<t){
     x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.repeatPrev;n++;}});
   if(n)save();}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
   if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;
     if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
-  else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
+  else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);
+    if(!advanceRepeatTask(x)&&x.pin)toast('今日の分を完了！明日また表示します📌');}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
@@ -3444,7 +3451,10 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.88（2026-07-28）</b><br>
+  <div class="mini"><b>v1.89（2026-07-28）</b><br>
+  ・<b>毎日表示（pin）タスクも「今日の分だけ完了」</b>できるように。完了すると今日はグレーで残って記録に入り、<b>翌日また未完了で表示</b>されます<br>
+  ・タスク追加ポップを<b>「✅ タスク追加」</b>に改名し、優先度の代わりに<b>4つの部屋</b>（薄ピンク→薄オレンジ→薄黄→薄黄緑の色分け）で選ぶ形に<br>
+  <b>v1.88（2026-07-28）</b><br>
   ・<b>どのタブでも右下の「＋」でタスクをさっと追加</b>。開いた瞬間に入力でき、Enterまたは「追加」で連続入力もOK。「詳細も書く」で全項目の編集へ<br>
   ・タスクの<b>グループは前回選んだものを最初から選択</b><br>
   ・<b>繰り返しタスク</b>：完了すると今日はグレーで残り（戻すのも可）、<b>翌日また未完了として入ります</b><br>
