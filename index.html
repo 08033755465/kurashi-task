@@ -818,7 +818,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.90';
+const APP_VERSION='v1.91';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1885,16 +1885,27 @@ function tlEmptyTap(ev){if(placeToks)return;
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 開始ボタン下：今日のタスク（チェックボックス・小さめ） */
+/* 今日のタスクの並び：手動順(torder・タスクタブと共通)→優先度。完了は一番下 */
+const chkTaskSort=(a,b)=>((a.status==='done')-(b.status==='done'))||((a.torder??1e9)-(b.torder??1e9))||((a.priority||2)-(b.priority||2));
+/* ▲▼で並び替え＝タスクタブの「手動」順にも連動 */
+function moveChecklistTask(id,dir){const t=todayStr();
+  const vis=todayTasks(t).slice().sort(chkTaskSort).filter(x=>x.status!=='done');
+  const i=vis.findIndex(x=>x.id===id);const j=i+dir;if(i<0||j<0||j>=vis.length)return;
+  const nb=vis[j].id;
+  let ids=manualTaskIds().filter(x=>x!==id);
+  const ni=ids.indexOf(nb);if(ni<0)return;
+  ids.splice(dir<0?ni:ni+1,0,id);
+  commitTaskOrder(ids);taskSort='manual';render();}
 function todayTaskChecklist(t){
-  // 優先度順（高→中→低）。完了は一番下
-  const tasks=todayTasks(t).slice().sort((a,b)=>((a.status==='done')-(b.status==='done'))||((a.priority||2)-(b.priority||2)));
+  const tasks=todayTasks(t).slice().sort(chkTaskSort);
   if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" style="${quadBg(x)?`background:${quadBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
       <div class="tct" onclick="taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
-      <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div></div>`).join('')}</div></div>`;}
+      <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div>
+      ${x.status==='done'?'':`<div class="arrows h"><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',1)">▼</button></div>`}</div>`).join('')}</div></div>`;}
 /* 未配置プールをタップ→配置モード（トグル選択） */
 function tapPool(tok){if(!placeToks)placeToks=[];const i=placeToks.indexOf(tok);
   i>=0?placeToks.splice(i,1):placeToks.push(tok);if(!placeToks.length)placeToks=null;render();}
@@ -3474,7 +3485,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.90（2026-07-28）</b><br>
+  <div class="mini"><b>v1.91（2026-07-28）</b><br>
+  ・<b>「今日のタスク」を▲▼で並び替え</b>できるように。並びは<b>タスクタブの「手動」順と連動</b>（どちらで並び替えても同じ順になります）<br>
+  <b>v1.90（2026-07-28）</b><br>
   ・今日タブのタスクに<b>4つの部屋の色</b>を表示（薄ピンク／薄オレンジ／薄黄／薄黄緑。自分で色分けした場合はそちら優先）<br>
   ・✅タスク追加に<b>「▸ 詳細も入力」</b>を追加：ポップの中で<b>所要時間・期限・繰り返し・メモ・毎日表示</b>まで入れられます（連続入力時は次のタスクに引き継ぎません）<br>
   <b>v1.89（2026-07-28）</b><br>
