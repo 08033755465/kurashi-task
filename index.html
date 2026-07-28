@@ -605,7 +605,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .setmenu .seticon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;}
 
 /* color popover (bottom sheet) */
-#colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;}
+#colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;max-height:72vh;overflow-y:auto;}
 #colorSheet.show{display:block;}
 /* セル直下に出る色分けポップ */
 #cellpop{position:fixed;z-index:130;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.28);padding:8px;display:none;}
@@ -818,7 +818,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.92';
+const APP_VERSION='v1.93';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1915,14 +1915,29 @@ function moveChecklistTask(id,dir){const t=todayStr();
   const ni=ids.indexOf(nb);if(ni<0)return;
   ids.splice(dir<0?ni:ni+1,0,id);
   commitTaskOrder(ids);taskSort='manual';render();}
+/* 今日のタスクをタップ→アクションメニュー（編集・削除・完了・明日へ等）。詳細編集は「✎ 編集」から */
+function chkTaskMenu(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;const sheet=$('#colorSheet');
+  const done=x.status==='done';
+  sheet.innerHTML=`<div class="t">${esc(x.title)}</div><div class="actsheet">
+    ${done?`<button onclick="closeSheet();toggleTaskDone('${id}')">↩ 未完了に戻す</button>`
+      :`<button onclick="closeSheet();toggleTaskDone('${id}')">✓ 完了にする</button>
+       <button onclick="closeSheet();chkDayDone('${id}')">☀ 今日のみ完了（明日また表示）</button>`}
+    <button onclick="closeSheet();taskModal('${id}')">✎ 編集</button>
+    ${done?'':`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ</button>
+    <button onclick="closeSheet();archiveToday('${id}')">🗂 アーカイブ（今日は隠す）</button>`}
+    <button class="del" onclick="closeSheet();delTask('${id}')">🗑 削除</button></div>
+    <div class="mini" style="padding:8px 0 0;">並び替えは行の▲▼、長押しで完了・優先度・色のメニューが開きます。</div>`;
+  sheet.classList.add('show');
+  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function todayTaskChecklist(t){
   const tasks=todayTasks(t).slice().sort(chkTaskSort);
   if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
-    <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" style="${quadBg(x)?`background:${quadBg(x)};`:''}">
+    <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${quadBg(x)?`background:${quadBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
-      <div class="tct" onclick="taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
+      <div class="tct" onclick="chkTaskMenu('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
       <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div>
       ${x.status==='done'?'':`<div class="arrows h"><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',1)">▼</button></div>`}</div>`).join('')}</div></div>`;}
 /* 未配置プールをタップ→配置モード（トグル選択） */
@@ -2310,8 +2325,7 @@ function quickAddPop(){
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">いつやる</label>
     <div class="btnrow" id="qaWhenRow">${[['today','今日'],['tomorrow','明日'],['','いつか']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v==='today'?'on':''}" onclick="pickBtn('qaWhenRow','qaWhen','${v}')">${l}</button>`).join('')}</div>
     <input type="hidden" id="qaWhen" value="today">
-    <button type="button" class="inlineadd" id="qaDetailBtn" style="margin-top:12px;" onclick="qaToggleDetail()">▸ 詳細も入力（時間・期限・繰り返し・メモ）</button>
-    <div id="qaDetail" style="display:none;">
+    <div id="qaDetail" style="margin-top:14px;border-top:1px solid var(--line2);padding-top:2px;">
       <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">所要時間（分）</label>${minPicker('qaEst',15)}
       <div style="display:flex;gap:10px;margin-top:10px;">
         <div style="flex:1;"><label style="font-size:12px;color:var(--sub);display:block;margin:0 0 3px;">期限</label><input id="qaDue" type="date" style="width:100%;"></div>
@@ -2322,17 +2336,13 @@ function quickAddPop(){
     <div class="db"><button onclick="dlgEnd()">閉じる</button><button onclick="qaSave(true)">詳細も書く</button><button class="ok" onclick="qaSave(false)">追加</button></div>`;
   $('#dlgWrap').classList.add('show');
   const el=$('#qaTitle');if(el)el.focus();}
-function qaToggleDetail(){const d=$('#qaDetail'),b=$('#qaDetailBtn');if(!d)return;
-  const open=d.style.display==='none';d.style.display=open?'block':'none';
-  if(b)b.textContent=(open?'▾':'▸')+' 詳細も入力（時間・期限・繰り返し・メモ）';}
 /* クイック追加の途中でカテゴリ新規作成→入力内容を保ったまま戻る */
 function qaAddGroup(){
   const st={title:$('#qaTitle')?.value||'',quad:$('#qaQuad')?.value||'0',when:$('#qaWhen')?.value??'today',
     est:$('#qaEst')?.value,due:$('#qaDue')?.value||'',rep:$('#qaRep')?.value||'',memo:$('#qaMemo')?.value||'',
-    pin:!!$('#qaPin')?.checked,open:$('#qaDetail')&&$('#qaDetail').style.display==='block'};
+    pin:!!$('#qaPin')?.checked};
   groupInlinePop(null,gid=>{quickAddPop();
     $('#qaTitle').value=st.title;pickBtn('qaQuadRow','qaQuad',st.quad);pickBtn('qaWhenRow','qaWhen',st.when);
-    if(st.open)qaToggleDetail();
     if($('#qaEst')&&st.est)$('#qaEst').value=st.est;if($('#qaDue'))$('#qaDue').value=st.due;
     if($('#qaRep'))$('#qaRep').value=st.rep;if($('#qaMemo'))$('#qaMemo').value=st.memo;
     if($('#qaPin'))$('#qaPin').checked=st.pin;
@@ -2586,11 +2596,16 @@ function advanceRepeatTask(x){if(!x.repeat)return false;
   toast(`完了！${fmtDateJa(nd)} にまた表示します🔁`);return true;}
 /* 日付が変わったら、完了済みの繰り返しタスクを未完了に戻す（＝翌日また入る） */
 function resetRepeatDone(){const t=todayStr();let n=0;
-  S.tasks.forEach(x=>{if((x.repeat||x.pin)&&x.status==='done'&&x.doneAt&&x.doneAt<t){
-    x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.repeatPrev;n++;}});
+  S.tasks.forEach(x=>{if((x.repeat||x.pin||x.dayDone)&&x.status==='done'&&x.doneAt&&x.doneAt<t){
+    x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.repeatPrev;delete x.dayDone;n++;}});
   if(n)save();}
+/* 「今日のみ完了」＝今日の分は完了として記録し、明日また未完了で表示 */
+function chkDayDone(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo();
+  x.status='done';x.doneAt=todayStr();x.doneMin=curMin();x.dayDone=true;sinkDoItem('t_'+id);
+  save();render();flashUndo('今日の分を完了！明日また表示します');checkCelebrate();}
+function archiveToday(id){snapUndo();applyHideToday('t_'+id);save();render();flashUndo('今日は隠しました（アーカイブ）');}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;
+  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
     if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
   else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);
     if(!advanceRepeatTask(x)&&x.pin)toast('今日の分を完了！明日また表示します📌');}
@@ -2690,7 +2705,12 @@ function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const sheet=$('#colorSheet');
   const isToday=type==='t'&&obj.today===todayStr();
   sheet.innerHTML=`<div class="t">${esc(obj.title)}</div>
-    ${type==='t'?`<div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
+    ${type==='t'?`<div class="actsheet" style="margin-bottom:10px;">
+      ${obj.status==='done'?`<button onclick="closeSheet();toggleTaskDone('${id}')">↩ 未完了に戻す</button>`
+        :`<button onclick="closeSheet();toggleTaskDone('${id}')">✓ 完了にする</button>
+         <button onclick="closeSheet();chkDayDone('${id}')">☀ 今日のみ完了（明日また表示）</button>
+         <button onclick="closeSheet();archiveToday('${id}')">🗂 アーカイブ（今日は隠す）</button>`}</div>
+    <div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
       ${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>
     <div class="actsheet" style="margin-bottom:10px;">
       ${isToday?`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ（今日から消える）</button>`
@@ -3518,7 +3538,12 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.92（2026-07-28）</b><br>
+  <div class="mini"><b>v1.93（2026-07-28）</b><br>
+  ・今日のタスクを<b>タップするとメニュー</b>が開くように（完了／今日のみ完了／編集／明日へ／アーカイブ／削除。詳細編集は「✎ 編集」から）<br>
+  ・今日のタスクを<b>長押しすると完了メニュー</b>（✓完了／☀今日のみ完了／🗂アーカイブ／➡明日へ＋優先度・色）<br>
+  ・<b>「☀ 今日のみ完了」</b>を追加：今日は完了として記録され、<b>明日また未完了で表示</b>されます<br>
+  ・✅タスク追加は<b>折りたたみをやめて全項目をそのまま表示</b>（名前→グループ→部屋→いつやる→時間→期限・繰り返し→メモの順）<br>
+  <b>v1.92（2026-07-28）</b><br>
   ・<b>予定・タスク・✅タスク追加のどこからでも、カテゴリを新規作成</b>できるように（「＋新規」ボタン）。<b>親カテゴリを選べば子カテゴリも作れます</b>。作ったカテゴリはその場で選択され、色は空いている色を自動で使います<br>
   <b>v1.91（2026-07-28）</b><br>
   ・<b>「今日のタスク」を▲▼で並び替え</b>できるように。並びは<b>タスクタブの「手動」順と連動</b>（どちらで並び替えても同じ順になります）<br>
