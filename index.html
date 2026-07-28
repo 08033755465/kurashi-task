@@ -818,7 +818,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.91';
+const APP_VERSION='v1.92';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1169,13 +1169,32 @@ function eventOccursOn(e,dstr){
 function evTitle(e){return e.title&&e.title.trim()?e.title:(e.start?e.start+'の予定':'予定');}
 function repTag(e){return e.repeat?`<span class="rep">🔁${REPEAT_LABEL[e.repeat]||''}</span>`:'';}
 /* 予定・タスクのフォームからその場で新規カテゴリ追加 */
-async function addGroupInline(selId){
-  const name=await uiPrompt('新しいカテゴリ名');if(name===null)return;
-  const nm=name.trim();if(!nm)return;
+/* 予定・タスクのフォームから、その場で新規カテゴリ（親・子どちらも）を作成 */
+let _giCb=null;
+function groupInlinePop(selId,after){
+  _giCb=after||null;
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">＋ 新しいカテゴリ
+    <input id="giName" placeholder="カテゴリ名（例：仕事／クライアントA）" style="width:100%;margin-top:10px;font-size:16px;padding:10px;">
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">親カテゴリ（任意）</label>
+    <select id="giParent" style="width:100%;"><option value="">なし（いちばん上の階層）</option>
+      ${S.groups.map(g=>`<option value="${g.id}">${esc(groupPath(g.id))} の下に</option>`).join('')}</select>
+    <div class="mini" style="padding:6px 0 0;">親を選ぶと子カテゴリになります（例：仕事 ▸ クライアントA）。色は空いている色を自動で使います。</div></div>
+    <div class="db"><button onclick="giCancel()">やめる</button><button class="ok" onclick="giCreate('${selId||''}')">作成</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  const el=$('#giName');if(el)el.focus();}
+function giCreate(selId){const nm=($('#giName')?.value||'').trim();
+  if(!nm){toast('カテゴリ名を入力してください');$('#giName')?.focus();return;}
+  const parentId=$('#giParent').value||null;
   const used=new Set(S.groups.map(g=>g.hue));
-  let hue=0;for(let i=0;i<HUES12.length;i++){if(!used.has(i)){hue=i;break;}hue=S.groups.length%HUES12.length;}
-  const g={id:uid(),name:nm,parentId:null,hue};S.groups.push(g);save();
-  const sel=$('#'+selId);if(sel){sel.innerHTML=S.groups.map(x=>`<option value="${x.id}">${esc(groupPath(x.id))}</option>`).join('');sel.value=g.id;}}
+  let hue=S.groups.length%HUES12.length;
+  for(let i=0;i<HUES12.length;i++)if(!used.has(i)){hue=i;break;}
+  const g={id:uid(),name:nm,parentId,hue};S.groups.push(g);save();
+  dlgEnd();const cb=_giCb;_giCb=null;
+  if(cb){cb(g.id);return;}
+  const sel=$('#'+selId);if(sel){sel.innerHTML=S.groups.map(x=>`<option value="${x.id}">${esc(groupPath(x.id))}</option>`).join('');sel.value=g.id;}
+  toast('カテゴリ「'+nm+'」を作成しました');}
+function giCancel(){const cb=_giCb;_giCb=null;dlgEnd();if(cb)cb(null);}
+async function addGroupInline(selId){groupInlinePop(selId);}
 
 /* ========================= Supabase同期（オフラインファースト） ========================= */
 /* ローカル(localStorage)が本体。設定があれば自動でクラウドへ押し上げ、新しい方を採用する */
@@ -2282,7 +2301,8 @@ function quickAddPop(){
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;">✅ タスク追加
     <input id="qaTitle" placeholder="タスク名を入力…" style="width:100%;margin-top:10px;font-size:16px;padding:11px 10px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)qaSave(false)">
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">グループ</label>
-    <select id="qaGroup" style="width:100%;">${S.groups.map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
+    <div style="display:flex;gap:8px;"><select id="qaGroup" style="flex:1;min-width:0;">${S.groups.map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
+      <button type="button" class="inlineadd" onclick="qaAddGroup()">＋新規</button></div>
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">4つの部屋</label>
     <div class="btnrow quadc" id="qaQuadRow">${QUADS.map((q,i)=>`<button type="button" data-v="${i+1}" style="background:${QP[i]};" onclick="pickBtn('qaQuadRow','qaQuad','${i+1}')">${q.t}</button>`).join('')}
       <button type="button" data-v="0" class="on" style="background:var(--bg);" onclick="pickBtn('qaQuadRow','qaQuad','0')">未分類</button></div>
@@ -2305,6 +2325,18 @@ function quickAddPop(){
 function qaToggleDetail(){const d=$('#qaDetail'),b=$('#qaDetailBtn');if(!d)return;
   const open=d.style.display==='none';d.style.display=open?'block':'none';
   if(b)b.textContent=(open?'▾':'▸')+' 詳細も入力（時間・期限・繰り返し・メモ）';}
+/* クイック追加の途中でカテゴリ新規作成→入力内容を保ったまま戻る */
+function qaAddGroup(){
+  const st={title:$('#qaTitle')?.value||'',quad:$('#qaQuad')?.value||'0',when:$('#qaWhen')?.value??'today',
+    est:$('#qaEst')?.value,due:$('#qaDue')?.value||'',rep:$('#qaRep')?.value||'',memo:$('#qaMemo')?.value||'',
+    pin:!!$('#qaPin')?.checked,open:$('#qaDetail')&&$('#qaDetail').style.display==='block'};
+  groupInlinePop(null,gid=>{quickAddPop();
+    $('#qaTitle').value=st.title;pickBtn('qaQuadRow','qaQuad',st.quad);pickBtn('qaWhenRow','qaWhen',st.when);
+    if(st.open)qaToggleDetail();
+    if($('#qaEst')&&st.est)$('#qaEst').value=st.est;if($('#qaDue'))$('#qaDue').value=st.due;
+    if($('#qaRep'))$('#qaRep').value=st.rep;if($('#qaMemo'))$('#qaMemo').value=st.memo;
+    if($('#qaPin'))$('#qaPin').checked=st.pin;
+    if(gid)$('#qaGroup').value=gid;});}
 function qaSave(detail){
   const title=($('#qaTitle')?.value||'').trim();
   const gid=$('#qaGroup').value;const quad=+($('#qaQuad')?.value||0);const when=$('#qaWhen')?.value??'today';
@@ -2332,7 +2364,8 @@ function taskModal(id,presetDue,presetToday){
   openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
-    <div class="frow"><label>グループ</label>${(()=>{const selG=x?x.groupId:lastTaskGroupId();return `<select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${selG===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>`;})()}</div>
+    <div class="frow"><label>グループ</label><div style="display:flex;gap:8px;">${(()=>{const selG=x?x.groupId:lastTaskGroupId();return `<select id="tmGroup" style="flex:1;min-width:0;">${S.groups.map(g=>`<option value="${g.id}" ${selG===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>`;})()}
+      <button type="button" class="inlineadd" onclick="groupInlinePop('tmGroup')">＋新規</button></div></div>
     <div class="frow"><label>所要時間（分）</label>${minPicker('tmEst',x?.estMin??15)}</div>
     <div class="frow"><label>重要度・緊急度（4つの箱）</label>
       <div class="quadsel" id="tmQuad">
@@ -3485,7 +3518,9 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.91（2026-07-28）</b><br>
+  <div class="mini"><b>v1.92（2026-07-28）</b><br>
+  ・<b>予定・タスク・✅タスク追加のどこからでも、カテゴリを新規作成</b>できるように（「＋新規」ボタン）。<b>親カテゴリを選べば子カテゴリも作れます</b>。作ったカテゴリはその場で選択され、色は空いている色を自動で使います<br>
+  <b>v1.91（2026-07-28）</b><br>
   ・<b>「今日のタスク」を▲▼で並び替え</b>できるように。並びは<b>タスクタブの「手動」順と連動</b>（どちらで並び替えても同じ順になります）<br>
   <b>v1.90（2026-07-28）</b><br>
   ・今日タブのタスクに<b>4つの部屋の色</b>を表示（薄ピンク／薄オレンジ／薄黄／薄黄緑。自分で色分けした場合はそちら優先）<br>
