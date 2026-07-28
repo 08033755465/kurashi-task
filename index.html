@@ -818,7 +818,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.93';
+const APP_VERSION='v1.94';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -3533,12 +3533,15 @@ function renderSettings(){
       <label>改善メモ（次にやりたいこと・気づき）</label>
       <textarea rows="3" placeholder="使っていて気づいた改善点をここにメモ" onchange="S.notes=this.value;save();">${esc(S.notes)}</textarea>
       <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-        <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">${s.feedbackUrl?'📮 改善DBへ送信（Gmail通知つき）':'📧 メモをGmailへ送る'}</button></div>
-      <div class="mini" style="padding:10px 0 0;">通知先メール：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
-      改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
-      <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
+        <button style="border:1px solid var(--ink);padding:8px 16px;font-size:13px;font-weight:600;" onclick="sendNotes()">📮 改善DBへ送信</button></div>
+      <div class="mini" style="padding:10px 0 0;">送信すると<b>Notionの改善DB</b>に記録されます（Vercel経由。うまくいかない時はメール下書きになります）。<br>
+      連絡先メール（任意）：<input type="email" style="width:230px;display:inline-block;padding:3px 8px;font-size:12px;" value="${esc(s.notifyEmail)}" onchange="S.settings.notifyEmail=this.value;save();"><br>
+      <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
+      <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.93（2026-07-28）</b><br>
+  <div class="mini"><b>v1.94（2026-07-28）</b><br>
+  ・<b>改善メモの送信先をNotionの改善DBに接続</b>（Vercelサーバー経由で直接記録。設定→個人・改善設定の「📮 改善DBへ送信」）。GASの用意は不要になりました<br>
+  <b>v1.93（2026-07-28）</b><br>
   ・今日のタスクを<b>タップするとメニュー</b>が開くように（完了／今日のみ完了／編集／明日へ／アーカイブ／削除。詳細編集は「✎ 編集」から）<br>
   ・今日のタスクを<b>長押しすると完了メニュー</b>（✓完了／☀今日のみ完了／🗂アーカイブ／➡明日へ＋優先度・色）<br>
   ・<b>「☀ 今日のみ完了」</b>を追加：今日は完了として記録され、<b>明日また未完了で表示</b>されます<br>
@@ -3873,20 +3876,29 @@ function toggleNotify(el){
   }else{S.settings.notifyOn=false;save();render();}}
 async function sendNotes(){const memo=(S.notes||'').trim();
   if(!memo){uiAlert('メモが空です。先に改善メモを書いてください。');return;}
-  const d=new Date();
+  const d=new Date();const dev=(navigator.userAgent||'').slice(0,80);
+  const payload={action:'feedback',type:'改善要望',content:memo,
+    contact:S.settings.notifyEmail||'',email:S.settings.notifyEmail||'',device:dev,sentAt:d.toISOString()};
+  // 1) Vercelの窓口（/api/kaizen）→ Notion改善DBに直接記録
+  try{
+    const r=await fetch('/api/kaizen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok){S.notes='';save();render();uiAlert('送信しました📮 Notionの改善DBに記録しました。');return;}
+    if(r.status===500&&/NOTION_TOKEN/.test(j.error||'')&&!S.settings.feedbackUrl){
+      uiAlert('サーバー側の設定（NOTION_TOKEN）がまだのようです。設定が済むと自動で記録されます。');return;}
+  }catch(e){/* Vercel以外（localhost等）ではここへ→下のフォールバック */}
+  // 2) GAS URLが設定されていればそちらへ
   if(S.settings.feedbackUrl){
     try{
-      await fetch(S.settings.feedbackUrl,{method:'POST',mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'feedback',type:'改善要望',content:memo,
-          contact:S.settings.notifyEmail,sentAt:d.toISOString()})});
-      S.notes='';save();render();
-      uiAlert('送信しました📮 Notionの改善DBに記録され、Gmailにも通知が届きます。');
-    }catch(e){uiAlert('送信に失敗しました。ネット接続を確認するか、後でもう一度お試しください。');}
-  }else{
-    location.href='mailto:'+encodeURIComponent(S.settings.notifyEmail)
-      +'?subject='+encodeURIComponent(`【くらしタスク】改善メモ ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`)
-      +'&body='+encodeURIComponent(memo);}}
+      await fetch(S.settings.feedbackUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify(payload)});
+      S.notes='';save();render();uiAlert('送信しました📮 Notionの改善DBに記録され、Gmailにも通知が届きます。');return;
+    }catch(e){}
+  }
+  // 3) 最後の手段＝メール下書き
+  location.href='mailto:'+encodeURIComponent(S.settings.notifyEmail||'')
+    +'?subject='+encodeURIComponent(`【くらしタスク】改善メモ ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`)
+    +'&body='+encodeURIComponent(memo);}
 /* 一覧モーダル（設定画面には一覧を並べない） */
 function bdayList(){openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
