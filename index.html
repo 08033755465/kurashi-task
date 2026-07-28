@@ -161,8 +161,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .evpopmemo{font-size:12px;line-height:1.5;color:var(--ink);word-break:break-word;}
 .evpopacts{display:flex;gap:6px;margin-top:2px;}
 .evpopacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:7px 4px;font-size:11.5px;}
-/* 「先頭へ／今へ」＝常時表示（画面右下に固定） */
-.tlnowbtns{position:fixed;right:14px;bottom:calc(58px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:flex-end;z-index:48;pointer-events:none;}
+/* 「先頭へ／今へ」＝常時表示（＋ボタンの左に並べる） */
+.tlnowbtns{position:fixed;right:70px;bottom:calc(58px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:flex-end;z-index:48;pointer-events:none;}
+/* どのタブでも押せる「タスクさっと追加」ボタン */
+#quickadd{position:fixed;right:14px;bottom:calc(58px + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:50% !important;background:var(--ink);color:#fff;font-size:26px;line-height:1;z-index:48;box-shadow:0 4px 14px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;padding-bottom:2px;}
 .tlnowbtn{pointer-events:auto;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);}
 .tl{position:relative;flex:1;min-width:0;}
 .tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
@@ -512,6 +514,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .pinbadge{font-size:9.5px;border:1px solid var(--line);color:var(--sub);padding:1px 5px;letter-spacing:.05em;margin-left:4px;white-space:nowrap;}
 .arrows{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:0 8px 0 0;}
 .arrows button{border:1px solid var(--line2);font-size:9px;line-height:1;padding:5px 7px;color:var(--sub);}
+/* 省スペース行用の横並び▲▼ */
+.arrows.h{flex-direction:row;padding:0 2px 0 0;gap:2px;}
+.arrows.h button{padding:7px 6px;}
+/* 長押しシートの優先度ボタン */
+#colorSheet .sw.prio button{font-size:13px;font-weight:600;align-items:center;padding-bottom:0;color:var(--ink);}
+#colorSheet .sw.prio button.on{border:2px solid var(--ink);font-weight:800;}
 /* 4つの箱 */
 .quadwrap{padding:10px 12px;}
 .qhint{font-size:11.5px;color:var(--sub);padding:2px 4px 8px;line-height:1.6;}
@@ -779,6 +787,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 <div id="dlgWrap"><div id="dlg"></div></div>
 <div id="colorSheet"></div>
 <div id="cellpop"></div>
+<button id="quickadd" onclick="quickAddPop()" title="タスクをさっと追加">＋</button>
 <div id="flowbar"></div>
 <div id="flow"></div>
 <div id="lightbox" onclick="if(event.target===this)closeLightbox()"></div>
@@ -806,7 +815,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.87';
+const APP_VERSION='v1.88';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1587,13 +1596,15 @@ function doItemRowDense(it,t,tok){
       <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?CHK:''}</div>
       <div class="dt" onclick="setAnchor('${tok}');routineModal('${r.id}')">${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}${r.memo?' 📝':''}${r.images&&r.images.length?' 📷':''}</div>
       <span class="typetag r">ルーティン</span>
-      <div class="dtime">${SLOTS[r.slot].slice(0,1)}・${fmtMin(r.estMin)}</div></div>`;}
+      <div class="dtime">${SLOTS[r.slot].slice(0,1)}・${fmtMin(r.estMin)}</div>
+      <div class="arrows h"><button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button><button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button></div></div>`;}
   const x=it.obj;const done=x.status==='done';
   return `<div class="ditem ${done?'done':''}" data-lp="t_${x.id}" data-do="${tok}" style="${pastelBg(x)}border-left:3px solid ${bc};">
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${done?CHK:''}</div>
     <div class="dt" onclick="setAnchor('${tok}');taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.status==='wait'?'<span class="wtag">待</span>':''}${x.memo?' 📝':''}${x.images&&x.images.length?' 📷':''}</div>
     <span class="typetag t">タスク</span>
-    <div class="dtime">${done?doneLabel(x,t):(x.estMin?fmtMin(x.estMin):'')}</div></div>`;}
+    <div class="dtime">${done?doneLabel(x,t):(x.estMin?fmtMin(x.estMin):'')}</div>
+    <div class="arrows h"><button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button><button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button></div></div>`;}
 function doItemRow(it,t){
   const tok=it.type+'_'+it.obj.id;
   if(S.settings.dense)return doItemRowDense(it,t,tok);
@@ -1865,7 +1876,10 @@ function tlEmptyTap(ev){if(placeToks)return;
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 開始ボタン下：今日のタスク（チェックボックス・小さめ） */
-function todayTaskChecklist(t){const tasks=todayTasks(t);if(!tasks.length)return '';
+function todayTaskChecklist(t){
+  // 優先度順（高→中→低）。完了は一番下
+  const tasks=todayTasks(t).slice().sort((a,b)=>((a.status==='done')-(b.status==='done'))||((a.priority||2)-(b.priority||2)));
+  if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}">
@@ -2239,6 +2253,38 @@ function openLightbox(src){$('#lightbox').innerHTML=`<button class="lbclose" onc
 function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightbox').innerHTML='';}
 
 /* ===== task modal ===== */
+/* ⚡ どのタブからでもタスクをさっと追加（開いた瞬間に入力できる） */
+function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
+  return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
+function quickAddPop(){
+  const gid=lastTaskGroupId();
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">⚡ タスクをさっと追加
+    <input id="qaTitle" placeholder="タスク名を入力…" style="width:100%;margin-top:10px;font-size:16px;padding:11px 10px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)qaSave(false)">
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">グループ</label>
+    <select id="qaGroup" style="width:100%;">${S.groups.map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">優先度</label>
+    <div class="btnrow" id="qaPrioRow">${[[1,'高'],[2,'中'],[3,'低']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v===2?'on':''}" onclick="pickBtn('qaPrioRow','qaPrio','${v}')">${l}</button>`).join('')}</div>
+    <input type="hidden" id="qaPrio" value="2">
+    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">いつやる</label>
+    <div class="btnrow" id="qaWhenRow">${[['today','今日'],['tomorrow','明日'],['','いつか']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v==='today'?'on':''}" onclick="pickBtn('qaWhenRow','qaWhen','${v}')">${l}</button>`).join('')}</div>
+    <input type="hidden" id="qaWhen" value="today"></div>
+    <div class="db"><button onclick="dlgEnd()">閉じる</button><button onclick="qaSave(true)">詳細も書く</button><button class="ok" onclick="qaSave(false)">追加</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  const el=$('#qaTitle');if(el)el.focus();}
+function qaSave(detail){
+  const title=($('#qaTitle')?.value||'').trim();
+  const gid=$('#qaGroup').value;const pr=+($('#qaPrio')?.value||2);const when=$('#qaWhen')?.value??'today';
+  if(!title){
+    if(detail){dlgEnd();taskModal(null,'',when==='today');return;}
+    toast('タスク名を入力してください');$('#qaTitle')?.focus();return;}
+  snapUndo();const id=uid();
+  S.tasks.push({id,title,groupId:gid,estMin:15,quad:0,qOrder:0,priority:pr,due:'',repeat:'',status:'todo',waitNote:'',
+    today:when==='today'?todayStr():when==='tomorrow'?tomorrowStr():null,
+    memo:'',links:[],images:[],pin:false,snooze:null,order:Date.now(),createdAt:todayStr()});
+  S.settings.lastTaskGroup=gid;save();
+  if(detail){dlgEnd();taskModal(id);return;}
+  $('#qaTitle').value='';render();toast('追加しました（続けて入力OK）');
+  const el=$('#qaTitle');if(el)el.focus();}
 function taskModal(id,presetDue,presetToday){
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
@@ -2246,7 +2292,7 @@ function taskModal(id,presetDue,presetToday){
   openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
-    <div class="frow"><label>グループ</label><select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${x?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select></div>
+    <div class="frow"><label>グループ</label>${(()=>{const selG=x?x.groupId:lastTaskGroupId();return `<select id="tmGroup">${S.groups.map(g=>`<option value="${g.id}" ${selG===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>`;})()}</div>
     <div class="frow"><label>所要時間（分）</label>${minPicker('tmEst',x?.estMin??15)}</div>
     <div class="frow"><label>重要度・緊急度（4つの箱）</label>
       <div class="quadsel" id="tmQuad">
@@ -2291,6 +2337,7 @@ function saveTask(id){
     if(taskAddAfter){taskSort='manual';let ids=manualTaskIds().filter(i=>i!==newId);
       const ai=ids.indexOf(taskAddAfter);if(ai>=0)ids.splice(ai+1,0,newId);else ids.push(newId);
       commitTaskOrder(ids);taskAddAfter=null;}}
+  S.settings.lastTaskGroup=data.groupId; // 次回のグループ初期値に
   chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
   save();closeModal();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
@@ -2457,16 +2504,21 @@ function nextTaskDate(fromDs,repeat){const d=parseDs(fromDs);
   else if(repeat==='monthly')d.setMonth(d.getMonth()+1);
   else return null;
   return dsOf(d);}
+/* 繰り返しタスク：今日は「完了」のまま残す（グレー・戻せる）。次回日付へ進め、日付が変わったら自動で未完了に復活 */
 function advanceRepeatTask(x){if(!x.repeat)return false;
   const t=todayStr();const base=x.today||x.due||t;const nd=nextTaskDate(base,x.repeat);if(!nd)return false;
-  const pd=parseDs(base);const md=(pd.getMonth()+1)+'/'+pd.getDate();
-  const label=(base!==t)?`${x.title}（${md}分）`:x.title; // いつの分か分かるように
-  dayLogs(t).push({id:uid(),kind:'done',text:label,at:curMin(),dur:0});
-  x.status='todo';x.today=nd;if(x.due)x.due=nd;delete x.doneAt;delete x.doneMin;
+  x.repeatPrev={today:x.today??null,due:x.due||''}; // 戻す用
+  x.today=nd;if(x.due)x.due=nd;
   const at=dayLog(t).at;if(at)delete at['t_'+x.id];
-  toast(`完了！${base!==t?`（${md}分）`:''}次回は ${fmtDateJa(nd)} に繰り返します🔁`);return true;}
+  toast(`完了！${fmtDateJa(nd)} にまた表示します🔁`);return true;}
+/* 日付が変わったら、完了済みの繰り返しタスクを未完了に戻す（＝翌日また入る） */
+function resetRepeatDone(){const t=todayStr();let n=0;
+  S.tasks.forEach(x=>{if(x.repeat&&x.status==='done'&&x.doneAt&&x.doneAt<t){
+    x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.repeatPrev;n++;}});
+  if(n)save();}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;}
+  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;
+    if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
   else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
@@ -2562,12 +2614,25 @@ function pastelBg(obj){return (obj&&obj.color!=null&&PASTELS[obj.color])?`backgr
 function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
   const sheet=$('#colorSheet');
-  sheet.innerHTML=`<div class="t">${esc(obj.title)} の色分け</div><div class="sw">
+  const isToday=type==='t'&&obj.today===todayStr();
+  sheet.innerHTML=`<div class="t">${esc(obj.title)}</div>
+    ${type==='t'?`<div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
+      ${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>
+    <div class="actsheet" style="margin-bottom:10px;">
+      ${isToday?`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ（今日から消える）</button>`
+        :`<button onclick="closeSheet();sendTaskToday('${id}')">☀ 今日へ${obj.today===tomorrowStr()?'戻す':'入れる'}</button>`}
+    </div>`:''}
+    <div class="t">色分け</div><div class="sw">
     ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
     <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+function setItemPrio(id,p){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  x.priority=p;save();render();closeSheet();toast('優先度を「'+({1:'高',2:'中',3:'低'}[p])+'」にしました');}
+function sendTaskTomorrow(id){snapUndo();applyTomorrow('t_'+id);save();render();flashUndo('明日へ送りました（長押し→今日へ戻す で戻せます）');}
+function sendTaskToday(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  snapUndo();x.today=todayStr();x.snooze=null;save();render();flashUndo('今日に入れました');}
 function setItemColor(tok,i){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);
   if(obj){if(i===null)delete obj.color;else obj.color=i;}
@@ -3379,7 +3444,13 @@ function renderSettings(){
       改善送信用GAS URL（設定するとNotion改善DB＋Gmailに自動送信。未設定ならメール下書き）：<br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.87（2026-07-28）</b><br>
+  <div class="mini"><b>v1.88（2026-07-28）</b><br>
+  ・<b>どのタブでも右下の「＋」でタスクをさっと追加</b>。開いた瞬間に入力でき、Enterまたは「追加」で連続入力もOK。「詳細も書く」で全項目の編集へ<br>
+  ・タスクの<b>グループは前回選んだものを最初から選択</b><br>
+  ・<b>繰り返しタスク</b>：完了すると今日はグレーで残り（戻すのも可）、<b>翌日また未完了として入ります</b><br>
+  ・今日タブのタスクを<b>優先度順（高→中→低）</b>に。省スペース行にも<b>▲▼の並び替え</b>を追加<br>
+  ・タスクを<b>長押し→優先度（高/中/低）と「明日へ／今日へ戻す」</b>をその場で変更できます<br>
+  <b>v1.87（2026-07-28）</b><br>
   ・今日タブを開いたとき<b>トップ（先頭）から表示</b>するように（「今」への自動ジャンプを廃止）<br>
   ・<b>「先頭へ／今へ」ボタンを常時表示</b>に（右下に固定。スクロールしなくても押せます）<br>
   <b>v1.86（2026-07-27）</b><br>
@@ -3919,7 +3990,9 @@ function applyDayOrderToRoutines(dstr){const seq=routineSeqOf(dstr);
     inSlot.sort((a,b)=>{const ia=seq.indexOf(a.id),ib=seq.indexOf(b.id);return (ia<0?9e9:ia)-(ib<0?9e9:ib);});
     inSlot.forEach((r,i)=>r.order=i);});
   save();}
-async function checkDayRollover(){const today=todayStr();const last=S.lastActiveDay;S.lastActiveDay=today;save();
+async function checkDayRollover(){const today=todayStr();const last=S.lastActiveDay;S.lastActiveDay=today;
+  resetRepeatDone(); // 完了済みの繰り返しタスクを未完了に戻す
+  save();
   if(!last||last>=today)return;
   if(!routineArrangeChanged(last))return;
   const md=parseDs(last);
