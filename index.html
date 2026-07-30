@@ -212,7 +212,18 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl.placing{cursor:pointer;outline:2px dashed var(--accent);outline-offset:-2px;}
 .tl.placing .tltask,.tl.placing .tlev{pointer-events:none;opacity:.5;}
 /* 右：未配置プール */
-.tlpool{flex:0 0 118px;width:118px;position:sticky;top:calc(env(safe-area-inset-top) + 6px);align-self:flex-start;display:flex;flex-direction:column;gap:5px;}
+.tlaside{flex:0 0 148px;width:148px;display:flex;flex-direction:column;gap:8px;position:sticky;top:calc(env(safe-area-inset-top) + 6px);align-self:flex-start;}
+.tlpool{width:100%;display:flex;flex-direction:column;gap:5px;}
+/* バーチカル横の「今日のタスク」＝コンパクト表示 */
+.tlaside .sec{margin:0;padding:0;}
+.tlaside .sec .sec-h{font-size:11px;padding:0 2px 2px;}
+.tlaside .sec .sec-h .act{display:none;}
+.tlaside .tchk{background:var(--bg);}
+.tlaside .tchkr{padding:5px 6px;gap:5px;font-size:11px;}
+.tlaside .tchkr .cb{flex:0 0 16px;width:16px;height:16px;}
+.tlaside .tchkr .cb svg{width:11px;height:11px;}
+.tlaside .tchkr .tct{font-size:11px;white-space:normal;line-height:1.25;}
+.tlaside .tchkr .tcm,.tlaside .tchkr .arrows{display:none;}
 .tlpoolh{font-size:10.5px;font-weight:700;color:var(--sub);padding:0 2px;line-height:1.3;}
 /* 今日のタスク チェックリスト */
 .tchk{display:flex;flex-direction:column;}
@@ -454,6 +465,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .wkev.mkonly,.wkev.plain{background:none !important;box-shadow:none;}
 .wknow{position:absolute;left:0;right:0;border-top:2px solid #E5484D;z-index:4;}
 .wknow::before{content:'';position:absolute;left:-2px;top:-3px;width:5px;height:5px;border-radius:50% !important;background:#E5484D;}
+/* 色並び順の設定リスト */
+.poList{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.poRow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px !important;}
+.poRow .poSw{width:18px;height:18px;border-radius:4px !important;border:1px solid var(--line);}
+.poRow .poName{flex:1;font-size:12.5px;}
+.poRow .poNo{font-size:11px;color:var(--sub);width:20px;text-align:right;}
 /* 週・月メモ */
 .pnote{margin:10px 14px 14px;border:1px solid var(--line2);border-radius:12px !important;padding:10px 12px;background:var(--card,#fff);}
 .pnote .pnh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
@@ -854,7 +871,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.95';
+const APP_VERSION='v1.96';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -871,12 +888,26 @@ const QUADS=[
  {t:'計画してやる',s:'重要×緊急でない',c:'#2456E6'},
  {t:'サッと片付ける',s:'緊急×重要でない',c:'#D98324'},
  {t:'スキマにやる',s:'どちらでもない',c:'#7A7F8C'}];
+/* パステルカラー（カレンダー長押し色付けと共通・タスクも同じパレットを使う） */
 const PASTELS=[{c:'#FBE3E8',n:'もも'},{c:'#FCEFD9',n:'あんず'},{c:'#FBF6D3',n:'れもん'},{c:'#E1F1DC',n:'わかば'},{c:'#DDEBF9',n:'そら'},{c:'#E8E2F5',n:'ふじ'}];
-/* 4つの部屋の色（薄ピンク→薄オレンジ→薄黄→薄黄緑）。LINE＝行の左ラインなど少し濃いめ */
-const QUAD_BG=['#FBE3E8','#FCE4CF','#FBF6D3','#E4F3D9'];
-const QUAD_LINE=['#E88AA0','#E8A85E','#D4BC3A','#8FC96A'];
-function quadBg(x){return x&&x.quad?QUAD_BG[x.quad-1]:'';}
-function quadLine(x){return x&&x.quad?QUAD_LINE[x.quad-1]:'';}
+/* 4つの部屋→パステル色の対応（今すぐ＝もも,計画＝あんず,サッと＝れもん,スキマ＝わかば） */
+const QUAD_TO_PASTEL=[0,1,2,3];
+/* タスクの色インデックス（0..PASTELS.length-1）。x.colorを最優先、なければ部屋(quad)から引く */
+function taskPastelIdx(x){if(!x)return -1;
+  if(x.color!=null&&PASTELS[x.color])return x.color;
+  if(x.quad){const i=QUAD_TO_PASTEL[x.quad-1];return i!=null?i:-1;}
+  return -1;}
+function taskBg(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
+function taskLineC(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
+/* G設定で並べ替え可能な色の並び順（既定＝PASTELS順） */
+function pastelOrder(){const o=S.settings.pastelOrder;
+  if(Array.isArray(o)&&o.length===PASTELS.length)return o;
+  return PASTELS.map((_,i)=>i);}
+function pastelRank(x){const i=taskPastelIdx(x);if(i<0)return 999;
+  const idx=pastelOrder().indexOf(i);return idx<0?998:idx;}
+function movePastelOrder(i,dir){const arr=pastelOrder().slice();const at=arr.indexOf(i);if(at<0)return;
+  const to=at+dir;if(to<0||to>=arr.length)return;
+  [arr[at],arr[to]]=[arr[to],arr[at]];S.settings.pastelOrder=arr;save();render();}
 /* 予定の配色: 12色 × 2トーン（p=パステル / v=ポップ〔彩度高め〕）。重要な予定はポップで表示 */
 const HUES12=[
   {n:'すみ（黒）',   p:'#C7CAD0', v:'#33363B'},
@@ -1502,7 +1533,7 @@ function renderToday(){
     <button class="composeBtn" onclick="composeToday()">🔁 ルーティンを選ぶ${routines.length?`（${routines.length}）`:''}</button>
     <button class="startBtn2" onclick="startFlow()">▶ 開始</button>
   </div>
-  ${todayTaskChecklist(t)}
+  ${S.settings.timeline?'':todayTaskChecklist(t)/* タイムライン中はバーチカルの右横に出す */}
   <div class="gmsg">${gmsg}</div>
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
@@ -1679,8 +1710,8 @@ function doItemRowDense(it,t,tok){
       <div class="dtime">${SLOTS[r.slot].slice(0,1)}・${fmtMin(r.estMin)}</div>
       <div class="arrows h"><button onclick="event.stopPropagation();moveDoItem('${tok}',-1)">▲</button><button onclick="event.stopPropagation();moveDoItem('${tok}',1)">▼</button></div></div>`;}
   const x=it.obj;const done=x.status==='done';
-  const bgs=pastelBg(x)||(quadBg(x)?`background:${quadBg(x)};`:''); // 4つの部屋の色（自分で色分けした場合はそちら優先）
-  return `<div class="ditem ${done?'done':''}" data-lp="t_${x.id}" data-do="${tok}" style="${bgs}border-left:3px solid ${quadLine(x)||bc};">
+  const bg=taskBg(x); // カレンダーと同じパステルカラー（自分で色分け→なければ4つの部屋から）
+  return `<div class="ditem ${done?'done':''}" data-lp="t_${x.id}" data-do="${tok}" style="${bg?`background:${bg};`:''}border-left:3px solid ${bg||bc};">
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${done?CHK:''}</div>
     <div class="dt" onclick="setAnchor('${tok}');taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.status==='wait'?'<span class="wtag">待</span>':''}${x.memo?' 📝':''}${x.images&&x.images.length?' 📷':''}</div>
     <span class="typetag t">タスク</span>
@@ -1940,9 +1971,10 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
         ${rowImgs(e.images)}
         <div class="evpopacts"><button onclick="eventModal('${e.id}',null,null,'${t}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}','${t}');tlEvSel=null;">🗑</button></div>
       </div></div>`;})():'';
+  const tasksAside=todayTaskChecklist(t);
   return `${hint}<div class="tlwrap">
     <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${blockH}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}${gutterH}</div>
-    ${poolHtml}${evPop}</div>${actionBar}
+    <div class="tlaside">${poolHtml}${tasksAside}</div>${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 終了（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。<b>左の時間軸をタップ＝作業ブロック</b>（今からの作業時間）。予定はタップで<b>詳細</b>が右にひらきます。</div>`
@@ -1967,7 +1999,16 @@ function tlEmptyTap(ev){if(placeToks)return;
 function toggleTimeline(){S.settings.timeline=!S.settings.timeline;if(S.settings.timeline)_tlPendingScroll=true;save();render();}
 /* 開始ボタン下：今日のタスク（チェックボックス・小さめ） */
 /* 今日のタスクの並び：手動順(torder・タスクタブと共通)→優先度。完了は一番下 */
-const chkTaskSort=(a,b)=>((a.status==='done')-(b.status==='done'))||((a.torder??1e9)-(b.torder??1e9))||((a.priority||2)-(b.priority||2));
+/* 今日のタスク並び：完了は下／優先度高(1)は最上部／それ以外は「色の並び順」→ 新規が上（createdAt降順）→ 手動torder→ 優先度 */
+function cmpCreatedDesc(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');}
+const chkTaskSort=(a,b)=>{
+  const dd=(a.status==='done')-(b.status==='done');if(dd)return dd;
+  const pa=(a.priority||2),pb=(b.priority||2);
+  if((pa===1)!==(pb===1))return pa===1?-1:1; // 優先度「高」は最上部（色並びより優先）
+  const cr=pastelRank(a)-pastelRank(b);if(cr)return cr;              // 色の並び順
+  const nd=cmpCreatedDesc(a,b);if(nd)return nd;                      // 新規が上
+  const to=(a.torder??1e9)-(b.torder??1e9);if(to)return to;         // 手動並び
+  return pa-pb;};
 /* ▲▼で並び替え＝タスクタブの「手動」順にも連動 */
 function moveChecklistTask(id,dir){const t=todayStr();
   const vis=todayTasks(t).slice().sort(chkTaskSort).filter(x=>x.status!=='done');
@@ -1977,11 +2018,13 @@ function moveChecklistTask(id,dir){const t=todayStr();
   const ni=ids.indexOf(nb);if(ni<0)return;
   ids.splice(dir<0?ni:ni+1,0,id);
   commitTaskOrder(ids);taskSort='manual';render();}
-/* 今日のタスクをタップ→行のすぐ近くに小さなアイコンポップ（大きなシートは廃止） */
-function cpClose(){const p=$('#cellpop');if(p)p.style.display='none';}
+/* 今日のタスクをタップ→行のすぐ近くに小さなアイコンポップ（大きなシートは廃止）。同じ行を再タップで閉じる */
+let _cpForId=null;
+function cpClose(){const p=$('#cellpop');if(p)p.style.display='none';_cpForId=null;}
 function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id){cpClose();return;} // 同じタスクの再タップで閉じる
   const row=(ev&&ev.target&&ev.target.closest('.tchkr'))||document.querySelector(`.tchkr[data-lp="t_${id}"]`);
-  const pop=$('#cellpop');const done=x.status==='done';
+  const pop=$('#cellpop');const done=x.status==='done';_cpForId=id;
   pop.innerHTML=`<div class="miniacts">
     ${done?`<button onclick="cpClose();toggleTaskDone('${id}')"><span>↩</span>戻す</button>`
       :`<button onclick="cpClose();toggleTaskDone('${id}')"><span>✓</span>完了</button>
@@ -2011,7 +2054,7 @@ function todayTaskChecklist(t){
   if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
-    <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${quadBg(x)?`background:${quadBg(x)};`:''}">
+    <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${taskBg(x)?`background:${taskBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
       <div class="tct" onclick="chkTaskMenu('${x.id}',event)">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
       <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div>
@@ -2262,7 +2305,7 @@ function taskRow(x,o={}){
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
   const active=o.tabAction&&taskActiveRow===x.id;
   const onclick=o.tabAction?`setTaskActive('${x.id}')`:`${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')`;
-  return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}" style="${active?'':(pastelBg(x)||(quadBg(x)?`background:${quadBg(x)};`:''))}">
+  return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}" style="${active?'':(taskBg(x)?`background:${taskBg(x)};`:'')}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
@@ -2452,7 +2495,7 @@ function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
 function quickAddPop(){
   const gid=lastTaskGroupId();
-  const QP=QUAD_BG;
+  const QP=QUAD_TO_PASTEL.map(i=>PASTELS[i].c); // 4つの部屋のボタン色＝パステル色から
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;">✅ タスク追加
     <input id="qaTitle" placeholder="タスク名を入力…" style="width:100%;margin-top:10px;font-size:16px;padding:11px 10px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)qaSave(false)">
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">グループ</label>
@@ -3670,6 +3713,13 @@ function renderSettings(){
         ${Object.keys(COLOR_TONES).map(k=>`<button style="flex:1;" class="${(s.colorTone||'pastel')===k?'on':''}" onclick="S.settings.colorTone='${k}';save();render();">${COLOR_TONES[k]}</button>`).join('')}</div>
       <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
       <div class="mini" style="padding:5px 0 0;">「あざやか」＝彩度高め／「くすみ」＝やわらかい落ち着いた色。予定の付箋すべてに反映されます。</div></div>
+    <div class="sec-h">タスクの色の並び順（今日タブ）</div>
+    <div style="padding:0 16px 4px;">
+      <div id="pastelOrderList" class="poList">${pastelOrder().map((i,pos)=>`<div class="poRow" data-i="${i}">
+        <span class="poSw" style="background:${PASTELS[i].c}"></span><span class="poName">${PASTELS[i].n}</span>
+        <span class="poNo">${pos+1}</span>
+        <div class="arrows h"><button onclick="movePastelOrder(${i},-1)">▲</button><button onclick="movePastelOrder(${i},1)">▼</button></div></div>`).join('')}</div>
+      <div class="mini" style="padding:6px 0 0;">今日タブのタスクはこの順で並びます（優先度「高」だけ最上部・完了は下）。</div></div>
     <div class="sec-h">カラーパレット（12色・テスト期間中は編集可）</div>
     <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="hueitem">
       <div class="huerow">
@@ -3709,7 +3759,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.95（2026-07-28）</b><br>
+  <div class="mini"><b>v1.96（2026-07-28）</b><br>
+  ・タスクの色を<b>カレンダーと共通のパステルカラー</b>に統一（4つの部屋→もも／あんず／れもん／わかば）<br>
+  ・今日タブのタスクを<b>色→新規が上→手動→優先度</b>の順で並べます。<b>優先度「高」だけ最上部</b>（色並びを飛び越えて先頭に）<br>
+  ・タスクを<b>タップして開いたミニポップは、もう一度タップで閉じる</b>ように<br>
+  ・タイムライン表示中は<b>「今日のタスク」をバーチカルの右横</b>に配置。全景がひと目で見えます<br>
+  ・設定→予定・カテゴリ設定に<b>「タスクの色の並び順」</b>を追加。▲▼で自由に並び替え可能<br>
+  <b>v1.95（2026-07-28）</b><br>
   ・<b>完了が気持ちよく</b>：チェックすると行がポンと弾む＋軽いバイブ<br>
   ・カレンダーのページ切替（◀▶・スワイプ）に<b>スライド感</b>を追加<br>
   ・今日のタスクの操作を整理：<b>タップ＝行の近くに小さな4ボタン</b>（完了/今日のみ/編集/その他）／<b>右スワイプ＝完了・左スワイプ＝明日へ</b>／<b>長押し＝優先度・色</b><br>
