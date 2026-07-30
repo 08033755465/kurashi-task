@@ -176,6 +176,14 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tlzlab{position:absolute;left:48px;font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.85;}
 .tl .tlev{position:absolute;left:46px;right:4px;background:#EEF1F6;font-size:10.5px;line-height:1.25;padding:2px 7px;overflow:hidden;white-space:nowrap;color:var(--ink);z-index:1;border-radius:6px !important;}
 .tl .tlev b{font-variant-numeric:tabular-nums;}
+/* 作業ブロック（今からの作業時間）：時間軸タップ→出現、上下の取っ手で伸縮 */
+.tl .tlgutter{position:absolute;left:0;top:0;bottom:0;width:44px;z-index:4;}
+.tl .tlblock{position:absolute;left:46px;right:4px;background:rgba(47,111,237,.07);border:1.5px dashed rgba(47,111,237,.5);border-radius:10px !important;z-index:0;}
+.tl .tlblock .tlbl{position:absolute;top:2px;right:6px;font-size:9.5px;font-weight:700;color:#2F6FED;background:rgba(255,255,255,.8);padding:0 4px;border-radius:5px !important;}
+.tl .tlbh{position:absolute;left:50%;transform:translateX(-50%);width:64px;height:20px;touch-action:none;display:flex;align-items:center;justify-content:center;z-index:6;cursor:ns-resize;}
+.tl .tlbh::after{content:'';width:34px;height:6px;border-radius:3px !important;background:#2F6FED;opacity:.8;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.tl .tlbh.top{top:-10px;}
+.tl .tlbh.bot{bottom:-10px;}
 /* マイルストーン（この時間までに終わらせたい）＝逆算の終点 */
 .tl .tlgoal{position:absolute;left:0;right:0;height:0;border-top:2px dashed #2F6FED;z-index:6;}
 .tl .tlgoal .tlgl{position:absolute;right:4px;top:-16px;background:#2F6FED;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;white-space:nowrap;border-radius:9px !important;box-shadow:0 1px 4px rgba(0,0,0,.2);}
@@ -208,7 +216,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tlpoolh{font-size:10.5px;font-weight:700;color:var(--sub);padding:0 2px;line-height:1.3;}
 /* 今日のタスク チェックリスト */
 .tchk{display:flex;flex-direction:column;}
-.tchkr{display:flex;align-items:center;gap:9px;padding:6px 16px;border-bottom:1px solid var(--line2);}
+.tchkr{display:flex;align-items:center;gap:9px;padding:6px 16px;border-bottom:1px solid var(--line2);transition:transform .18s ease-out;}
+/* スワイプ中のヒント（右＝完了・左＝明日へ） */
+.tchkr.swR{box-shadow:inset 4px 0 0 #2E9E5B;}
+.tchkr.swL{box-shadow:inset -4px 0 0 #2F6FED;}
 .tchkr.done{opacity:.5;}
 .tchkr.done .tct{text-decoration:line-through;}
 .tchkr .cb{flex:0 0 22px;width:22px;height:22px;border:1.5px solid var(--line);border-radius:5px !important;display:flex;align-items:center;justify-content:center;cursor:pointer;}
@@ -443,6 +454,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .wkev.mkonly,.wkev.plain{background:none !important;box-shadow:none;}
 .wknow{position:absolute;left:0;right:0;border-top:2px solid #E5484D;z-index:4;}
 .wknow::before{content:'';position:absolute;left:-2px;top:-3px;width:5px;height:5px;border-radius:50% !important;background:#E5484D;}
+/* 週・月メモ */
+.pnote{margin:10px 14px 14px;border:1px solid var(--line2);border-radius:12px !important;padding:10px 12px;background:var(--card,#fff);}
+.pnote .pnh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.pnote .pnh b{font-size:12.5px;letter-spacing:.04em;}
+.pnline{font-size:13px;line-height:1.7;display:flex;align-items:flex-start;gap:7px;}
+.pnline.sp{height:8px;}
+.pnline.ckl{cursor:pointer;}
+.pnline.ckl .pncb{flex:0 0 17px;width:17px;height:17px;margin-top:3px;border:1.5px solid var(--line);border-radius:4px !important;display:flex;align-items:center;justify-content:center;}
+.pnline.ckl .pncb svg{width:12px;height:12px;fill:none;stroke:var(--ink);stroke-width:2.5;}
+.pnline.ckl.done .pntx{text-decoration:line-through;color:var(--sub);}
 .scopebtns{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
 .scopebtns button{padding:12px;border:1px solid var(--line);font-size:14px;text-align:left;border-radius:10px !important;}
 .scopebtns button:active{background:var(--line2);}
@@ -520,6 +541,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* 省スペース行用の横並び▲▼ */
 .arrows.h{flex-direction:row;padding:0 2px 0 0;gap:2px;}
 .arrows.h button{padding:7px 6px;}
+/* 完了マイクロインタラクション：行がポンと弾む＋チェック印がポップ */
+@keyframes donePop{0%{transform:scale(1);}40%{transform:scale(1.05);}100%{transform:scale(1);}}
+@keyframes chkPop{0%{transform:scale(.2);opacity:0;}60%{transform:scale(1.3);}100%{transform:scale(1);opacity:1;}}
+.justdone{animation:donePop .38s cubic-bezier(.34,1.56,.64,1);}
+.justdone .chk svg,.justdone .cb svg{animation:chkPop .42s cubic-bezier(.34,1.56,.64,1);}
+/* カレンダーのページ切替：スッと入るスライド感 */
+@keyframes slideL{0%{transform:translateX(26px);opacity:.4;}100%{transform:translateX(0);opacity:1;}}
+@keyframes slideR{0%{transform:translateX(-26px);opacity:.4;}100%{transform:translateX(0);opacity:1;}}
+.slidein-l{animation:slideL .2s ease-out;}
+.slidein-r{animation:slideR .2s ease-out;}
 /* 長押しシートの優先度ボタン */
 #colorSheet .sw.prio button{font-size:13px;font-weight:600;align-items:center;padding-bottom:0;color:var(--ink);}
 #colorSheet .sw.prio button.on{border:2px solid var(--ink);font-weight:800;}
@@ -613,6 +644,11 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #cellpop .cpsw button{width:32px;height:32px;border:1px solid var(--line);border-radius:7px !important;}
 #cellpop .cpsw .clear{background:var(--bg);font-size:9px;color:var(--sub);}
 #cellpop .cpmore{margin-top:7px;width:100%;padding:8px;font-size:12px;color:var(--accent);border:1px solid var(--line);border-radius:8px !important;}
+/* 行のすぐ近くに出る小さなアクションポップ */
+#cellpop .miniacts{display:flex;gap:6px;}
+#cellpop .miniacts button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;padding:7px 8px;border:1px solid var(--line);border-radius:9px !important;font-size:10px;color:var(--ink);}
+#cellpop .miniacts button span{font-size:16px;line-height:1;}
+#cellpop .miniacts button:active{background:var(--line2);}
 .cell.selc{box-shadow:inset 0 0 0 2px #2F6FED;}
 #colorSheet .t{font-size:12px;color:var(--sub);letter-spacing:.1em;margin-bottom:10px;}
 #colorSheet .sw{display:flex;gap:8px;}
@@ -818,7 +854,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.94';
+const APP_VERSION='v1.95';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1016,6 +1052,7 @@ function migrate(){const st=S.settings;
   if(!BACKFILL_MODES[st.backfillTarget])st.backfillTarget='placed';
   if(!MONTH_EV_MODES[st.monthEvMode])st.monthEvMode='mark';
   if(!COLOR_TONES[st.colorTone])st.colorTone='pastel';
+  if(!S.periodNotes)S.periodNotes={}; // 週・月メモ
   if(!S.links)S.links=[];
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
@@ -1137,19 +1174,31 @@ function tfNorm(id){let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'');
 function tfClear(id){$('#'+id).value='';$('#'+id+'_v').value='';const el=$('#'+id);if(el.onchange)el.onchange();}
 function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+id+'_v').value=val||'';}
 /* カレンダーの左右スワイプで前後へ（月=前後月・週=前後週・日=前後日）。リスナーは1度だけ登録 */
-let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false;
+let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false,swRow=null;
+function swRowReset(){if(!swRow)return;swRow.style.transform='';swRow.style.transition='';swRow.classList.remove('swR','swL');swRow=null;}
 function attachCalSwipe(){
   if(swipeBound)return;const el=$('#view');if(!el)return;swipeBound=true;
   el.addEventListener('touchstart',e=>{
     if(e.touches.length!==1){swValid=false;return;}
-    const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;},{passive:true});
-  el.addEventListener('touchcancel',()=>{swValid=false;});
+    const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;
+    swRow=(view==='today'&&e.target.closest)?e.target.closest('.tchkr[data-lp]'):null;
+    if(swRow)swRow.style.transition='none';},{passive:true});
+  el.addEventListener('touchmove',e=>{
+    if(!swValid||!swRow)return;const t=e.touches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
+    if(Math.abs(dy)>Math.abs(dx)*1.2){swRowReset();return;} // 縦スクロールに譲る
+    const x=Math.max(-84,Math.min(84,dx*0.6));
+    swRow.style.transform=`translateX(${x}px)`;
+    swRow.classList.toggle('swR',dx>40);swRow.classList.toggle('swL',dx<-40);},{passive:true});
+  el.addEventListener('touchcancel',()=>{swValid=false;swRowReset();});
   el.addEventListener('touchend',e=>{
     if(!swValid)return;swValid=false;
+    const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
     if(e.target.closest&&e.target.closest('.chips'))return; // グループチップの横スクロールだけは邪魔しない
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(!(Date.now()-swT<900&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3))return;
+    // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
+    if(row){const tok=row.dataset.lp;dx>0?swipeComplete(tok):sendTaskTomorrow(tok.slice(2));return;}
     if(view==='cal'){calNav(dx<0?1:-1);return;}
     if(view==='today'){const r=e.target.closest&&e.target.closest('[data-do]');if(r)dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do);}});}
 /* 予定の繰り返し */
@@ -1352,7 +1401,9 @@ function switchView(v){
 // タブ移動のたびに（多くても10秒に1回）クラウドの最新を取り込む＝別端末の変更・削除がすぐ反映される
 let _lastPull=0;
 function maybePull(){if(!syncReady())return;const now=Date.now();if(now-_lastPull<10000)return;_lastPull=now;pullState();}
-let _tlPendingScroll=false,_reorderFollow=null,_focusSearch=false;
+let _tlPendingScroll=false,_reorderFollow=null,_focusSearch=false,_justDoneTok=null;
+/* 完了の気持ちよさ：直前に完了した行をポンと弾ませる＋軽いバイブ */
+function markJustDone(tok){_justDoneTok=tok;try{navigator.vibrate&&navigator.vibrate(20);}catch(e){}}
 function render(){
   const el=$('#view');const sy=window.scrollY;
   if(view==='today')el.innerHTML=renderToday();
@@ -1368,6 +1419,9 @@ function render(){
   if(_reorderFollow){const row=document.querySelector(_reorderFollow);_reorderFollow=null;
     if(row){const r=row.getBoundingClientRect();if(r.top<90||r.bottom>window.innerHeight-90)window.scrollBy(0,r.top-160);}}
   if(_focusSearch){_focusSearch=false;const el=$('#taskSearch');if(el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
+  if(_justDoneTok){const tok=_justDoneTok;_justDoneTok=null;
+    document.querySelectorAll(`[data-lp="${tok}"]`).forEach(row=>{row.classList.add('justdone');
+      setTimeout(()=>row.classList.remove('justdone'),450);});}
 }
 function toTop(){window.scrollTo(0,0);}
 /* キャッシュを避けて最新を読み込み直す */
@@ -1442,8 +1496,7 @@ function renderToday(){
     <div class="row"><span>残り作業 <b>${fmtMin(restMin)}</b> ／ 使える <b>${fmtMin(avail)}</b></span>
       <span class="nums ${free<0?'neg':''}">${free<0?'▲'+fmtMin(-free)+'超過':'空き '+fmtMin(free)}</span></div>
     <div class="gauge"><i class="${restMin>avail?'over':''}" style="width:${avail?Math.min(100,restMin/avail*100):0}%"></i></div>
-    <div class="row" style="margin:7px 0 0;"><span>活動 <b>${dayWake(t)}</b>〜<b>${daySleep(t)}</b><button class="availEdit" onclick="editDayTimes()">変更</button>${t===todayStr()?`<button class="availEdit" style="margin-left:6px;" onclick="startNow()">今から開始</button>`:''}</span>
-      ${bed>0?`<span class="nums">終了まで ${fmtMin(bed)}</span>`:''}</div>
+    <!-- 「今日の作業時間」の入力行は廃止。作業時間はバーチカルの時間軸タップ→作業ブロックで（1日に何回でも） -->
   </div>
   <div class="startrow">
     <button class="composeBtn" onclick="composeToday()">🔁 ルーティンを選ぶ${routines.length?`（${routines.length}）`:''}</button>
@@ -1560,7 +1613,7 @@ function sinkDoItem(tok){const t=todayStr();let toks=doItems(t).map(it=>it.type+
   const i=toks.indexOf(tok);if(i<0)return;toks.splice(i,1);toks.push(tok);dayLog(t).doOrder=toks;}
 function toggleRoutine(id){const t=todayStr();const log=dayLog(t);setAnchor('r_'+id);
   const cur=log.routines[id]?.done;log.routines[id]={...(log.routines[id]||{}),done:!cur,doneMin:!cur?curMin():undefined};
-  if(!cur)sinkDoItem('r_'+id);
+  if(!cur){sinkDoItem('r_'+id);markJustDone('r_'+id);}
   save();render();checkCelebrate();}
 function checkCelebrate(){const t=todayStr();const log=dayLog(t);
   const rs=todaysRoutines(t),ts=S.tasks.filter(x=>x.today===t);
@@ -1834,6 +1887,15 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     const tail=s.need>0?(s.left<=0?'・時間切れ':(s.slack>=0?'・余裕'+fmtMin(s.slack):'・不足'+fmtMin(-s.slack))):'';
     return `<div class="tlgoal${bad?' bad':''}" style="top:${y(A(g.at))}px" ${placing?'':`onclick="event.stopPropagation();goalTap('${g.id}')"`}>
       <span class="tlgl">⚑ ${esc(g.title)} ${min2hm(g.at)}${tail}</span></div>`;}).join('');
+  // 作業ブロック（「今からの作業時間」帯・複数OK）＋左の時間軸タップで新規作成
+  const blockH=(log.blocks||[]).map(b=>{const sA=A(b.s),eA=Math.max(A(b.e),sA+15);const btop=y(sA),bh=(eA-sA)*PX;
+    const asg=live.filter(it=>at[tokOf(it)]!=null&&A(at[tokOf(it)])>=sA&&A(at[tokOf(it)])<eA)
+      .reduce((n,it)=>n+Math.max(5,(+it.obj.estMin)||10),0);
+    return `<div class="tlblock" data-bid="${b.id}" style="top:${btop}px;height:${bh}px;" ${placing?'':`onclick="blockTap(event,'${b.id}')"`}>
+      <span class="tlbl">${min2hm(b.s)}–${min2hm(b.e)}（${fmtMin(eA-sA)}${asg?'・配置'+fmtMin(asg):''}）</span>
+      <div class="tlbh top" onpointerdown="blockDragStart(event,'${b.id}','s')"></div>
+      <div class="tlbh bot" onpointerdown="blockDragStart(event,'${b.id}','e')"></div></div>`;}).join('');
+  const gutterH=`<div class="tlgutter" ${placing?'':'onclick="gutterTap(event)"'}></div>`;
   const nowLine=(t===todayStr())?`<div class="tlnow" style="top:${y(nowA)}px"><span>今 ${min2hm(nowM)}</span></div>`:'';
   const sleepLine=`<div class="tlsleep" style="top:${y(s)}px"><span>終了 ${min2hm(hm2min(daySleep(t)))}</span></div>`;
   const overAny=placed.some(p=>p.ax+p.est>end);
@@ -1879,11 +1941,11 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
         <div class="evpopacts"><button onclick="eventModal('${e.id}',null,null,'${t}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}','${t}');tlEvSel=null;">🗑</button></div>
       </div></div>`;})():'';
   return `${hint}<div class="tlwrap">
-    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}</div>
+    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${blockH}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}${gutterH}</div>
     ${poolHtml}${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 終了（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
-      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。下のバーで一括操作。予定はタップで<b>詳細</b>（メモ・リンク）が右にひらきます。</div>`
+      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。<b>左の時間軸をタップ＝作業ブロック</b>（今からの作業時間）。予定はタップで<b>詳細</b>が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
 function tlScrollTop(){const el=$('.tlwrap');if(el){const r=el.getBoundingClientRect();window.scrollBy({top:r.top-120,behavior:'smooth'});}}
@@ -1915,18 +1977,32 @@ function moveChecklistTask(id,dir){const t=todayStr();
   const ni=ids.indexOf(nb);if(ni<0)return;
   ids.splice(dir<0?ni:ni+1,0,id);
   commitTaskOrder(ids);taskSort='manual';render();}
-/* 今日のタスクをタップ→アクションメニュー（編集・削除・完了・明日へ等）。詳細編集は「✎ 編集」から */
-function chkTaskMenu(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;const sheet=$('#colorSheet');
-  const done=x.status==='done';
+/* 今日のタスクをタップ→行のすぐ近くに小さなアイコンポップ（大きなシートは廃止） */
+function cpClose(){const p=$('#cellpop');if(p)p.style.display='none';}
+function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  const row=(ev&&ev.target&&ev.target.closest('.tchkr'))||document.querySelector(`.tchkr[data-lp="t_${id}"]`);
+  const pop=$('#cellpop');const done=x.status==='done';
+  pop.innerHTML=`<div class="miniacts">
+    ${done?`<button onclick="cpClose();toggleTaskDone('${id}')"><span>↩</span>戻す</button>`
+      :`<button onclick="cpClose();toggleTaskDone('${id}')"><span>✓</span>完了</button>
+       <button onclick="cpClose();chkDayDone('${id}')"><span>☀</span>今日のみ</button>`}
+    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button onclick="cpClose();chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
+  pop.style.display='block';
+  const r=row?row.getBoundingClientRect():{left:20,bottom:window.innerHeight/2,top:window.innerHeight/2};
+  const pw=pop.offsetWidth,ph=pop.offsetHeight;
+  let left=Math.max(6,Math.min(r.left+10,window.innerWidth-pw-6));
+  let top=r.bottom+4;if(top+ph>window.innerHeight-6)top=r.top-ph-4;
+  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
+  const close=e2=>{if(!pop.contains(e2.target)){cpClose();document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+/* 「…その他」＝残りのアクション（明日へ・アーカイブ・削除） */
+function chkTaskMenuFull(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;const sheet=$('#colorSheet');
   sheet.innerHTML=`<div class="t">${esc(x.title)}</div><div class="actsheet">
-    ${done?`<button onclick="closeSheet();toggleTaskDone('${id}')">↩ 未完了に戻す</button>`
-      :`<button onclick="closeSheet();toggleTaskDone('${id}')">✓ 完了にする</button>
-       <button onclick="closeSheet();chkDayDone('${id}')">☀ 今日のみ完了（明日また表示）</button>`}
-    <button onclick="closeSheet();taskModal('${id}')">✎ 編集</button>
-    ${done?'':`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ</button>
+    ${x.status==='done'?'':`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ</button>
     <button onclick="closeSheet();archiveToday('${id}')">🗂 アーカイブ（今日は隠す）</button>`}
     <button class="del" onclick="closeSheet();delTask('${id}')">🗑 削除</button></div>
-    <div class="mini" style="padding:8px 0 0;">並び替えは行の▲▼、長押しで完了・優先度・色のメニューが開きます。</div>`;
+    <div class="mini" style="padding:8px 0 0;">右スワイプ＝完了／左スワイプ＝明日へ／長押し＝優先度・色。</div>`;
   sheet.classList.add('show');
   const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
   setTimeout(()=>document.addEventListener('pointerdown',close),50);}
@@ -1937,7 +2013,7 @@ function todayTaskChecklist(t){
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${quadBg(x)?`background:${quadBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${x.status==='done'?CHK:''}</div>
-      <div class="tct" onclick="chkTaskMenu('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
+      <div class="tct" onclick="chkTaskMenu('${x.id}',event)">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${isCarried(x)?'<span class="carriedtag">昨日</span>':''}${x.repeat?'<span class="pinbadge">🔁</span>':''}</div>
       <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div>
       ${x.status==='done'?'':`<div class="arrows h"><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',1)">▼</button></div>`}</div>`).join('')}</div></div>`;}
 /* 未配置プールをタップ→配置モード（トグル選択） */
@@ -1958,6 +2034,70 @@ function placeAtClick(ev){if(!placeToks||!placeToks.length)return;const t=todayS
   }
   placeToks=null;save();render();flashUndo('配置しました');}
 function unpinItem(tok){const t=todayStr();const dl=dayLog(t);if(dl.at){snapUndo();delete dl.at[tok];chainClean(t);chainRelink(t);save();render();flashUndo('未配置に戻しました');}}
+/* ===== 作業ブロック（今からの作業時間。左の時間軸タップで作成・上下ドラッグで伸縮・複数OK） ===== */
+function gutterTap(ev){ev.stopPropagation();
+  const t=todayStr();const w=hm2min(dayWake(t));
+  const tl=ev.currentTarget.closest('.tl')||ev.currentTarget.parentElement;
+  const r=tl.getBoundingClientRect();let ax=w+(ev.clientY-r.top)/tlPx();
+  ax=Math.round(ax/5)*5;ax=Math.max(w,Math.min(ax,w+1440-15));
+  const s=((ax%1440)+1440)%1440;const e=((Math.min(ax+60,w+1440)%1440)+1440)%1440;
+  snapUndo();const dl=dayLog(t);dl.blocks=dl.blocks||[];
+  dl.blocks.push({id:uid(),s,e});save();render();
+  flashUndo(`作業ブロック ${min2hm(s)}〜${min2hm(e)} を作りました（上下の取っ手で伸縮）`);}
+function blockTap(ev,id){ev.stopPropagation();
+  if(ev.target.closest('.tlbh'))return;
+  const t=todayStr();const b=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!b)return;
+  const pop=$('#cellpop');
+  pop.innerHTML=`<div class="miniacts">
+    <button onclick="cpClose();blockFill('${id}')"><span>▶</span>流し込む</button>
+    <button onclick="cpClose();blockDel('${id}')"><span>🗑</span>削除</button></div>`;
+  pop.style.display='block';
+  const r=ev.target.closest('.tlblock').getBoundingClientRect();
+  const pw=pop.offsetWidth,ph=pop.offsetHeight;
+  let left=Math.max(6,Math.min(r.left+40,window.innerWidth-pw-6));
+  let top=r.top+18;if(top+ph>window.innerHeight-6)top=r.top-ph-4;
+  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
+  const close=e2=>{if(!pop.contains(e2.target)){cpClose();document.removeEventListener('pointerdown',close);}};
+  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+/* ブロックに未配置のタスクを頭から流し込む（予定は避ける・はみ出す分は配置しない） */
+function blockFill(id){const t=todayStr();const b=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!b)return;
+  const w=hm2min(dayWake(t));const A=v=>toAxis(v,w);
+  const dl=dayLog(t);dl.at=dl.at||{};
+  const cand=todayTasks(t).slice().sort(chkTaskSort).filter(x=>x.status!=='done'&&dl.at['t_'+x.id]==null);
+  if(!cand.length){toast('未配置のタスクがありません');return;}
+  const spans=avoidOn()?busySpans(t):[];
+  snapUndo();let ax=A(b.s);let placed=0,skipped=0;
+  cand.forEach(x=>{const est=Math.max(5,(+x.estMin)||10);
+    const nx=avoidFwd(spans,ax,est);
+    if(nx+est>A(b.e)){skipped++;return;}
+    ax=nx;dl.at['t_'+x.id]=((Math.round(ax)%1440)+1440)%1440;ax+=est;placed++;});
+  save();render();
+  flashUndo(placed?`${placed}件をブロックに配置しました${skipped?`（${skipped}件は入りきらず）`:''}`:'ブロックに収まるタスクがありませんでした');}
+function blockDel(id){const t=todayStr();snapUndo();
+  dayLog(t).blocks=(dayLog(t).blocks||[]).filter(x=>x.id!==id);
+  save();render();flashUndo('作業ブロックを削除しました（配置したタスクは残ります）');}
+/* 上下の取っ手ドラッグ＝5分刻みで伸縮（最小15分） */
+let _bdrag=null;
+function blockDragStart(ev,id,edge){ev.stopPropagation();ev.preventDefault();
+  const t=todayStr();const b=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!b)return;
+  const w=hm2min(dayWake(t));
+  _bdrag={id,edge,startY:ev.clientY,orig:edge==='s'?toAxis(b.s,w):toAxis(b.e,w)};
+  const mv=e2=>{if(!_bdrag)return;
+    const bb=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!bb)return;
+    let v=Math.round((_bdrag.orig+(e2.clientY-_bdrag.startY)/tlPx())/5)*5;
+    const sA=toAxis(bb.s,w),eA=toAxis(bb.e,w);
+    if(edge==='s')v=Math.max(w,Math.min(v,eA-15));
+    else v=Math.max(sA+15,Math.min(v,w+1440));
+    const mn=((v%1440)+1440)%1440;
+    if(edge==='s')bb.s=mn;else bb.e=mn;
+    const el=document.querySelector(`.tlblock[data-bid="${id}"]`);
+    if(el){const PX=tlPx();el.style.top=((toAxis(bb.s,w)-w)*PX)+'px';
+      el.style.height=((toAxis(bb.e,w)-toAxis(bb.s,w))*PX)+'px';
+      const lab=el.querySelector('.tlbl');if(lab)lab.textContent=`${min2hm(bb.s)}–${min2hm(bb.e)}（${fmtMin(toAxis(bb.e,w)-toAxis(bb.s,w))}）`;}};
+  const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);
+    _bdrag=null;save();render();};
+  document.addEventListener('pointermove',mv);
+  document.addEventListener('pointerup',up);}
 /* タイムラインの完了ゴーストをタップ→未完了に戻す（誤操作リカバリ・全タブ共通の考え方） */
 function tlUndone(tk){const t=todayStr();const type=tk[0],id=tk.slice(2);snapUndo();
   if(type==='r'){const log=dayLog(t);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
@@ -2432,7 +2572,10 @@ function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
 /* ========================= カレンダー ========================= */
 function calNav(n){if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(calX>11){calX=0;calY++;}}
   else{const d=parseDs(calDate);d.setDate(d.getDate()+(calMode==='week'?7*n:n));calDate=dsOf(d);calY=d.getFullYear();calX=d.getMonth();}
-  render();toTop();}
+  render();toTop();
+  // ページ切替のスライド感（次へ＝右から、前へ＝左からスッと入る）
+  const pg=$('#calpage');if(pg){pg.classList.add(n>0?'slidein-l':'slidein-r');
+    setTimeout(()=>{const p=$('#calpage');if(p)p.classList.remove('slidein-l','slidein-r');},250);}}
 function setCalMode(m){calMode=m;if(m!=='month')calMonthAll=false;render();toTop();}
 function onMonthBtn(){if(calMode==='month')calMonthAll=!calMonthAll;else{calMonthAll=false;calMode='month';}render();toTop();}
 function isNight(e){return !!(e.start&&S.settings.showNight&&e.start>=S.settings.nightStart);}
@@ -2482,6 +2625,38 @@ function marksOn(m,d){const out=[];
   S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+'の誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
   S.marks.forEach(k=>{if(+k.month===m&&+k.day===d)out.push({icon:k.icon,color:k.color,name:k.name});});
   return out;}
+/* ===== 週・月メモ（時期メモ。[]/[x]=チェック行、・=箇条書き行） ===== */
+function weekKeyOf(dstr){const d=parseDs(dstr);const ws=S.settings.weekStart||0;
+  const st=new Date(d);st.setDate(d.getDate()-((d.getDay()-ws+7)%7));return 'w:'+dsOf(st);}
+function monthKeyOf(dstr){return 'm:'+dstr.slice(0,7);}
+function periodNoteHtml(key,label){
+  const txt=(S.periodNotes||{})[key]||'';
+  const body=txt?txt.split('\n').map((ln,i)=>{
+    const m=ln.match(/^\[( |x)?\]\s?(.*)$/);
+    if(m){const ck=m[1]==='x';return `<div class="pnline ckl${ck?' done':''}" onclick="pnToggle('${key}',${i})"><span class="pncb">${ck?CHK:''}</span><span class="pntx">${esc(m[2])}</span></div>`;}
+    if(/^[・-]\s?/.test(ln))return `<div class="pnline bl">・ ${esc(ln.replace(/^[・-]\s?/,''))}</div>`;
+    if(!ln.trim())return '<div class="pnline sp"></div>';
+    return `<div class="pnline">${esc(ln)}</div>`;}).join('')
+    :`<div class="mini" style="padding:2px 0 0;" onclick="pnEdit('${key}','${label}')">まだメモはありません（タップで書く）</div>`;
+  return `<div class="pnote"><div class="pnh"><b>📝 ${label}</b><button class="act" style="color:var(--accent);" onclick="pnEdit('${key}','${label}')">✎ 編集</button></div>${body}</div>`;}
+function pnToggle(key,i){const txt=(S.periodNotes||{})[key]||'';const lines=txt.split('\n');
+  const m=lines[i]&&lines[i].match(/^\[( |x)?\]\s?(.*)$/);if(!m)return;
+  lines[i]=(m[1]==='x'?'[] ':'[x] ')+m[2];S.periodNotes[key]=lines.join('\n');save();render();}
+function pnEdit(key,label){
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">📝 ${label}
+    <textarea id="pnText" rows="8" style="width:100%;margin-top:10px;font-size:14px;line-height:1.6;" placeholder="打ち合わせメモなど。&#10;[] 行頭でチェックリスト&#10;・ 行頭で箇条書き">${esc((S.periodNotes||{})[key]||'')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button type="button" class="inlineadd" onclick="pnInsert('[] ')">＋□ チェック行</button>
+      <button type="button" class="inlineadd" onclick="pnInsert('・ ')">＋・ 箇条書き行</button></div></div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="pnSave('${key}')">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');const el=$('#pnText');if(el)el.focus();}
+function pnInsert(prefix){const el=$('#pnText');if(!el)return;const v=el.value;
+  const pos=el.selectionStart??v.length;
+  const needNl=pos>0&&v[pos-1]!=='\n';
+  const ins=(needNl?'\n':'')+prefix;
+  el.value=v.slice(0,pos)+ins+v.slice(pos);
+  const np=pos+ins.length;el.focus();try{el.setSelectionRange(np,np);}catch(e){}}
+function pnSave(key){if(!S.periodNotes)S.periodNotes={};S.periodNotes[key]=$('#pnText').value;save();dlgEnd();render();}
 function renderCal(){
   const modeBtns=`<div class="calmode">
     <button class="${calMode==='month'?'on':''}" onclick="onMonthBtn()">月${calMode==='month'&&calMonthAll?'<span class="allbadge">ALL</span>':''}</button>
@@ -2528,7 +2703,8 @@ function renderCal(){
       </div>`;}
     const gridAll=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     body=`<div id="calGrid" class="${gridAll?'allmode':''}" style="--mfs:${(MONTH_FONTS[S.settings.monthFont]||MONTH_FONTS.m).px}px;">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
-    <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示。見せ方は<b>設定→表示設定</b>でも変えられます</div>`;
+    <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示。見せ方は<b>設定→表示設定</b>でも変えられます</div>
+    ${periodNoteHtml('m:'+calY+'-'+pad(calX+1),`${calX+1}月のメモ`)}`;
   }else if(calMode==='week'){
     const base=parseDs(calDate);const ws=S.settings.weekStart;
     const start=new Date(base);start.setDate(base.getDate()-((base.getDay()-ws+7)%7));
@@ -2561,7 +2737,8 @@ function renderCal(){
       const now=isT&&nowM>=minMin&&nowM<=maxMin?`<div class="wknow" style="top:${(nowM-minMin)*PXM}px"></div>`:'';
       return `<div class="wkcol ${isT?'today':''}" onclick="calGoto('${dd.dstr}')">${hline}${blocks}${now}</div>`;}).join('');
     body=`<div class="wkcal">${header}${alldayRow}<div class="wkbody" style="height:${H}px"><div class="wkgutter">${hlab}</div>${cols}</div></div>
-      <div class="mini">日付をタップでその日を開く／終日欄をタップで予定追加。時間指定の予定はブロックで表示。重なりは横並びになります。</div>`;
+      <div class="mini">日付をタップでその日を開く／終日欄をタップで予定追加。時間指定の予定はブロックで表示。重なりは横並びになります。</div>
+      ${periodNoteHtml(weekKeyOf(dsOf(start)),`今週のメモ（${start.getMonth()+1}/${start.getDate()}〜）`)}`;
   }else{
     const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
     head=`${m}月`;
@@ -2571,12 +2748,14 @@ function renderCal(){
       <div class="d2">${S.settings.showRokuyo?rokuyo(y,m,d):''}${ich?'<span style="color:#B8860B;">一粒万倍日</span>':''}${hol?`<span class="hol">${esc(hol)}</span>`:''}</div>
       ${mks.length?`<div class="d2" style="margin-top:6px;">${mks.map(k=>`<span style="display:flex;align-items:center;gap:4px;color:${k.color};"><span style="width:15px;height:15px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</span>`).join('')}</div>`:''}
     </div>
-    ${dayScheduleHtml(calDate)}`;
+    ${dayScheduleHtml(calDate)}
+    ${periodNoteHtml(weekKeyOf(calDate),'この週のメモ')}
+    ${periodNoteHtml(monthKeyOf(calDate),'この月のメモ')}`;
   }
   return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替できます</span></div>
   ${groupChipsHtml(calSel,'tglCalSel')}
   <div class="calbar"><div class="mv"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calNav(1)">›</button></div>
-    <div class="ym">${head}</div>${modeBtns}</div>${body}`;
+    <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
@@ -2601,13 +2780,13 @@ function resetRepeatDone(){const t=todayStr();let n=0;
   if(n)save();}
 /* 「今日のみ完了」＝今日の分は完了として記録し、明日また未完了で表示 */
 function chkDayDone(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo();
-  x.status='done';x.doneAt=todayStr();x.doneMin=curMin();x.dayDone=true;sinkDoItem('t_'+id);
+  x.status='done';x.doneAt=todayStr();x.doneMin=curMin();x.dayDone=true;sinkDoItem('t_'+id);markJustDone('t_'+id);
   save();render();flashUndo('今日の分を完了！明日また表示します');checkCelebrate();}
 function archiveToday(id){snapUndo();applyHideToday('t_'+id);save();render();flashUndo('今日は隠しました（アーカイブ）');}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
   if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
     if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
-  else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);
+  else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);markJustDone('t_'+id);
     if(!advanceRepeatTask(x)&&x.pin)toast('今日の分を完了！明日また表示します📌');}
   save();render();checkCelebrate();}
 function dayScheduleHtml(dstr){
@@ -2703,19 +2882,10 @@ function pastelBg(obj){return (obj&&obj.color!=null&&PASTELS[obj.color])?`backgr
 function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
   const sheet=$('#colorSheet');
-  const isToday=type==='t'&&obj.today===todayStr();
+  // 長押し＝優先度と色だけ（完了系はタップ・スワイプに役割分担）
   sheet.innerHTML=`<div class="t">${esc(obj.title)}</div>
-    ${type==='t'?`<div class="actsheet" style="margin-bottom:10px;">
-      ${obj.status==='done'?`<button onclick="closeSheet();toggleTaskDone('${id}')">↩ 未完了に戻す</button>`
-        :`<button onclick="closeSheet();toggleTaskDone('${id}')">✓ 完了にする</button>
-         <button onclick="closeSheet();chkDayDone('${id}')">☀ 今日のみ完了（明日また表示）</button>
-         <button onclick="closeSheet();archiveToday('${id}')">🗂 アーカイブ（今日は隠す）</button>`}</div>
-    <div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
-      ${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>
-    <div class="actsheet" style="margin-bottom:10px;">
-      ${isToday?`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ（今日から消える）</button>`
-        :`<button onclick="closeSheet();sendTaskToday('${id}')">☀ 今日へ${obj.today===tomorrowStr()?'戻す':'入れる'}</button>`}
-    </div>`:''}
+    ${type==='t'?`<div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
+      ${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>`:''}
     <div class="t">色分け</div><div class="sw">
     ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
     <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div>`;
@@ -3539,7 +3709,14 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.94（2026-07-28）</b><br>
+  <div class="mini"><b>v1.95（2026-07-28）</b><br>
+  ・<b>完了が気持ちよく</b>：チェックすると行がポンと弾む＋軽いバイブ<br>
+  ・カレンダーのページ切替（◀▶・スワイプ）に<b>スライド感</b>を追加<br>
+  ・今日のタスクの操作を整理：<b>タップ＝行の近くに小さな4ボタン</b>（完了/今日のみ/編集/その他）／<b>右スワイプ＝完了・左スワイプ＝明日へ</b>／<b>長押し＝優先度・色</b><br>
+  ・<b>作業ブロック</b>を追加：バーチカル<b>左の時間軸をタップ</b>→「今からの作業時間」の帯が出現。<b>上下の取っ手で伸縮</b>（5分刻み）、タップで<b>タスクを頭から流し込み</b>（入りきらない分は配置しません）。1日に何個でも<br>
+  ・「活動 開始〜終了」の入力行は廃止（既定時刻は設定→時間関連設定）<br>
+  ・<b>週・月メモ</b>を追加：月/週/日表示の下に常時表示。<b>[] でチェックリスト・・で箇条書き</b>が書けて、チェックは表示のままタップで切替<br>
+  <b>v1.94（2026-07-28）</b><br>
   ・<b>改善メモの送信先をNotionの改善DBに接続</b>（Vercelサーバー経由で直接記録。設定→個人・改善設定の「📮 改善DBへ送信」）。GASの用意は不要になりました<br>
   <b>v1.93（2026-07-28）</b><br>
   ・今日のタスクを<b>タップするとメニュー</b>が開くように（完了／今日のみ完了／編集／明日へ／アーカイブ／削除。詳細編集は「✎ 編集」から）<br>
