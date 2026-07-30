@@ -670,8 +670,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #cellpop .cpsw .clear{background:var(--bg);font-size:9px;color:var(--sub);}
 #cellpop .cpmore{margin-top:7px;width:100%;padding:8px;font-size:12px;color:var(--accent);border:1px solid var(--line);border-radius:8px !important;}
 /* 行のすぐ近くに出る小さなアクションポップ */
-#cellpop .miniacts{display:flex;gap:6px;}
+#cellpop .miniacts{display:flex;gap:6px;flex-wrap:wrap;max-width:260px;}
 #cellpop .miniacts button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;padding:7px 8px;border:1px solid var(--line);border-radius:9px !important;font-size:10px;color:var(--ink);}
+#cellpop .miniacts button.hi{border-color:var(--accent);color:var(--accent);font-weight:700;}
+/* 縦リスト型の近接ポップ（項目が多いメニュー用） */
+#cellpop .cpmenu{display:flex;flex-direction:column;gap:2px;min-width:190px;max-width:260px;max-height:66vh;overflow:auto;}
+#cellpop .cpmenu button{text-align:left;padding:11px 12px;border:none;border-bottom:1px solid var(--line2);font-size:14px;color:var(--ink);border-radius:0 !important;}
+#cellpop .cpmenu button:last-child{border-bottom:none;}
+#cellpop .cpmenu button:active{background:var(--line2);}
+#cellpop .cpmenu button.hi{color:var(--accent);font-weight:700;}
+#cellpop .cpmenu button.del{color:var(--danger);}
 #cellpop .miniacts button span{font-size:16px;line-height:1;}
 #cellpop .miniacts button:active{background:var(--line2);}
 .cell.selc{box-shadow:inset 0 0 0 2px #2F6FED;}
@@ -1928,7 +1936,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   const taskH=blocks.map(bl=>{const it=bl.it,bc=bandColorOf(it),tk=tokOf(it);
     const cp=chainPos(t,tk);
     const cls=`tltask${bl.over?' over':''}${bl.done?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}${cp>0?' chained':''}`;
-    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTapTask('${tk}')`}"`}>
+    return `<div class="${cls}${bl.shifted?' shifted':''}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${bl.done?`tlUndone('${tk}')`:`tlTaskTap('${tk}',event)`}"`}>
       <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
   const goalH=goalsOf(t).slice().sort((a,b)=>A(a.at)-A(b.at)).map(g=>{const s=goalSlack(t,g);
     const bad=s.need>0&&(s.left<=0||s.slack<0);
@@ -1951,9 +1959,9 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
   // 右：未配置プール
   const poolHtml=`<div class="tlpool">
     <div class="tlpoolh">これから行う<br>ルーティン ${pool.length}件</div>
-    ${!placing&&(pool.length||placed.length)?`<button class="poolall" onclick="tlSelectAllRoutines()">${tlSel.length?'選択を解除':'ルーティンを全選択'}</button>`:''}
+    ${!placing&&pool.length?`<button class="poolall" onclick="tlPlaceAllPool()">🕐 未配置をまとめて配置</button>`:''}
     ${pool.length?pool.map(it=>{const tk=tokOf(it);const bc=bandColorOf(it);const sel=placing?placeToks.includes(tk):tlSel.includes(tk);
-      return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTapTask('${tk}')"`}>
+      return `<div class="poolitem ${sel?'sel':''}" style="border-left:3px solid ${bc};" ${placing?'':`onclick="tlTaskTap('${tk}',event)"`}>
         <span class="pt">${sel?'✓ ':''}${it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '}${esc(it.obj.title)}</span><span class="pm">${fmtMin(Math.max(5,(+it.obj.estMin)||10))}</span></div>`;}).join('')
       :`<div class="poolempty">${dayLog(t).planRoutines?'すべて配置済み🎉':'まだ選んでいません'}</div>`}
     <button class="poolall" onclick="composeToday()">🔁 ルーティンを選ぶ</button>
@@ -1962,20 +1970,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       :`<button class="poolall" onclick="goalModal(null)">⚑ 目標時刻をおく</button>`):''}
   </div>`;
   const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
-  const selCount=tlSel.length;const one=selCount===1?tlSel[0]:null;
-  const anyPinnedSel=tlSel.some(tk=>at[tk]!=null);
-  const actionBar=selCount?`<div class="tlbar">
-    <span class="tlbn">${selCount}件選択</span>
-    <div class="tlbtns">
-      <button onclick="tlDoComplete()">完了</button>
-      <button onclick="tlDoPlace()">時間</button>
-      ${anyPinnedSel?`<button onclick="tlDoUnpin()">未配置に</button>`:''}
-      ${one?`<button onclick="tlDoTimeDone()">時間を入れて完了</button>`:''}
-      <button onclick="tlDoRemoveToday()">今日から消す</button>
-      <button onclick="tlDoTomorrow()">明日へ</button>
-      ${one?`<button onclick="tlDoEdit()">編集</button>`:''}
-      <button class="cl" onclick="tlClearSel()">✕</button>
-    </div></div>`:'';
+  const actionBar='';/* 下部バーは廃止。タイムラインのタスクはタップ→近接ポップ（tlTaskTap） */
   const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
     const top=y(A(hm2min(e.start)));const bg=evColor(e),tc=evTextColor(bg);
     return `<div class="evpop" style="top:${Math.max(0,top-6)}px;">
@@ -1994,7 +1989,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     <div class="tlaside">${poolHtml}${tasksAside}</div>${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 終了（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
-      :(selCount||tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>複数選べます</b>。<b>左の時間軸をタップ＝作業ブロック</b>（今からの作業時間）。予定はタップで<b>詳細</b>が右にひらきます。</div>`
+      :(tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">タスクをタップ→<b>近くにメニュー</b>（未配置に戻す・完了・時間など）。<b>左の時間軸をタップ＝作業ブロック</b>。予定はタップで<b>詳細</b>が右にひらきます。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">今日ぶんはすべて配置できました。</div>'))}`;}
 function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
 function tlScrollTop(){const el=$('.tlwrap');if(el){const r=el.getBoundingClientRect();window.scrollBy({top:r.top-120,behavior:'smooth'});}}
@@ -2185,9 +2180,41 @@ function poolAllTomorrow(){const t=todayStr();const at=(dayLog(t).at)||{};
   const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
   if(!pool.length)return;snapUndo();pool.forEach(it=>applyTomorrow(it.type+'_'+it.obj.id));
   save();render();flashUndo(pool.length+'件を明日へ送りました');}
-/* ===== タイムラインのタップ＝複数選択→下のバーで一括操作（⑥⑦⑧⑨） ===== */
+/* ===== タイムラインのタップ＝そのタスクの近接ポップ（下部バーは廃止） ===== */
 let tlSel=[],tlEvSel=null;
 function tlTapTask(tk){tlEvSel=null;const i=tlSel.indexOf(tk);i>=0?tlSel.splice(i,1):tlSel.push(tk);render();}
+/* 配置済みタスク／未配置プールをタップ→行の近くにミニポップ。単体で既存 tlDo系を流用 */
+function tlTaskTap(tk,ev){const t=todayStr();const at=(dayLog(t).at)||{};const placed=at[tk]!=null;
+  if(_cpForId===tk){cpClose();return;}
+  const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.tltask,.poolitem'):null;
+  const type=tk[0],id=tk.slice(2);
+  const html=`<div class="miniacts">
+    ${placed?`<button class="hi" onclick="tlOne('${tk}','unpin')"><span>↩</span>未配置に</button>`
+             :`<button class="hi" onclick="tlOne('${tk}','place')"><span>🕐</span>時間を決めて</button>`}
+    <button onclick="tlOne('${tk}','complete')"><span>✓</span>完了</button>
+    ${placed?`<button onclick="tlOne('${tk}','place')"><span>🕐</span>時間</button>`:''}
+    <button onclick="tlOne('${tk}','edit')"><span>✎</span>編集</button>
+    <button onclick="tlTaskTapMore('${tk}',event)"><span>…</span>その他</button></div>`;
+  cellpopAt(anchor,html,{forId:tk,rowSel:'.tltask,.poolitem'});}
+function tlTaskTapMore(tk,ev){const type=tk[0],id=tk.slice(2);
+  const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('#cellpop'):null;
+  const html=`<div class="miniacts">
+    <button onclick="tlOne('${tk}','tomorrow')"><span>➡</span>明日へ</button>
+    <button onclick="tlOne('${tk}','removeToday')"><span>🗂</span>今日から外す</button>
+    ${type==='t'?`<button onclick="tlOne('${tk}','delete')" style="color:var(--danger);"><span>🗑</span>削除</button>`:''}
+    <button onclick="tlTaskTap('${tk}',event)"><span>‹</span>戻る</button></div>`;
+  cellpopAt(anchor||$('#cellpop'),html,{forId:tk+'_more',rowSel:'.tltask,.poolitem'});}
+/* 単体アクション：既存 tlDo系（tlSelベース）を tlSel=[tk] で一時的に呼ぶ */
+async function tlOne(tk,act){const type=tk[0],id=tk.slice(2);
+  if(act==='edit'){cpClose();type==='r'?routineModal(id):taskModal(id);return;}
+  if(act==='delete'){cpClose();delTask(id);return;}
+  if(act==='place'){cpClose();startPlace([tk]);return;}
+  tlSel=[tk];
+  if(act==='unpin')tlDoUnpin();
+  else if(act==='complete')tlDoComplete();
+  else if(act==='tomorrow')tlDoTomorrow();
+  else if(act==='removeToday')tlDoRemoveToday();
+  cpClose();}
 function tlTapEv(id){tlSel=[];tlEvSel=(tlEvSel===id?null:id);render();}
 function tlClearSel(){tlSel=[];tlEvSel=null;render();}
 function tlDoComplete(){const t=todayStr();snapUndo();tlSel.forEach(tk=>{const type=tk[0],id=tk.slice(2);
@@ -2232,10 +2259,11 @@ function tlDoRemoveToday(){const n=tlSel.length;if(!n)return;const t=todayStr();
   chainClean(t);chainRelink(t);
   tlSel=[];save();render();flashUndo(n+'件を今日から外しました');}
 /* タイムライン＋未配置のルーティンをまとめて選択／解除 */
-function tlSelectAllRoutines(){const t=todayStr();
-  if(tlSel.length){tlSel=[];render();return;}
-  tlSel=doItems(t).filter(it=>it.type==='r'&&!flowItemDone(it)).map(it=>'r_'+it.obj.id);
-  tlEvSel=null;render();}
+/* 未配置のルーティンをまとめて時間配置モードへ（旧「全選択→下部バー」の置き換え） */
+function tlPlaceAllPool(){const t=todayStr();const at=(dayLog(t).at)||{};
+  const toks=doItems(t).filter(it=>it.type==='r'&&!flowItemDone(it)&&at['r_'+it.obj.id]==null).map(it=>'r_'+it.obj.id);
+  if(!toks.length){toast('未配置のルーティンはありません');return;}
+  startPlace(toks);}
 /* ===== 今日やることの並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let todayReorder=false,todaySel=[];
 function enterTodayReorder(){todayReorder=true;todaySel=[];render();}
