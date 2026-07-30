@@ -475,6 +475,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .pnote{margin:10px 14px 14px;border:1px solid var(--line2);border-radius:12px !important;padding:10px 12px;background:var(--card,#fff);}
 .pnote .pnh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
 .pnote .pnh b{font-size:12.5px;letter-spacing:.04em;}
+.pnpick{display:flex;align-items:center;gap:9px;padding:7px 2px;font-size:13.5px;cursor:pointer;}
+.pnpick input{width:18px;height:18px;flex:none;}
 .pnline{font-size:13px;line-height:1.7;display:flex;align-items:flex-start;gap:7px;}
 .pnline.sp{height:8px;}
 .pnline.ckl{cursor:pointer;}
@@ -679,6 +681,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #cellpop .cpmore{margin-top:7px;width:100%;padding:8px;font-size:12px;color:var(--accent);border:1px solid var(--line);border-radius:8px !important;}
 /* 行のすぐ近くに出る小さなアクションポップ */
 #cellpop .miniacts{display:flex;gap:6px;flex-wrap:wrap;max-width:260px;}
+#cellpop .miniacts .cptitle{flex:0 0 100%;white-space:normal;padding-bottom:2px;}
 #cellpop .miniacts button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;padding:7px 8px;border:1px solid var(--line);border-radius:9px !important;font-size:10px;color:var(--ink);}
 #cellpop .miniacts button.hi{border-color:var(--accent);color:var(--accent);font-weight:700;}
 /* 縦リスト型の近接ポップ（項目が多いメニュー用） */
@@ -752,6 +755,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tchkr,.ditem,.titem,.ritem,.rrow,.cell,.wkhcell,.wkad,.dtask,.listrow,.setrow{-webkit-tap-highlight-color:transparent;transition:background .12s ease,transform .12s ease;}
 .tchkr:active,.ditem:active,.titem:active,.ritem:active,.rrow:active,.wkad:active,.dtask:active,.listrow:active,.setrow:active{background:var(--line2);transform:scale(.99);}
 .cell:active,.wkhcell:active{background:var(--line2);}
+.cell.primed{background:var(--line2);}
 #daypop .dpev:active,#daypop .dpevrow:active{background:var(--line2);}
 #colorSheet .actsheet button:active{background:var(--line2);}
 /* 日ビューの中身も横スワイプがテキスト選択に奪われないよう抑止 */
@@ -905,7 +909,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.98';
+const APP_VERSION='v1.99';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1239,13 +1243,13 @@ function tfNorm(id){let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'');
 function tfClear(id){$('#'+id).value='';$('#'+id+'_v').value='';const el=$('#'+id);if(el.onchange)el.onchange();}
 function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+id+'_v').value=val||'';}
 /* カレンダーの左右スワイプで前後へ（月=前後月・週=前後週・日=前後日）。リスナーは1度だけ登録 */
-let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false,swRow=null;
+let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false,swRow=null,swAxis=null;
 function swRowReset(){if(!swRow)return;swRow.style.transform='';swRow.style.transition='';swRow.classList.remove('swR','swL');swRow=null;}
 function attachCalSwipe(){
   if(swipeBound)return;const el=$('#view');if(!el)return;swipeBound=true;
   el.addEventListener('touchstart',e=>{
     if(e.touches.length!==1){swValid=false;return;}
-    const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;
+    const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;swAxis=null;
     swRow=(view==='today'&&e.target.closest)?e.target.closest('.tchkr[data-lp]'):null;
     if(swRow)swRow.style.transition='none';},{passive:true});
   el.addEventListener('touchmove',e=>{
@@ -1254,9 +1258,17 @@ function attachCalSwipe(){
     const x=Math.max(-84,Math.min(84,dx*0.6));
     swRow.style.transform=`translateX(${x}px)`;
     swRow.classList.toggle('swR',dx>40);swRow.classList.toggle('swL',dx<-40);},{passive:true});
-  el.addEventListener('touchcancel',()=>{swValid=false;swRowReset();});
+  // カレンダーの横スワイプ：軸を固定して縦揺れ（縦スクロール混入）を止める
+  el.addEventListener('touchmove',e=>{
+    if(!swValid||view!=='cal'||e.touches.length!==1)return;
+    if(e.target.closest&&e.target.closest('.wkbody,.tlwrap,.chips,input,textarea,select'))return; // スクロール領域は触らない
+    const t=e.touches[0],dx=t.clientX-swSx,dy=t.clientY-swSy;
+    if(swAxis===null&&(Math.abs(dx)>8||Math.abs(dy)>8))swAxis=Math.abs(dx)>Math.abs(dy)?'h':'v';
+    if(swAxis==='h')e.preventDefault(); // 横スワイプ確定→縦スクロール抑止
+  },{passive:false});
+  el.addEventListener('touchcancel',()=>{swValid=false;swAxis=null;swRowReset();});
   el.addEventListener('touchend',e=>{
-    if(!swValid)return;swValid=false;
+    if(!swValid)return;swValid=false;const wasAxis=swAxis;swAxis=null;
     const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
     if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.wkbody,.tlwrap'))return; // 横スクロール/ドラッグ/リンク等は邪魔しない
@@ -2065,8 +2077,7 @@ function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const done=x.status==='done';
   const html=`<div class="miniacts">
     ${done?`<button onclick="cpClose();toggleTaskDone('${id}')"><span>↩</span>戻す</button>`
-      :`<button onclick="cpClose();toggleTaskDone('${id}')"><span>✓</span>完了</button>
-       <button onclick="cpClose();chkDayDone('${id}')"><span>☀</span>今日のみ</button>`}
+      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
     <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
   cellpopAt(row,html,{forId:id,rowSel:'.tchkr[data-lp^="t_"]'});}
@@ -2213,9 +2224,10 @@ async function tlOne(tk,act){const type=tk[0],id=tk.slice(2);
   if(act==='edit'){cpClose();type==='r'?routineModal(id):taskModal(id);return;}
   if(act==='delete'){cpClose();delTask(id);return;}
   if(act==='place'){cpClose();startPlace([tk]);return;}
+  if(act==='complete'&&type==='t'){taskCompleteTap(id,$('#cellpop'));return;} // タスク完了はPOPで出し分け
   tlSel=[tk];
   if(act==='unpin')tlDoUnpin();
-  else if(act==='complete')tlDoComplete();
+  else if(act==='complete')tlDoComplete(); // ルーティンは即完了
   else if(act==='tomorrow')tlDoTomorrow();
   else if(act==='removeToday')tlDoRemoveToday();
   cpClose();}
@@ -2714,7 +2726,7 @@ function weekLayout(evs,minMin,PXM){
   items.forEach(it=>{if(cluster.length&&it.s>=clusterEnd){flush();clusterEnd=-1;}cluster.push(it);clusterEnd=Math.max(clusterEnd,it.en);});
   flush();
   return res.map(it=>({e:it.e,top:(it.s-minMin)*PXM,h:Math.max(15,(it.en-it.s)*PXM),lane:it.lane,lanes:it.lanes}));}
-function calGoto(dstr){calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
+function calGoto(dstr){clearPrime();closeDayPopup();calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 function dueTasksOn(d){if(!S.settings.showDue)return[];const ids=visibleGroups(calSel);
@@ -2736,7 +2748,37 @@ function periodNoteHtml(key,label){
     if(!ln.trim())return '<div class="pnline sp"></div>';
     return `<div class="pnline">${esc(ln)}</div>`;}).join('')
     :`<div class="mini" style="padding:2px 0 0;" onclick="pnEdit('${key}','${label}')">まだメモはありません（タップで書く）</div>`;
-  return `<div class="pnote"><div class="pnh"><b>📝 ${label}</b><button class="act" style="color:var(--accent);" onclick="pnEdit('${key}','${label}')">✎ 編集</button></div>${body}</div>`;}
+  const toMonthBtn=(key.slice(0,2)==='w:'&&txt.trim())?`<button class="act" style="color:var(--ink3,#888);margin-right:8px;" onclick="pnToMonth('${key}')">📅 月メモへ</button>`:'';
+  return `<div class="pnote"><div class="pnh"><b>📝 ${label}</b><span style="display:flex;align-items:center;">${toMonthBtn}<button class="act" style="color:var(--accent);" onclick="pnEdit('${key}','${label}')">✎ 編集</button></span></div>${body}</div>`;}
+/* 週メモの行を選んで、月メモへ 複製／移動 */
+function pnToMonth(weekKey){const txt=(S.periodNotes||{})[weekKey]||'';const lines=txt.split('\n');
+  const idxs=lines.map((ln,i)=>({ln,i})).filter(o=>o.ln.trim()); // 空行は対象外
+  if(!idxs.length){toast('この週メモには移せる行がありません');return;}
+  const monthKey='m:'+weekKey.slice(2,9); // w:YYYY-MM-DD → m:YYYY-MM（週開始日の月）
+  const mlabel=weekKey.slice(2,6)+'年'+(+weekKey.slice(7,9))+'月';
+  const rows=idxs.map(o=>{const disp=o.ln.replace(/^\[( |x)?\]\s?/,'').replace(/^[・-]\s?/,'');
+    return `<label class="pnpick"><input type="checkbox" class="pnpickcb" data-i="${o.i}" checked><span>${esc(disp||'（空）')}</span></label>`;}).join('');
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">📅 ${mlabel}のメモへ移す
+    <div class="mini" style="margin:2px 0 8px;">入れたい行を選んでください（既定は全部）</div>
+    <div style="max-height:44vh;overflow:auto;">${rows}</div>
+    <label class="pnpick" style="border-top:1px solid var(--line2);margin-top:6px;padding-top:8px;"><input type="checkbox" id="pnpickAll" checked><span>すべて選択</span></label></div>
+    <div class="db" style="flex-wrap:wrap;gap:6px;"><button onclick="dlgEnd()">やめる</button>
+      <button onclick="pnDoToMonth('${weekKey}','copy')">📋 複製で入れる</button>
+      <button class="ok" onclick="pnDoToMonth('${weekKey}','move')">➡ 移動で入れる</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  const all=$('#pnpickAll');if(all)all.onchange=()=>$$('.pnpickcb').forEach(cb=>{cb.checked=all.checked;});}
+function pnDoToMonth(weekKey,mode){const picked=$$('.pnpickcb').filter(cb=>cb.checked).map(cb=>+cb.dataset.i);
+  if(!picked.length){toast('行が選ばれていません');return;}
+  const monthKey='m:'+weekKey.slice(2,9);snapUndo();
+  const wlines=((S.periodNotes||{})[weekKey]||'').split('\n');
+  const moving=picked.map(i=>wlines[i]);
+  if(!S.periodNotes)S.periodNotes={};
+  const cur=(S.periodNotes[monthKey]||'').replace(/\n+$/,'');
+  S.periodNotes[monthKey]=(cur?cur+'\n':'')+moving.join('\n');
+  if(mode==='move'){const rest=wlines.filter((_,i)=>!picked.includes(i));
+    const j=rest.join('\n').replace(/\n{3,}/g,'\n\n');
+    if(j.trim())S.periodNotes[weekKey]=j;else delete S.periodNotes[weekKey];}
+  save();dlgEnd();render();flashUndo(mode==='move'?`${moving.length}行を月メモへ移動しました`:`${moving.length}行を月メモへ複製しました`);}
 function pnToggle(key,i){const txt=(S.periodNotes||{})[key]||'';const lines=txt.split('\n');
   const m=lines[i]&&lines[i].match(/^\[( |x)?\]\s?(.*)$/);if(!m)return;
   lines[i]=(m[1]==='x'?'[] ':'[x] ')+m[2];S.periodNotes[key]=lines.join('\n');save();render();}
@@ -2881,6 +2923,31 @@ function chkDayDone(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo
   x.status='done';x.doneAt=todayStr();x.doneMin=curMin();x.dayDone=true;sinkDoItem('t_'+id);markJustDone('t_'+id);
   save();render();flashUndo('今日の分を完了！明日また表示します');checkCelebrate();}
 function archiveToday(id){snapUndo();applyHideToday('t_'+id);save();render();flashUndo('今日は隠しました（アーカイブ）');}
+/* 完了はタップ→POP。毎日表示/繰り返しは「今日の分／完全完了」、普通タスクは確認 */
+function taskCompleteTap(id,anchor){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id+'_cmp'){cpClose();return;}
+  const a=anchor||document.querySelector(`.tchkr[data-lp="t_${id}"]`);
+  let html;
+  if(x.pin||x.repeat){
+    html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
+      <button class="hi" onclick="cpClose();completeTodayOnly('${id}')"><span>☀</span>今日の分を記録</button>
+      <button onclick="cpClose();fullyCompleteTask('${id}')"><span>✅</span>完全に完了</button>
+      <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  }else{
+    html=`<div class="miniacts"><div class="cptitle">${esc(x.title)} を完了にする？</div>
+      <button class="hi" onclick="cpClose();toggleTaskDone('${id}')"><span>✓</span>完了する</button>
+      <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  }
+  cellpopAt(a,html,{forId:id+'_cmp',rowSel:'.tchkr[data-lp^="t_"],.tltask,.poolitem'});}
+function completeTodayOnly(id){const x=S.tasks.find(v=>v.id===id);if(!x||x.status==='done')return;snapUndo();
+  x.status='done';x.doneAt=todayStr();x.doneMin=curMin();
+  if(x.repeat)advanceRepeatTask(x);else x.dayDone=true;
+  sinkDoItem('t_'+id);markJustDone('t_'+id);save();render();flashUndo('今日の分を完了！明日また表示します');checkCelebrate();}
+function fullyCompleteTask(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo();
+  x.status='done';x.doneAt=todayStr();x.doneMin=curMin();
+  x.pin=false;x.repeat='';delete x.dayDone;delete x.repeatPrev; // 復活条件から外す＝真の完了
+  const at=dayLog(todayStr()).at;if(at)delete at['t_'+id];
+  sinkDoItem('t_'+id);markJustDone('t_'+id);save();render();flashUndo('完全に完了しました🎉');checkCelebrate();}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
   if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
     if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
@@ -2922,7 +2989,7 @@ async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
   else{const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr){x.status='todo';delete x.doneAt;delete x.doneMin;}}
   save();render();flashUndo('未完了に戻しました');}
 /* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
-function openDayPopup(dstr){const evs=eventsOn(dstr);const dues=dueTasksOn(dstr);
+function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dues=dueTasksOn(dstr);
   const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
   let el=$('#daypop');if(!el){el=document.createElement('div');el.id='daypop';document.body.appendChild(el);}
   el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
@@ -2949,6 +3016,9 @@ function dpPressEnd(){clearTimeout(_dpPress);}
 /* 長押し→色（タップでは発動しない。移動・スクロール・指を離すと確実にキャンセル） */
 let pressTimer=null,pressStart=null,pressFired=false,pressCell=null,pressLp=null,lpSuppress=false,pressDocBound=false;
 let cellSel=new Set(),cellSelMode=false; // 複数セル選択で「まとめて色分け」
+let primedCell=null,_primedEl=null,_primeTmr=null; // 1回目タップ＝グレーのみ（プライム）、2回目でPOP
+function primeCell(el){clearPrime();if(!el)return;_primedEl=el;primedCell=el.dataset.d;el.classList.add('primed');_primeTmr=setTimeout(clearPrime,2200);}
+function clearPrime(){if(_primeTmr){clearTimeout(_primeTmr);_primeTmr=null;}if(_primedEl){_primedEl.classList.remove('primed');}_primedEl=null;primedCell=null;}
 function endPressTimer(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
 function attachCellPress(){
   if(!pressDocBound){pressDocBound=true;
@@ -2958,7 +3028,14 @@ function attachCellPress(){
     },{passive:true});
     document.addEventListener('pointerup',()=>{
       const had=!!pressTimer;endPressTimer();
-      if(had&&pressCell&&!pressFired){if(cellSelMode)toggleCellSel(pressCell.dataset.d);else openDayPopup(pressCell.dataset.d);}
+      if(had&&pressCell&&!pressFired){
+        const d=pressCell.dataset.d;
+        if(cellSelMode){toggleCellSel(d);}
+        else{const popOpen=($('#cellpop').style.display!=='none')||!!$('#daypop')?.classList.contains('show');
+          if(popOpen){cpClose();closeDayPopup();primeCell(pressCell);} // 開いてるPOPは消えるだけ→グレー
+          else if(primedCell===d){clearPrime();openDayPopup(d);}       // 2回目でPOP
+          else{primeCell(pressCell);}}                                 // 1回目はグレーのみ
+      }
       pressCell=null;pressLp=null;pressStart=null;setTimeout(()=>{pressFired=false;},0);});
     document.addEventListener('pointercancel',()=>{endPressTimer();pressCell=null;pressLp=null;pressStart=null;});
     window.addEventListener('scroll',()=>endPressTimer(),{passive:true});
@@ -3047,7 +3124,7 @@ function openCellColorPop(dstr,el){
 function setDayColor(d,i){if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;
   save();cpClose();render();attachCellPress();}
 /* (b) 複数セル選択→まとめて色分け */
-function enterCellSel(d){cpClose();cellSelMode=true;cellSel=new Set(d?[d]:[]);render();attachCellPress();openMultiColorSheet();}
+function enterCellSel(d){clearPrime();cpClose();cellSelMode=true;cellSel=new Set(d?[d]:[]);render();attachCellPress();openMultiColorSheet();}
 function exitCellSel(){cellSelMode=false;cellSel=new Set();$('#multibar').classList.remove('show');render();attachCellPress();}
 function toggleCellSel(d){cellSel.has(d)?cellSel.delete(d):cellSel.add(d);render();attachCellPress();openMultiColorSheet();}
 /* 複数セル色分け＝画面上部の固定バー（下部を覆わない） */
@@ -3801,7 +3878,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.98（2026-07-30）</b><br>
+  <div class="mini"><b>v1.99（2026-07-31）</b><br>
+  ・<b>月カレンダーのタップを2段階に</b>：1回目のタップは色がうすくグレーになるだけ、<b>もう一度タップで日付ポップ</b>。指がかすっての誤爆を防ぎます<br>
+  ・長押しで出した<b>色つけポップを閉じたい時に周りをタップ</b>→ポップが消えるだけ（別の日のポップは開きません）<br>
+  ・カレンダーを<b>横スワイプした時の縦揺れを解消</b>（横に送る時は縦スクロールしない）<br>
+  ・<b>週メモ→月メモへ</b>：週メモの「📅 月メモへ」から、行を選んで<b>複製／移動</b>できます<br>
+  ・<b>タスク完了をポップで確認</b>：「終わるまで毎日表示」タスクは<b>「☀今日の分を記録／✅完全に完了」</b>を選択、ふつうのタスクは完了の確認ポップが出ます（取り消しも可）<br>
+  <b>v1.98（2026-07-30）</b><br>
   ・<b>画面下を覆う操作バー・シートを全廃</b>し、操作は<b>タップした対象のすぐ近くの小さなポップ</b>に統一しました<br>
   ・バーチカルに配置したタスクを<b>タップ→近くのメニュー</b>。先頭に強調した<b>「↩ 未配置に戻す」</b>／完了・時間・編集・…その他（明日へ・今日から外す・削除）<br>
   ・今日の＋追加・項目メニュー・空き時間タップ・目標・カレンダーの予定タップも<b>すべて近接ポップ</b>に<br>
