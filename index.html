@@ -656,8 +656,16 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #colorSheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ink);z-index:120;display:none;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:960px;margin:0 auto;max-height:72vh;overflow-y:auto;}
 #colorSheet.show{display:block;}
 /* セル直下に出る色分けポップ */
-#cellpop{position:fixed;z-index:130;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.28);padding:8px;display:none;}
-#cellpop .cpsw{display:flex;gap:5px;}
+#cellpop{position:fixed;z-index:130;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.28);padding:8px;display:none;max-width:calc(100vw - 12px);}
+#cellpop.wide{width:250px;}
+#cellpop.rise{animation:rise-in .16s ease both;}
+@keyframes rise-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+#cellpop .cptitle{font-size:11.5px;font-weight:700;color:var(--ink);padding:0 2px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#cellpop .cprow{display:flex;align-items:center;gap:6px;margin-top:4px;}
+#cellpop .cprow .cplab{flex:0 0 30px;font-size:10px;color:var(--sub);}
+#cellpop .cpprio{flex:1;padding:6px 0;border:1px solid var(--line);border-radius:7px !important;font-size:12px;color:var(--ink);}
+#cellpop .cpprio.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+#cellpop .cpsw{display:flex;gap:5px;flex:1;flex-wrap:wrap;}
 #cellpop .cpsw button{width:32px;height:32px;border:1px solid var(--line);border-radius:7px !important;}
 #cellpop .cpsw .clear{background:var(--bg);font-size:9px;color:var(--sub);}
 #cellpop .cpmore{margin-top:7px;width:100%;padding:8px;font-size:12px;color:var(--accent);border:1px solid var(--line);border-radius:8px !important;}
@@ -724,6 +732,15 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .ractions button:last-child{border-right:none;font-weight:700;}
 /* 長押し時の文字選択（コピペ挙動）・コールアウトを抑止 */
 .titem,.ritem,.rrow,.tl,.dtask,.cell,[data-lp]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+/* スマホのタップ手応え：うっすらグレーにへこむ（下タブ・入力・トグルは除外） */
+.tchkr,.ditem,.titem,.ritem,.rrow,.cell,.wkhcell,.wkad,.dtask,.listrow,.setrow{-webkit-tap-highlight-color:transparent;transition:background .12s ease,transform .12s ease;}
+.tchkr:active,.ditem:active,.titem:active,.ritem:active,.rrow:active,.wkad:active,.dtask:active,.listrow:active,.setrow:active{background:var(--line2);transform:scale(.99);}
+.cell:active,.wkhcell:active{background:var(--line2);}
+#daypop .dpev:active,#daypop .dpevrow:active{background:var(--line2);}
+#colorSheet .actsheet button:active{background:var(--line2);}
+/* 日ビューの中身も横スワイプがテキスト選択に奪われないよう抑止 */
+.daycols,.daycol,.dcev,.cev,.drec,.dch,.dayhead,.pnote,.pnline{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.daycols img,.dcev img,.drec img{-webkit-user-drag:none;user-drag:none;pointer-events:none;}
 .rrow{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line2);cursor:pointer;-webkit-user-select:none;user-select:none;}
 .rrow.sel{background:#EEF2FF;}
 .rnum{width:24px;height:24px;flex:0 0 24px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--accent);font-weight:700;}
@@ -871,7 +888,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v1.96';
+const APP_VERSION='v1.97';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1225,9 +1242,9 @@ function attachCalSwipe(){
     if(!swValid)return;swValid=false;
     const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
-    if(e.target.closest&&e.target.closest('.chips'))return; // グループチップの横スクロールだけは邪魔しない
+    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.wkbody,.tlwrap'))return; // 横スクロール/ドラッグ/リンク等は邪魔しない
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
-    if(!(Date.now()-swT<900&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3))return;
+    if(!(Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15))return;
     // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
     if(row){const tok=row.dataset.lp;dx>0?swipeComplete(tok):sendTaskTomorrow(tok.slice(2));return;}
     if(view==='cal'){calNav(dx<0?1:-1);return;}
@@ -2018,37 +2035,51 @@ function moveChecklistTask(id,dir){const t=todayStr();
   const ni=ids.indexOf(nb);if(ni<0)return;
   ids.splice(dir<0?ni:ni+1,0,id);
   commitTaskOrder(ids);taskSort='manual';render();}
-/* 今日のタスクをタップ→行のすぐ近くに小さなアイコンポップ（大きなシートは廃止）。同じ行を再タップで閉じる */
-let _cpForId=null;
-function cpClose(){const p=$('#cellpop');if(p)p.style.display='none';_cpForId=null;}
+/* ===== 共通：行のすぐ近くに出るミニポップ（画面下フルシートの代替） =====
+   opt.wide   …横に広い版（色スウォッチ列など）
+   opt.forId  …再タップ検出用のID
+   opt.rowSel …「別の行タップ＝差し替え」対象セレクタ。pop外＆その行以外のタップで閉じる（その行タップは素通し） */
+let _cpForId=null,_cpDocClick=null;
+function cpDetach(){if(_cpDocClick){document.removeEventListener('click',_cpDocClick,true);_cpDocClick=null;}}
+function cpClose(){const p=$('#cellpop');if(p){p.style.display='none';p.classList.remove('wide','rise');}_cpForId=null;cpDetach();}
+function cellpopAt(anchor,html,opt){opt=opt||{};const pop=$('#cellpop');
+  cpDetach();
+  pop.innerHTML=html;
+  pop.classList.toggle('wide',!!opt.wide);
+  pop.classList.add('rise');
+  pop.style.left='0px';pop.style.top='0px';pop.style.display='block';
+  const r=(anchor&&anchor.getBoundingClientRect)?anchor.getBoundingClientRect():{left:20,right:200,top:innerHeight/2,bottom:innerHeight/2,width:180,height:20};
+  const pw=pop.offsetWidth,ph=pop.offsetHeight;
+  let left=Math.max(6,Math.min(r.left+Math.min(40,r.width/3),innerWidth-pw-6));
+  let top=r.bottom+4;if(top+ph>innerHeight-6)top=Math.max(6,r.top-ph-4);
+  pop.style.left=left+'px';pop.style.top=top+'px';
+  _cpForId=opt.forId||null;
+  _cpDocClick=e=>{
+    if(pop.contains(e.target))return;
+    if(opt.rowSel&&e.target.closest&&e.target.closest(opt.rowSel))return; // 別行タップは素通し（差し替え）
+    cpClose();};
+  setTimeout(()=>document.addEventListener('click',_cpDocClick,true),0);}
+/* 今日のタスクをタップ→ミニポップ（再タップで閉じる／別タスクで差し替え／pop外タップで閉じる） */
 function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   if(_cpForId===id){cpClose();return;} // 同じタスクの再タップで閉じる
   const row=(ev&&ev.target&&ev.target.closest('.tchkr'))||document.querySelector(`.tchkr[data-lp="t_${id}"]`);
-  const pop=$('#cellpop');const done=x.status==='done';_cpForId=id;
-  pop.innerHTML=`<div class="miniacts">
+  const done=x.status==='done';
+  const html=`<div class="miniacts">
     ${done?`<button onclick="cpClose();toggleTaskDone('${id}')"><span>↩</span>戻す</button>`
       :`<button onclick="cpClose();toggleTaskDone('${id}')"><span>✓</span>完了</button>
        <button onclick="cpClose();chkDayDone('${id}')"><span>☀</span>今日のみ</button>`}
     <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
-    <button onclick="cpClose();chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
-  pop.style.display='block';
-  const r=row?row.getBoundingClientRect():{left:20,bottom:window.innerHeight/2,top:window.innerHeight/2};
-  const pw=pop.offsetWidth,ph=pop.offsetHeight;
-  let left=Math.max(6,Math.min(r.left+10,window.innerWidth-pw-6));
-  let top=r.bottom+4;if(top+ph>window.innerHeight-6)top=r.top-ph-4;
-  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
-  const close=e2=>{if(!pop.contains(e2.target)){cpClose();document.removeEventListener('pointerdown',close);}};
-  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
-/* 「…その他」＝残りのアクション（明日へ・アーカイブ・削除） */
-function chkTaskMenuFull(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;const sheet=$('#colorSheet');
-  sheet.innerHTML=`<div class="t">${esc(x.title)}</div><div class="actsheet">
-    ${x.status==='done'?'':`<button onclick="closeSheet();sendTaskTomorrow('${id}')">➡ 明日へ</button>
-    <button onclick="closeSheet();archiveToday('${id}')">🗂 アーカイブ（今日は隠す）</button>`}
-    <button class="del" onclick="closeSheet();delTask('${id}')">🗑 削除</button></div>
-    <div class="mini" style="padding:8px 0 0;">右スワイプ＝完了／左スワイプ＝明日へ／長押し＝優先度・色。</div>`;
-  sheet.classList.add('show');
-  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
-  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+    <button onclick="chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
+  cellpopAt(row,html,{forId:id,rowSel:'.tchkr[data-lp^="t_"]'});}
+/* 「…その他」＝明日へ・隠す・削除・戻る。ミニポップ版（画面下フルシート廃止） */
+function chkTaskMenuFull(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  const row=document.querySelector(`.tchkr[data-lp="t_${id}"]`);
+  const html=`<div class="miniacts">
+    ${x.status==='done'?'':`<button onclick="cpClose();sendTaskTomorrow('${id}')"><span>➡</span>明日へ</button>
+    <button onclick="cpClose();archiveToday('${id}')"><span>🗂</span>隠す</button>`}
+    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button onclick="chkTaskMenu('${id}')"><span>‹</span>戻る</button></div>`;
+  cellpopAt(row,html,{forId:id+'_full',rowSel:'.tchkr[data-lp^="t_"]'});}
 function todayTaskChecklist(t){
   const tasks=todayTasks(t).slice().sort(chkTaskSort);
   if(!tasks.length)return '';
@@ -2090,18 +2121,10 @@ function gutterTap(ev){ev.stopPropagation();
 function blockTap(ev,id){ev.stopPropagation();
   if(ev.target.closest('.tlbh'))return;
   const t=todayStr();const b=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!b)return;
-  const pop=$('#cellpop');
-  pop.innerHTML=`<div class="miniacts">
+  const html=`<div class="miniacts">
     <button onclick="cpClose();blockFill('${id}')"><span>▶</span>流し込む</button>
     <button onclick="cpClose();blockDel('${id}')"><span>🗑</span>削除</button></div>`;
-  pop.style.display='block';
-  const r=ev.target.closest('.tlblock').getBoundingClientRect();
-  const pw=pop.offsetWidth,ph=pop.offsetHeight;
-  let left=Math.max(6,Math.min(r.left+40,window.innerWidth-pw-6));
-  let top=r.top+18;if(top+ph>window.innerHeight-6)top=r.top-ph-4;
-  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
-  const close=e2=>{if(!pop.contains(e2.target)){cpClose();document.removeEventListener('pointerdown',close);}};
-  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+  cellpopAt(ev.target.closest('.tlblock'),html,{forId:id+'_blk'});}
 /* ブロックに未配置のタスクを頭から流し込む（予定は避ける・はみ出す分は配置しない） */
 function blockFill(id){const t=todayStr();const b=(dayLog(t).blocks||[]).find(x=>x.id===id);if(!b)return;
   const w=hm2min(dayWake(t));const A=v=>toAxis(v,w);
@@ -2922,28 +2945,25 @@ function attachCellPress(){
   $$('.cell').forEach(el=>bind(el,'cell'));
   $$('[data-lp]').forEach(el=>bind(el,'lp'));}
 function pastelBg(obj){return (obj&&obj.color!=null&&PASTELS[obj.color])?`background:${PASTELS[obj.color].c};`:'';}
+/* 長押し＝優先度＋色だけ。行のすぐ近くにミニポップ（画面下フルシート廃止） */
 function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
-  const sheet=$('#colorSheet');
-  // 長押し＝優先度と色だけ（完了系はタップ・スワイプに役割分担）
-  sheet.innerHTML=`<div class="t">${esc(obj.title)}</div>
-    ${type==='t'?`<div class="t" style="margin-bottom:6px;">優先度</div><div class="sw prio" style="margin-bottom:10px;">
-      ${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>`:''}
-    <div class="t">色分け</div><div class="sw">
-    ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
-    <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div>`;
-  sheet.classList.add('show');
-  const close=e=>{if(!sheet.contains(e.target)){sheet.classList.remove('show');document.removeEventListener('pointerdown',close);}};
-  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+  const anchor=document.querySelector(`[data-lp="${tok}"]`);
+  const html=`<div class="cptitle">${esc(obj.title)}</div>
+    ${type==='t'?`<div class="cprow"><span class="cplab">優先度</span>${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="cpprio ${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>`:''}
+    <div class="cprow"><span class="cplab">色</span><div class="cpsw">
+      ${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
+      <button class="clear" onclick="setItemColor('${tok}',null)">なし</button></div></div>`;
+  cellpopAt(anchor,html,{wide:true,forId:tok+'_lp'});}
 function setItemPrio(id,p){const x=S.tasks.find(v=>v.id===id);if(!x)return;
-  x.priority=p;save();render();closeSheet();toast('優先度を「'+({1:'高',2:'中',3:'低'}[p])+'」にしました');}
+  x.priority=p;save();render();cpClose();toast('優先度を「'+({1:'高',2:'中',3:'低'}[p])+'」にしました');}
 function sendTaskTomorrow(id){snapUndo();applyTomorrow('t_'+id);save();render();flashUndo('明日へ送りました（長押し→今日へ戻す で戻せます）');}
 function sendTaskToday(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   snapUndo();x.today=todayStr();x.snooze=null;save();render();flashUndo('今日に入れました');}
 function setItemColor(tok,i){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);
   if(obj){if(i===null)delete obj.color;else obj.color=i;}
-  save();$('#colorSheet').classList.remove('show');render();}
+  save();cpClose();$('#colorSheet').classList.remove('show');render();}
 function closeSheet(){$('#colorSheet').classList.remove('show');}
 function todayItemMenu(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
@@ -2989,21 +3009,15 @@ async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);cons
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
     x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);advanceRepeatTask(x);}save();render();if(!done)checkCelebrate();}}
 /* (a) 単日の色分け＝押したセルの下に小さくポップ表示 */
-function openCellColorPop(dstr,el){const pop=$('#cellpop');
-  pop.innerHTML=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
+function openCellColorPop(dstr,el){
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
     <button class="clear" onclick="setDayColor('${dstr}',null)">なし</button></div>
     <button class="cpmore" onclick="enterCellSel('${dstr}')">▤ 他の日もまとめて色分け</button>`;
-  pop.style.display='block';
-  const r=el.getBoundingClientRect();const pw=pop.offsetWidth,ph=pop.offsetHeight;
-  let left=r.left;if(left+pw>window.innerWidth-6)left=window.innerWidth-pw-6;left=Math.max(6,left);
-  let top=r.bottom+4;if(top+ph>window.innerHeight-6)top=r.top-ph-4; // 下に入らなければ上へ
-  pop.style.left=left+'px';pop.style.top=Math.max(6,top)+'px';
-  const close=e=>{if(!pop.contains(e.target)){pop.style.display='none';document.removeEventListener('pointerdown',close);}};
-  setTimeout(()=>document.addEventListener('pointerdown',close),50);}
+  cellpopAt(el,html,{wide:true,forId:'daycol_'+dstr});}
 function setDayColor(d,i){if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;
-  save();$('#cellpop').style.display='none';render();attachCellPress();}
+  save();cpClose();render();attachCellPress();}
 /* (b) 複数セル選択→まとめて色分け */
-function enterCellSel(d){$('#cellpop').style.display='none';cellSelMode=true;cellSel=new Set(d?[d]:[]);render();attachCellPress();openMultiColorSheet();}
+function enterCellSel(d){cpClose();cellSelMode=true;cellSel=new Set(d?[d]:[]);render();attachCellPress();openMultiColorSheet();}
 function exitCellSel(){cellSelMode=false;cellSel=new Set();$('#colorSheet').classList.remove('show');render();attachCellPress();}
 function toggleCellSel(d){cellSel.has(d)?cellSel.delete(d):cellSel.add(d);render();attachCellPress();openMultiColorSheet();}
 function openMultiColorSheet(){const sheet=$('#colorSheet');
@@ -3759,7 +3773,12 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:3px 8px;font-size:12px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v1.96（2026-07-28）</b><br>
+  <div class="mini"><b>v1.97（2026-07-30）</b><br>
+  ・今日タブのタスクの<b>ミニポップが再タップ・pop外タップで閉じる</b>ように修正。別タスクをタップすると差し替わります<br>
+  ・タスクの<b>「…その他」「長押し（優先度・色）」も画面下フルシートをやめて</b>、行のすぐ近くのミニポップに（他の画面を覆いません）<br>
+  ・カレンダー日表示の<b>横スワイプ</b>を、日付部分だけでなく<b>予定エリア・空白部分など画面のほとんど</b>で効くように改善<br>
+  ・タスク・ルーティン・カレンダーのセル等を<b>タップした時にうっすらグレー</b>にへこむ手応えを追加（下タブ・入力欄は対象外）<br>
+  <b>v1.96（2026-07-28）</b><br>
   ・タスクの色を<b>カレンダーと共通のパステルカラー</b>に統一（4つの部屋→もも／あんず／れもん／わかば）<br>
   ・今日タブのタスクを<b>色→新規が上→手動→優先度</b>の順で並べます。<b>優先度「高」だけ最上部</b>（色並びを飛び越えて先頭に）<br>
   ・タスクを<b>タップして開いたミニポップは、もう一度タップで閉じる</b>ように<br>
