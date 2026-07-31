@@ -264,8 +264,13 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .btnrow.quadc button{color:var(--ink);}
 .btnrow.quadc button.on{color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);}
 .minpick .minchips{margin-top:7px;}
-.minchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.minchips button{flex:1 1 auto;min-width:52px;border:1px solid var(--line);padding:9px 0;font-size:13px;}
+/* 分のボタンは「長いほど幅が広い」＝目で時間の大小が分かるように（厳密な比率ではない） */
+.minchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:stretch;}
+.minchips button{flex:1 1 auto;min-width:44px;border:1px solid var(--line);padding:9px 0;font-size:13px;}
+.minchips button[data-w="s"]{flex-grow:1;}
+.minchips button[data-w="m"]{flex-grow:2;}
+.minchips button[data-w="l"]{flex-grow:3;font-weight:600;}
+.minchips button[data-w="x"]{flex-grow:4;font-weight:700;}
 .minchips button:active{background:var(--ink);color:#fff;}
 #undobar{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(52px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:9px 10px 9px 16px;border-radius:24px !important;display:none;align-items:center;gap:12px;z-index:70;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:13px;max-width:92vw;opacity:0;transition:opacity .25s,transform .25s;}
 #undobar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
@@ -837,13 +842,41 @@ body.swiping .lpress{animation:none;}
 /* dialog */
 #dlgWrap{position:fixed;inset:0;background:rgba(21,23,26,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:24px;}
 #dlgWrap.show{display:flex;}
-#dlg{background:var(--bg);width:100%;max-width:360px;border:1px solid var(--ink);}
+#dlg{background:var(--bg);width:100%;max-width:360px;border:1px solid var(--ink);transition:transform .18s ease;}
 #dlg .dm{padding:20px 18px 14px;font-size:14.5px;line-height:1.7;white-space:pre-wrap;}
 #dlg input{margin-top:10px;}
 #dlg .db{display:flex;border-top:1px solid var(--line);}
 #dlg .db button{flex:1;padding:13px 0;font-size:14px;letter-spacing:.1em;color:var(--sub);}
 #dlg .db button.ok{background:var(--ink);color:#fff;font-weight:700;}
 #dlg .db button.dngr{color:var(--danger);font-weight:700;}
+/* タスクの追加・編集フォーム（追加と編集は同じ画面）。余白は詰めて、閉じるは指の届く下に */
+#dlg .tform{padding:0 14px 8px;white-space:normal;max-height:74vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+#dlg .tform .tfh{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);padding:12px 0 8px;margin-bottom:2px;border-bottom:1px solid var(--line2);z-index:2;}
+#dlg .tform .tfh b{font-size:14px;letter-spacing:.06em;}
+#dlg .tform .tfh button{font-size:20px;color:var(--sub);padding:0 4px;line-height:1;}
+#dlg .tform .frow{margin-bottom:9px;}
+#dlg .tform label{margin-bottom:3px;}
+#dlg .tform input,#dlg .tform textarea,#dlg .tform select{margin-top:0;}
+#dlg .tform .tfchk{display:flex;align-items:center;gap:8px;}
+#dlg .tform .tfchk input{width:20px;height:20px;flex:none;}
+#dlg .tform .tfchk span{font-size:13px;}
+#dlg .tform .tfsub{display:flex;gap:8px;border-top:1px solid var(--line2);padding-top:9px;}
+#dlg .tform .tfsub button{flex:1;padding:9px 0;font-size:12.5px;border:1px solid var(--line);color:var(--sub);}
+#dlg .tform .tfsub .del{color:var(--danger);border-color:var(--danger);}
+/* グループ＝親タブ→子タブ（選んだ時点で決定） */
+.gtabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;margin-bottom:4px;-webkit-overflow-scrolling:touch;}
+.gtabs button{flex:0 0 auto;display:flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid var(--line);font-size:13px;color:var(--ink);white-space:nowrap;border-radius:999px !important;}
+.gtabs button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+.gtabs button .gdot{width:9px;height:9px;flex:none;border-radius:50% !important;}
+.gtabs .gadd{color:var(--accent);font-weight:700;}
+/* 繰り返しの曜日・日付えらび */
+.daysel{display:flex;gap:5px;margin-top:6px;}
+.daysel button{flex:1;padding:9px 0;border:1px solid var(--line);font-size:13px;color:var(--ink);}
+.daysel button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+.domsel{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px;}
+.domsel button{padding:8px 0;border:1px solid var(--line);font-size:12.5px;color:var(--ink);}
+.domsel button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+#dlg .dpgrid button.td{border-color:var(--accent);color:var(--accent);font-weight:700;}
 
 /* celebrate */
 /* 画像メモ */
@@ -909,7 +942,7 @@ body.swiping .lpress{animation:none;}
 <div id="colorSheet"></div>
 <div id="cellpop"></div>
 <div id="multibar"></div>
-<button id="quickadd" onclick="quickAddPop()" title="タスクをさっと追加">＋</button>
+<button id="quickadd" onclick="taskModal(null)" title="タスクを追加">＋</button>
 <div id="flowbar"></div>
 <div id="flow"></div>
 <div id="lightbox" onclick="if(event.target===this)closeLightbox()"></div>
@@ -937,7 +970,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.11';
+const APP_VERSION='v2.20';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -949,6 +982,11 @@ const PALETTE=(()=>{const F=[
  ['#C86A1C','#DE8B3E','#EBB07A','#F5D4B4'],  /* 橙 */
  ['#3F4650','#6B7280','#9AA1AD','#C9CED6']]; /* 灰 */
  const flat=[];for(let s=0;s<4;s++)for(let f=0;f<8;f++)flat.push(F[f][s]);return flat;})();
+/* 繰り返しの表示（毎週 火・金／毎月25日 のように分かるように） */
+function repLabelT(x){if(!x||!x.repeat)return '';
+  if(x.repeat==='weekly'&&x.repDays&&x.repDays.length)return '毎週'+x.repDays.slice().sort((a,b)=>a-b).map(d=>WD[d]).join('・');
+  if(x.repeat==='monthly'&&x.repDom)return '毎月'+x.repDom+'日';
+  return REPEAT_LABEL_T[x.repeat]||'';}
 const QUADS=[
  {t:'今すぐやる',s:'重要×緊急',c:'#C9403C'},
  {t:'計画してやる',s:'重要×緊急でない',c:'#2456E6'},
@@ -958,11 +996,9 @@ const QUADS=[
 const PASTELS=[{c:'#FBE3E8',n:'もも'},{c:'#FCEFD9',n:'あんず'},{c:'#FBF6D3',n:'れもん'},{c:'#E1F1DC',n:'わかば'},{c:'#DDEBF9',n:'そら'},{c:'#E8E2F5',n:'ふじ'}];
 /* 4つの部屋→パステル色の対応（今すぐ＝もも,計画＝あんず,サッと＝れもん,スキマ＝わかば） */
 const QUAD_TO_PASTEL=[0,1,2,3];
-/* タスクの色インデックス（0..PASTELS.length-1）。x.colorを最優先、なければ部屋(quad)から引く */
+/* タスクの色インデックス（0..PASTELS.length-1）。色は x.color のみ（旧「4つの部屋」は廃止・移行済み） */
 function taskPastelIdx(x){if(!x)return -1;
-  if(x.color!=null&&PASTELS[x.color])return x.color;
-  if(x.quad){const i=QUAD_TO_PASTEL[x.quad-1];return i!=null?i:-1;}
-  return -1;}
+  return (x.color!=null&&PASTELS[x.color])?x.color:-1;}
 function taskBg(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
 function taskLineC(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
 /* G設定で並べ替え可能な色の並び順（既定＝PASTELS順） */
@@ -1156,8 +1192,14 @@ function migrate(){const st=S.settings;
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(st.dense===undefined)st.dense=true;
   if(st.timeline===undefined)st.timeline=true;
-  S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.quad===undefined)x.quad=0;
-    if(x.qOrder===undefined)x.qOrder=0;if(x.snooze===undefined)x.snooze=null;});
+  S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.snooze===undefined)x.snooze=null;
+    // 「4つの部屋」廃止：色は部屋から引いていたので、消える前に x.color へ移しておく
+    if(x.quad){if(x.color==null&&QUAD_TO_PASTEL[x.quad-1]!=null)x.color=QUAD_TO_PASTEL[x.quad-1];
+      if(x.priority==null)x.priority=x.quad===1?1:x.quad===4?3:2;
+      delete x.quad;delete x.qOrder;}
+    if(x.quad!==undefined){delete x.quad;delete x.qOrder;}
+    if(x.priority==null)x.priority=2;
+    if(x.repDays===undefined)x.repDays=[];});
   S.routines.forEach(r=>{if(!r.freq)r.freq='weekly';if(!r.nths)r.nths=[];if(!r.days)r.days=[];if(r.memo===undefined)r.memo='';if(r.optional===undefined)r.optional=false;if(r.weekOnce===undefined)r.weekOnce=false;if(r.folder==null)r.folder=({morning:'朝のルーティン',day:'昼のルーティン',night:'夜のルーティン',any:'いつでも'}[r.slot]||'マイルーティン');if(r.mark===undefined)r.mark='';if(r.recordDone===undefined)r.recordDone=true;});
   S.groups.forEach((g,i)=>{if(g.hue==null)g.hue=i%HUES12.length;}); // 旧colorから12色パレットへ移行
   S.tasks.forEach(x=>{if(x.repeat===undefined)x.repeat='';});
@@ -1209,7 +1251,7 @@ function doneLabel(x,forDate){if(x.status!=='done'||!x.doneAt)return '';
   const sameDay=x.doneAt===forDate;let s='';
   if(!sameDay){const d=parseDs(x.doneAt);s=(d.getMonth()+1)+'/'+d.getDate()+' ';}
   return s+(x.doneMin!=null?min2hm(x.doneMin)+' ':'')+'完了';}
-const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.quad||9)-(b.quad||9)||a.qOrder-b.qOrder||a.priority-b.priority;
+const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.priority||2)-(b.priority||2);
 /* ===== テンキー対応タイムピッカー（数字タップ→テンキー、▲▼で微調整・分は15分刻み） ===== */
 function timeInput(id,val,opts={}){
   const p=(val||'').split(':');
@@ -1249,7 +1291,8 @@ function tpSet(id,v){const[h,m]=(v||'').split(':');$('#'+id).value=v;if($('#'+id
 /* ===== 連続4桁タイム入力（開始→終了を続けてテンキー入力） ===== */
 /* 分の選択＋手動入力（2/4/6/8/10…分チップ＋数値入力） */
 function minPicker(id,val){return `<div class="minpick"><input id="${id}" class="minfield" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${val??''}" placeholder="分" onfocus="this.select()">
-  <div class="minchips">${[2,4,6,8,10,15,20,30,45,60,90].map(n=>`<button type="button" onclick="$('#${id}').value=${n}">${n}</button>`).join('')}</div></div>`;}
+  <div class="minchips">${[5,10,15,20,30,45,60,90,120].map(n=>{const w=n<=10?'s':n<=20?'m':n<=45?'l':'x';
+    return `<button type="button" data-w="${w}" onclick="$('#${id}').value=${n}">${n>=60?(n/60)+'時間':n+'分'}</button>`;}).join('')}</div></div>`;}
 function timeField(id,val,opts={}){
   return `<span class="tfrow">
     <input type="hidden" id="${id}" value="${val||''}">
@@ -1716,7 +1759,7 @@ let anchorTok=null;
 function setAnchor(tok){anchorTok=tok;}
 function quickAddToday(){const inp=$('#qaToday');const v=inp.value.trim();if(!v)return;
   const id=uid();const tok='t_'+id;const t=todayStr();
-  S.tasks.push({id,title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:t});
+  S.tasks.push({id,title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',snooze:null,order:Date.now(),createdAt:t});
   // 挿入位置：直前に触れた行の下、なければ末尾
   let toks=doItems(t).map(it=>it.type+'_'+it.obj.id).filter(x=>x!==tok);
   const ai=anchorTok?toks.indexOf(anchorTok):-1;
@@ -2429,11 +2472,11 @@ function taskRow(x,o={}){
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
     <div class="chk" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
-      <div class="tt ${x.status==='done'?'done':''} ${(x.pin||x.repeat)?'cont':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.repeat?`<span class="pinbadge">${REPEAT_LABEL_T[x.repeat]||''}</span>`:''}</div>
+      <div class="tt ${x.status==='done'?'done':''} ${(x.pin||x.repeat)?'cont':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.repeat?`<span class="pinbadge">${repLabelT(x)}</span>`:''}</div>
       <div class="meta"><span class="gmark" style="${markCss(x.groupId)}"></span><span>${esc(groupPath(x.groupId))}</span>
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
         ${x.due?`<span>期限 ${fmtDateJa(x.due)}</span>`:''}
-        ${x.quad?`<span style="color:${QUADS[x.quad-1].c};">■${QUADS[x.quad-1].t}</span>`:''}
+        
         ${x.status==='wait'&&x.waitNote?`<span style="color:var(--wait);">${esc(x.waitNote)}</span>`:''}</div>
       ${linkChips(x.links)}${x.memo?`<div class="memoline">${linkify(x.memo)}</div>`:''}${rowImgs(x.images)}
     </div>
@@ -2486,23 +2529,8 @@ function renderTasks(){
   else if(taskSort==='manual'){
     const mlist=manualTaskIds().map(id=>S.tasks.find(t=>t.id===id));
     body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>');}
-  else{ // 4つの箱（重要×緊急マトリクス）
-    const un=open.filter(x=>!x.quad);
-    body=`<div class="quadwrap">
-      <div class="qhint">タスクをタップして選択 → 入れたい箱をタップ（★投げ入れ）。▲▼で箱の中の順番を変更。この順番は「今日」の並びにも反映されます。</div>
-      <div class="qtray">${un.length?un.map(x=>`<button class="qchip ${qSel===x.id?'sel':''}" onclick="qTap('${x.id}')">
-        <span class="gmark" style="${markCss(x.groupId)}"></span><span class="qt">${esc(x.title)}</span></button>`).join('')
-        :'<span class="qhint">未分類のタスクはありません</span>'}</div>
-      <div class="qgrid">${QUADS.map((q,i)=>{
-        const list=open.filter(x=>x.quad===i+1).sort((a,b)=>a.qOrder-b.qOrder);
-        return `<div class="qbox ${qSel?'target':''}" onclick="if(qSel)assignQuad(${i+1})">
-          <div class="qh" style="color:${q.c};"><b>${q.t}</b><span>${q.s}・${list.length}</span></div>
-          ${list.map(x=>`<div class="qtask ${qSel===x.id?'sel':''}" onclick="event.stopPropagation();qTap('${x.id}')">
-            <span class="gmark" style="${markCss(x.groupId)}"></span><span class="qt">${esc(x.title)}</span>
-            <button onclick="event.stopPropagation();moveQ('${x.id}',-1)">▲</button>
-            <button onclick="event.stopPropagation();moveQ('${x.id}',1)">▼</button>
-            <button onclick="event.stopPropagation();unQuad('${x.id}')">✕</button></div>`).join('')}
-        </div>`;}).join('')}</div></div>`;}
+  else{ // 旧「4つの箱」は廃止したので優先度順にフォールバック
+    body=open.length?open.slice().sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>';}
   return `
   <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
@@ -2510,7 +2538,6 @@ function renderTasks(){
   <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
     <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先</button>
     <button class="${taskSort==='grp'?'on':''}" onclick="setTaskSort('grp')">グループ</button>
-    <button class="${taskSort==='quad'?'on':''}" onclick="setTaskSort('quad')">箱★</button>
     <button class="${taskSort==='manual'?'on':''}" onclick="setTaskSort('manual')">手動</button></div>
     ${taskSort==='manual'
       ?(taskReorder?`<button class="act" onclick="exitTaskReorder()">完了</button>`:`<button class="act" onclick="enterTaskReorder()">並び替え</button>`)
@@ -2524,21 +2551,10 @@ function renderTasks(){
     ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(x=>taskRow(x)).join('')}`:''}`;
 }
 /* 4つの箱の操作 */
-function qTap(id){qSel=qSel===id?null:id;render();}
-function assignQuad(q){const x=S.tasks.find(t=>t.id===qSel);if(!x)return;
-  x.quad=q;x.qOrder=Math.max(0,...S.tasks.filter(t=>t.quad===q&&t.id!==x.id).map(t=>t.qOrder+1));
-  qSel=null;save();render();}
-function unQuad(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;x.quad=0;save();render();}
-function moveQ(id,dir){const x=S.tasks.find(t=>t.id===id);if(!x)return;
-  const list=S.tasks.filter(t=>t.quad===x.quad&&t.status!=='done').sort((a,b)=>a.qOrder-b.qOrder);
-  list.forEach((t,i)=>t.qOrder=i);
-  const i=list.findIndex(t=>t.id===id),j=i+dir;
-  if(j<0||j>=list.length)return;
-  list[i].qOrder=j;list[j].qOrder=i;save();render();}
 let taskAnchorId=null;
 function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
   const id=uid();
-  S.tasks.push({id,title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:todayStr()});
+  S.tasks.push({id,title:v,groupId:$('#qaGroup').value,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr()});
   if(taskSort==='manual'){let ids=manualTaskIds().filter(i=>i!==id);
     const ai=taskAnchorId?ids.indexOf(taskAnchorId):-1;
     if(ai>=0)ids.splice(ai+1,0,id);else ids.push(id);
@@ -2613,124 +2629,126 @@ function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightbox').
 /* ⚡ どのタブからでもタスクをさっと追加（開いた瞬間に入力できる） */
 function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
-function quickAddPop(){
-  const gid=lastTaskGroupId();
-  const QP=QUAD_TO_PASTEL.map(i=>PASTELS[i].c); // 4つの部屋のボタン色＝パステル色から
-  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;">✅ タスク追加
-    <input id="qaTitle" placeholder="タスク名を入力…" style="width:100%;margin-top:10px;font-size:16px;padding:11px 10px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)qaSave(false)">
-    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">グループ</label>
-    <div style="display:flex;gap:8px;"><select id="qaGroup" style="flex:1;min-width:0;">${S.groups.map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
-      <button type="button" class="inlineadd" onclick="qaAddGroup()">＋新規</button></div>
-    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">4つの部屋</label>
-    <div class="btnrow quadc" id="qaQuadRow">${QUADS.map((q,i)=>`<button type="button" data-v="${i+1}" style="background:${QP[i]};" onclick="pickBtn('qaQuadRow','qaQuad','${i+1}')">${q.t}</button>`).join('')}
-      <button type="button" data-v="0" class="on" style="background:var(--bg);" onclick="pickBtn('qaQuadRow','qaQuad','0')">未分類</button></div>
-    <input type="hidden" id="qaQuad" value="0">
-    <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">いつやる</label>
-    <div class="btnrow" id="qaWhenRow">${[['today','今日'],['tomorrow','明日'],['','いつか']].map(([v,l])=>`<button type="button" data-v="${v}" class="${v==='today'?'on':''}" onclick="pickBtn('qaWhenRow','qaWhen','${v}')">${l}</button>`).join('')}</div>
-    <input type="hidden" id="qaWhen" value="today">
-    <div id="qaDetail" style="margin-top:14px;border-top:1px solid var(--line2);padding-top:2px;">
-      <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">所要時間（分）</label>${minPicker('qaEst',15)}
-      <div style="display:flex;gap:10px;margin-top:10px;">
-        <div style="flex:1;"><label style="font-size:12px;color:var(--sub);display:block;margin:0 0 3px;">期限</label><input id="qaDue" type="date" style="width:100%;"></div>
-        <div style="flex:1;"><label style="font-size:12px;color:var(--sub);display:block;margin:0 0 3px;">繰り返し</label><select id="qaRep" style="width:100%;">${[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']].map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div></div>
-      <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 3px;">メモ</label><textarea id="qaMemo" rows="2" style="width:100%;"></textarea>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;"><input type="checkbox" id="qaPin" style="width:auto;"><span style="font-size:13px;">継続タスク（完了するまで毎日「今日」に出す）</span></div>
-    </div></div>
-    <div class="db"><button onclick="dlgEnd()">閉じる</button><button onclick="qaSave(true)">詳細も書く</button><button class="ok" onclick="qaSave(false)">追加</button></div>`;
-  $('#dlgWrap').classList.add('show');
-  const el=$('#qaTitle');if(el)el.focus();}
-/* クイック追加の途中でカテゴリ新規作成→入力内容を保ったまま戻る */
-function qaAddGroup(){
-  const st={title:$('#qaTitle')?.value||'',quad:$('#qaQuad')?.value||'0',when:$('#qaWhen')?.value??'today',
-    est:$('#qaEst')?.value,due:$('#qaDue')?.value||'',rep:$('#qaRep')?.value||'',memo:$('#qaMemo')?.value||'',
-    pin:!!$('#qaPin')?.checked};
-  groupInlinePop(null,gid=>{quickAddPop();
-    $('#qaTitle').value=st.title;pickBtn('qaQuadRow','qaQuad',st.quad);pickBtn('qaWhenRow','qaWhen',st.when);
-    if($('#qaEst')&&st.est)$('#qaEst').value=st.est;if($('#qaDue'))$('#qaDue').value=st.due;
-    if($('#qaRep'))$('#qaRep').value=st.rep;if($('#qaMemo'))$('#qaMemo').value=st.memo;
-    if($('#qaPin'))$('#qaPin').checked=st.pin;
-    if(gid)$('#qaGroup').value=gid;});}
-function qaSave(detail){
-  const title=($('#qaTitle')?.value||'').trim();
-  const gid=$('#qaGroup').value;const quad=+($('#qaQuad')?.value||0);const when=$('#qaWhen')?.value??'today';
-  const pr=quad===1?1:quad===4?3:2; // 4つの部屋→並び用の優先度（保存時と同じ変換）
-  if(!title){
-    if(detail){dlgEnd();taskModal(null,'',when==='today');return;}
-    toast('タスク名を入力してください');$('#qaTitle')?.focus();return;}
-  snapUndo();const id=uid();
-  S.tasks.push({id,title,groupId:gid,estMin:+($('#qaEst')?.value)||15,quad,qOrder:0,priority:pr,
-    due:$('#qaDue')?.value||'',repeat:$('#qaRep')?.value||'',status:'todo',waitNote:'',
-    today:when==='today'?todayStr():when==='tomorrow'?tomorrowStr():null,
-    memo:($('#qaMemo')?.value||'').trim(),links:[],images:[],pin:!!$('#qaPin')?.checked,snooze:null,order:Date.now(),createdAt:todayStr()});
-  S.settings.lastTaskGroup=gid;save();
-  if(detail){dlgEnd();taskModal(id);return;}
-  $('#qaTitle').value='';
-  // 詳細欄は次のタスクに引き継がない（時間だけ既定に戻す）
-  if($('#qaEst'))$('#qaEst').value=15;if($('#qaDue'))$('#qaDue').value='';if($('#qaRep'))$('#qaRep').value='';
-  if($('#qaMemo'))$('#qaMemo').value='';if($('#qaPin'))$('#qaPin').checked=false;
-  render();toast('追加しました（続けて入力OK）');
-  const el=$('#qaTitle');if(el)el.focus();}
+/* 「さっと追加」は廃止し、追加・編集を1つのフォームに統一（旧呼び出しは転送） */
+function quickAddPop(){taskModal(null,'',true);}
+function qaSave(){}
+/* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
+let _tfId=null,_tfGroup='',_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
 function taskModal(id,presetDue,presetToday){
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
   editLinks=(x?.links||[]).map(l=>({...l}));editImages=(x?.images||[]).slice();
-  openModal(`<div class="mh"><b>${x?'タスク編集':'タスク追加'}</b><button onclick="closeModal()">✕</button></div>
-  <div class="mbody">
-    <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(x?.title||'')}"></div>
-    <div class="frow"><label>グループ</label><div style="display:flex;gap:8px;">${(()=>{const selG=x?x.groupId:lastTaskGroupId();return `<select id="tmGroup" style="flex:1;min-width:0;">${S.groups.map(g=>`<option value="${g.id}" ${selG===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>`;})()}
-      <button type="button" class="inlineadd" onclick="groupInlinePop('tmGroup')">＋新規</button></div></div>
-    <div class="frow"><label>所要時間（分）</label>${minPicker('tmEst',x?.estMin??15)}</div>
-    <div class="frow"><label>重要度・緊急度（4つの箱）</label>
-      <div class="quadsel" id="tmQuad">
-        ${QUADS.map((q,i)=>`<button type="button" data-q="${i+1}" class="${(x?.quad||0)===i+1?'on':''}" style="border-color:${q.c};color:${q.c};" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${q.t}<small>${q.s}</small></button>`).join('')}
-        <button type="button" data-q="0" class="none ${!x?.quad?'on':''}" onclick="$$('#tmQuad button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">未分類（あとで箱に入れる）</button></div></div>
-    <div class="frow f2"><div><label>期限</label><input id="tmDue" type="date" value="${x?.due||presetDue||''}"></div>
-      <div><label>繰り返し</label><select id="tmRepeat">
-        ${[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']].map(([v,l])=>`<option value="${v}" ${(x?.repeat||'')===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  _tfId=id||null;
+  _tfGroup=x?x.groupId:lastTaskGroupId();
+  _tfDue=x?.due||presetDue||'';
+  _tfToday=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');
+  _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;
+  _tfDueOpen=!!_tfDue;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
+  tfRender(true);}
+function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
+  // 入力中の値は再描画でも保つ（別の項目を触ると消える、を防ぐ）
+  const keep={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,pin:$('#tmPin')?.checked,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
+  const st=keep.st??(x?.status||'todo');
+  const prio=+(keep.prio??x?.priority??2);
+  $('#dlg').innerHTML=`<div class="dm tform">
+    <div class="tfh"><b>${x?'タスクを編集':'タスクを追加'}</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??x?.title??'')}" placeholder="やること"></div>
+    <div class="frow"><label>グループ</label>${tfGroupHtml()}</div>
+    <div class="frow"><label>いつやる（つけなければ、ためておくタスク）</label>
+      <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}</div></div>
+    <div class="frow"><label>優先度</label>
+      <div class="btnrow" id="tmPrioRow">${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button type="button" data-v="${p}" class="${prio===p?'on':''}" onclick="pickBtn('tmPrioRow','tmPrio','${p}')">${l}</button>`).join('')}</div>
+      <input type="hidden" id="tmPrio" value="${prio}"></div>
+    <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??x?.estMin??15)}</div>
+    <div class="frow"><label>期限</label>${tfDueHtml()}</div>
+    <div class="frow"><label>繰り返し</label>${tfRepeatHtml()}</div>
     <div class="frow"><label>状態</label>
-      <div class="btnrow" id="tmStRow">${Object.entries(STATUS).map(([k,v])=>`<button type="button" data-v="${k}" class="${(x?.status||'todo')===k?'on':''}" onclick="pickBtn('tmStRow','tmSt','${k}')">${v}</button>`).join('')}</div>
-      <input type="hidden" id="tmSt" value="${x?.status||'todo'}"></div>
-    <div class="frow"><label>いつやる</label>
-      ${(()=>{const tv=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');return `<div class="btnrow" id="tmTodayRow">${[['','しない'],['today','今日やる'],['tomorrow','明日やる']].map(([v,l])=>`<button type="button" data-v="${v}" class="${tv===v?'on':''}" onclick="pickBtn('tmTodayRow','tmToday','${v}')">${l}</button>`).join('')}</div><input type="hidden" id="tmToday" value="${tv}">`;})()}</div>
-    <div class="frow" id="tmWaitRow" style="display:${x?.status==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(x?.waitNote||'')}" placeholder="例）B様の返信待ち"></div>
-    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="tmPin" style="width:auto;" ${x?.pin?'checked':''}>
-      <span style="font-size:13px;">継続タスク（完了するまで毎日「今日」に出す。なるはや・期限なし向け）</span></div>
-    <div class="frow"><label>メモ</label><textarea id="tmMemo" rows="2">${esc(x?.memo||'')}</textarea></div>
-    <div class="frow"><label>リンク（作業に使うサイト・資料）</label>${linksEditorHtml()}</div>
-    <div class="frow"><label>画像メモ（写真・スクショ）</label>${imagesEditorHtml()}</div>
+      <div class="btnrow" id="tmStRow">${Object.entries(STATUS).map(([k,v])=>`<button type="button" data-v="${k}" class="${st===k?'on':''}" onclick="pickBtn('tmStRow','tmSt','${k}')">${v}</button>`).join('')}</div>
+      <input type="hidden" id="tmSt" value="${st}"></div>
+    <div class="frow" id="tmWaitRow" style="display:${st==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(keep.wait??x?.waitNote??'')}" placeholder="例）B様の返信待ち"></div>
+    <div class="frow tfchk"><input type="checkbox" id="tmPin" ${(keep.pin??x?.pin)?'checked':''}>
+      <span>継続タスク（完了するまで毎日「今日」に出す）</span></div>
+    <div class="frow"><label>メモ</label><textarea id="tmMemo" rows="2">${esc(keep.memo??x?.memo??'')}</textarea></div>
+    <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
+    <div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>
+    ${x?`<div class="frow tfsub"><button type="button" onclick="dupTask('${x.id}')">⧉ 複製</button><button type="button" class="del" onclick="delTask('${x.id}')">🗑 削除</button></div>`:''}
   </div>
-  <div class="mbtns">
-    ${x?`<button class="del" onclick="delTask('${x.id}')">削除</button><button onclick="dupTask('${x.id}')">複製</button>`:''}
-    <button class="save" onclick="saveTask('${x?.id||''}')">保存</button>
-  </div>`);
-  setTimeout(()=>{const el=$('#tmTitle');if(el){el.focus();if(!x)el.scrollIntoView({block:'center'});}},120);}
+  <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  if(focus)setTimeout(()=>{const el=$('#tmTitle');if(el&&!_tfId)el.focus();},120);}
+/* グループ＝親タブを選んだ時点で決定。子があればその下にもう1段出る */
+function tfGroupHtml(){const chain=[];let cur=S.groups.find(g=>g.id===_tfGroup);
+  while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
+  const rows=[];let parentId=null,level=0;
+  while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
+    if(!opts.length)break;
+    const sel=chain[level]||null;
+    rows.push(`<div class="gtabs">${opts.map(g=>`<button type="button" class="${sel===g.id?'on':''}" onclick="tfPickGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}</button>`).join('')}${level===0?`<button type="button" class="gadd" onclick="tfAddGroup()">＋</button>`:''}</div>`);
+    if(!sel)break;
+    parentId=sel;level++;}
+  return rows.join('');}
+function tfPickGroup(gid){_tfGroup=gid;tfRender();}
+function tfAddGroup(){groupInlinePop(null,gid=>{_tfGroup=gid;tfRender();});}
+function tfPickToday(v){_tfToday=(_tfToday===v?'':v);tfRender();}
+/* 期限＝他の予定も点で見えるカレンダーから選ぶ */
+function tfDueHtml(){
+  if(!_tfDueOpen)return `<div class="btnrow"><button type="button" onclick="tfDueOpen()">📅 ${_tfDue?fmtDateJa(_tfDue):'期限をえらぶ'}</button>${_tfDue?`<button type="button" onclick="tfDueClear()">なし</button>`:''}</div>`;
+  const ws=S.settings.weekStart||0;
+  const start=(new Date(_tfDueY,_tfDueX,1).getDay()-ws+7)%7,dim=new Date(_tfDueY,_tfDueX+1,0).getDate();
+  let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
+  for(let dn=1;dn<=dim;dn++){const ds=`${_tfDueY}-${pad(_tfDueX+1)}-${pad(dn)}`;
+    cells+=`<button type="button" class="${ds===_tfDue?'on':''}${ds===todayStr()?' td':''}" onclick="tfPickDue('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
+  const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
+  return `<div class="dpnav"><button type="button" onclick="tfDueNav(-1)">‹</button><span>${_tfDueY}年${_tfDueX+1}月</span><button type="button" onclick="tfDueNav(1)">›</button></div>
+    <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
+    <div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">期限なしにする</button></div>`;}
+function tfDueOpen(){_tfDueOpen=true;const d=parseDs(_tfDue||todayStr());_tfDueY=d.getFullYear();_tfDueX=d.getMonth();tfRender();}
+function tfDueNav(k){_tfDueX+=k;if(_tfDueX<0){_tfDueX=11;_tfDueY--;}if(_tfDueX>11){_tfDueX=0;_tfDueY++;}tfRender();}
+function tfPickDue(ds){_tfDue=(_tfDue===ds?'':ds);tfRender();}
+function tfDueClear(){_tfDue='';_tfDueOpen=false;tfRender();}
+/* 繰り返し＝毎週は曜日（複数可）、毎月は何日かを選ぶ */
+function tfRepeatHtml(){
+  const tabs=[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']]
+    .map(([v,l])=>`<button type="button" class="${_tfRepeat===v?'on':''}" onclick="tfPickRepeat('${v}')">${l}</button>`).join('');
+  let detail='';
+  if(_tfRepeat==='weekly'){const ws=S.settings.weekStart||0;
+    detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
+      return `<button type="button" class="${_tfRepDays.includes(d)?'on':''}" onclick="tfToggleRepDay(${d})">${WD[d]}</button>`;}).join('')}</div>
+      <div class="mini">${_tfRepDays.length?`毎週 ${_tfRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:'曜日を選ばないと「完了した日の7日後」になります'}</div>`;}
+  if(_tfRepeat==='monthly'){
+    detail=`<div class="domsel">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+      <div class="mini">${_tfRepDom?`毎月 ${_tfRepDom}日`:'日を選ばないと「完了した日の1か月後」になります'}</div>`;}
+  return `<div class="btnrow" id="tmRepRow">${tabs}</div>${detail}`;}
+function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly')_tfRepDom=null;tfRender();}
+function tfToggleRepDay(d){const i=_tfRepDays.indexOf(d);i>=0?_tfRepDays.splice(i,1):_tfRepDays.push(d);tfRender();}
+function tfPickDom(n){_tfRepDom=(_tfRepDom===n?null:n);tfRender();}
 function pickBtn(rowId,hiddenId,val){const h=$('#'+hiddenId);if(h)h.value=val;
   $$('#'+rowId+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===val));
   if(hiddenId==='tmSt'){const w=$('#tmWaitRow');if(w)w.style.display=val==='wait'?'block':'none';}}
 function saveTask(id){
-  const title=$('#tmTitle').value.trim();if(!title){uiAlert('タスク名を入力してください');return;}
-  const quad=+($('#tmQuad button.on')?.dataset.q||0);
-  const priority=quad===1?1:quad===4?3:2; // 4つの箱→並び用の優先度に変換
-  snapUndo();const tv=$('#tmToday').value;const today=tv==='today'?todayStr():tv==='tomorrow'?tomorrowStr():null;
-  const data={title,groupId:$('#tmGroup').value,estMin:+$('#tmEst').value||0,quad,priority,
-    due:$('#tmDue').value,repeat:$('#tmRepeat').value,status:$('#tmSt').value,waitNote:$('#tmWait').value.trim(),
+  const title=($('#tmTitle')?.value||'').trim();if(!title){uiAlert('タスク名を入力してください');return;}
+  snapUndo();
+  const today=_tfToday==='today'?todayStr():_tfToday==='tomorrow'?tomorrowStr():null;
+  const data={title,groupId:_tfGroup,estMin:+$('#tmEst').value||0,priority:+($('#tmPrio')?.value||2),
+    due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,
+    status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
     pin:$('#tmPin').checked};
   if(id){const old=S.tasks.find(t=>t.id===id);
     if(data.pin&&!old.pin)data.snooze=null;
-    Object.assign(old,data);}
-  else{const newId=uid();S.tasks.push({id:newId,...data,quad:0,qOrder:0,snooze:null,order:Date.now(),createdAt:todayStr()});
+    Object.assign(old,data);touchPicked(old);}
+  else{const newId=uid();S.tasks.push({id:newId,...data,snooze:null,order:Date.now(),createdAt:todayStr(),pickedAt:Date.now()});
     if(taskAddAfter){taskSort='manual';let ids=manualTaskIds().filter(i=>i!==newId);
       const ai=ids.indexOf(taskAddAfter);if(ai>=0)ids.splice(ai+1,0,newId);else ids.push(newId);
       commitTaskOrder(ids);taskAddAfter=null;}}
   S.settings.lastTaskGroup=data.groupId; // 次回のグループ初期値に
   chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
-  save();closeModal();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
+  save();dlgEnd();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
-  snapUndo();S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();render();flashUndo('タスクを削除しました');}
+  snapUndo();S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();dlgEnd();render();flashUndo('タスクを削除しました');}
 function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   S.tasks.push({...JSON.parse(JSON.stringify(x)),id:uid(),title:x.title+'（コピー）',status:'todo',today:null,order:Date.now()});
-  save();closeModal();render();}
+  save();closeModal();dlgEnd();render();}
 
 /* ========================= カレンダー ========================= */
 function calNav(n){clearPrime();if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(calX>11){calX=0;calY++;}}
@@ -2953,15 +2971,27 @@ function renderCal(){
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 function taskModalWithDue(d){taskModal(null,d);}
 /* タスクの繰り返し：完了したら次回の日付へ送る（今日の記録に完了を残す） */
-function nextTaskDate(fromDs,repeat){const d=parseDs(fromDs);
+/* 次回日付：毎週は指定の曜日、毎月は指定の日。指定が無ければ今まで通り7日後／1か月後 */
+function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
+  const days=(x&&x.repDays&&x.repDays.length)?x.repDays.slice().sort((a,b)=>a-b):null;
+  const dom=(x&&x.repDom)?x.repDom:null;
   if(repeat==='daily')d.setDate(d.getDate()+1);
-  else if(repeat==='weekly')d.setDate(d.getDate()+7);
-  else if(repeat==='monthly')d.setMonth(d.getMonth()+1);
+  else if(repeat==='weekly'){
+    if(days){for(let i=1;i<=7;i++){const c=new Date(d);c.setDate(d.getDate()+i);
+      if(days.includes(c.getDay()))return dsOf(c);}}
+    d.setDate(d.getDate()+7);}
+  else if(repeat==='monthly'){
+    if(dom){ // その月に無い日（31日など）は月末に丸める。丸めた結果が今日以前なら翌月へ
+      const mk=(y,m)=>new Date(y,m,Math.min(dom,new Date(y,m+1,0).getDate()));
+      let c=mk(d.getFullYear(),d.getMonth());
+      if(c<=d)c=mk(d.getFullYear(),d.getMonth()+1);
+      return dsOf(c);}
+    d.setMonth(d.getMonth()+1);}
   else return null;
   return dsOf(d);}
 /* 繰り返しタスク：今日は「完了」のまま残す（グレー・戻せる）。次回日付へ進め、日付が変わったら自動で未完了に復活 */
 function advanceRepeatTask(x){if(!x.repeat)return false;
-  const t=todayStr();const base=x.today||x.due||t;const nd=nextTaskDate(base,x.repeat);if(!nd)return false;
+  const t=todayStr();const base=x.today||x.due||t;const nd=nextTaskDate(base,x.repeat,x);if(!nd)return false;
   x.repeatPrev={today:x.today??null,due:x.due||''}; // 戻す用
   x.today=nd;if(x.due)x.due=nd;
   const at=dayLog(t).at;if(at)delete at['t_'+x.id];
@@ -3871,7 +3901,7 @@ function saveFlowLog(){
     const i=flowList.findIndex(it=>it.type==='r'&&it.obj.id===rid);
     if(i>=0){flowList.splice(i,1);if(i<flowIdx)flowIdx--;if(flowIdx>=flowList.length)flowIdx=Math.max(0,flowList.length-1);}
   }else{const id=uid();
-    S.tasks.push({id,title:free,groupId:(S.groups.find(g=>g.id==='g_personal')||S.groups[0]).id,estMin:Math.round(sec/60),priority:2,quad:0,qOrder:0,status:'done',doneAt:t,today:t,snooze:null,links:[],due:'',memo:'',order:Date.now(),createdAt:t});}
+    S.tasks.push({id,title:free,groupId:(S.groups.find(g=>g.id==='g_personal')||S.groups[0]).id,estMin:Math.round(sec/60),priority:2,status:'done',doneAt:t,today:t,snooze:null,links:[],due:'',memo:'',order:Date.now(),createdAt:t});}
   save();dlgEnd();
   if(flowList.length&&$('#flow').classList.contains('show'))flowShow(true);else render();
   toast('記録しました（'+fmtMin(sec/60)+'）');}
@@ -4031,7 +4061,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.11（2026-07-31）</b><br>
+  <div class="mini"><b>v2.20（2026-08-01）タスクの追加・編集画面を作り直し</b><br>
+  ・<b>追加と編集を1つの画面に統一</b>しました（「詳細も書く」は廃止）。<b>ポップの外をタップ／下にスワイプでも閉じられ</b>、余白を詰めて「やめる・保存」は指の届く下に置いています<br>
+  ・<b>グループはタブで選ぶ形に</b>：親を押すとその場で決まり、子があれば下の段に出てさらに絞り込めます（例：仕事 ▸ クライアントA ▸ 顧客X）<br>
+  ・<b>「4つの部屋」を廃止</b>し、<b>優先度（高・中・低）</b>だけにしました。※これまで部屋で付いていた色は、そのまま色として引き継がれます<br>
+  ・<b>繰り返しが曜日・日づけで指定できます</b>：毎週＝曜日を複数えらべる（例：毎週 月・木）／毎月＝何日か（例：毎月25日）。31日など無い月は月末に寄せます<br>
+  ・<b>期限はカレンダーからえらぶ</b>形に（他の予定がある日には点が付きます）<br>
+  ・<b>いつやるは「今日／明日」のタグだけ</b>に。つけなければ、ためておくタスクとして扱います<br>
+  ・かかる時間のボタンを<b>時間の長さが目で分かる幅</b>にしました<br>
+  <b>v2.11（2026-07-31）</b><br>
   ・<b>完了を取り消す時もワンクッション</b>：完了済みのチェックを押すと、すぐには戻らず<b>「↩未完了に戻す／✎編集／🗑削除／‹やめる」</b>が出ます（タスク・ルーティンとも／今日タブ・省スペース表示・タスクタブ・日カレンダーのすべて）<br>
   ・<b>「⊟ 省スペース」表示だけ確認ポップが出ていなかったのを修正</b>（完了も取り消しも素通りしていました）<br>
   ・戻した時に<b>かかった時間や記録が消え残らない</b>よう処理を統一し、<b>戻す操作も取り消せる</b>ようになりました<br>
@@ -4612,7 +4650,23 @@ function openModal(html){const m=$('#modal');m.innerHTML=html;$('#modalWrap').cl
 function closeModal(){$('#modalWrap').classList.remove('show');taskAddAfter=null;routineAddAfter=null;}
 /* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
 let dlgResolve=null;
-function dlgEnd(v){$('#dlgWrap').classList.remove('show');const r=dlgResolve;dlgResolve=null;if(r)r(v);}
+function dlgEnd(v){$('#dlgWrap').classList.remove('show');$('#dlg').style.transform='';const r=dlgResolve;dlgResolve=null;if(r)r(v);}
+/* ポップの外をタップ／下へスワイプで閉じる */
+(function bindDlgClose(){const wrap=$('#dlgWrap'),box=$('#dlg');if(!wrap||!box)return;
+  wrap.addEventListener('click',e=>{if(e.target===wrap)dlgEnd(false);});
+  let sy=0,dragging=false,moved=0;
+  box.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    const sc=e.target.closest&&e.target.closest('.tform,.dpgrid,textarea,select');
+    // 中身をスクロールできる時は、いちばん上にいる時だけ引き下げを受け付ける
+    if(sc&&sc.classList&&sc.classList.contains('tform')&&sc.scrollTop>0){dragging=false;return;}
+    sy=e.touches[0].clientY;dragging=true;moved=0;},{passive:true});
+  box.addEventListener('touchmove',e=>{if(!dragging)return;
+    const dy=e.touches[0].clientY-sy;if(dy<=0){moved=0;box.style.transform='';return;}
+    moved=dy;box.style.transform=`translateY(${Math.min(dy,260)}px)`;},{passive:true});
+  const end=()=>{if(!dragging)return;dragging=false;
+    if(moved>90){box.style.transform='';dlgEnd(false);}else box.style.transform='';};
+  box.addEventListener('touchend',end);box.addEventListener('touchcancel',end);})();
 function uiAlert(msg){return new Promise(res=>{dlgResolve=res;
   $('#dlg').innerHTML=`<div class="dm">${esc(msg)}</div><div class="db"><button class="ok" onclick="dlgEnd()">OK</button></div>`;
   $('#dlgWrap').classList.add('show');});}
