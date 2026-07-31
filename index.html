@@ -869,13 +869,11 @@ body.swiping .lpress{animation:none;}
 .gtabs button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
 .gtabs button .gdot{width:9px;height:9px;flex:none;border-radius:50% !important;}
 .gtabs .gadd{color:var(--accent);font-weight:700;}
-/* 繰り返しの曜日・日付えらび */
+/* 繰り返しの曜日・日付えらび（他の黒トグルと見分けがつくようアクセント色） */
 .daysel{display:flex;gap:5px;margin-top:6px;}
-.daysel button{flex:1;padding:9px 0;border:1px solid var(--line);font-size:13px;color:var(--ink);}
-.daysel button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
-.domsel{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px;}
-.domsel button{padding:8px 0;border:1px solid var(--line);font-size:12.5px;color:var(--ink);}
-.domsel button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+.daysel button{flex:1;padding:10px 0;border:1px solid var(--line);font-size:13px;color:var(--ink);border-radius:8px !important;}
+.daysel button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;}
+.dpgrid.domcal{margin-top:6px;}
 #dlg .dpgrid button.td{border-color:var(--accent);color:var(--accent);font-weight:700;}
 
 /* celebrate */
@@ -970,7 +968,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.20';
+const APP_VERSION='v2.21';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -2633,7 +2631,7 @@ function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
 function quickAddPop(){taskModal(null,'',true);}
 function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
-let _tfId=null,_tfGroup='',_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
+let _tfId=null,_tfGroup='',_tfDue='',_tfToday='',_tfPin=false,_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
 function taskModal(id,presetDue,presetToday){
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
@@ -2642,32 +2640,36 @@ function taskModal(id,presetDue,presetToday){
   _tfGroup=x?x.groupId:lastTaskGroupId();
   _tfDue=x?.due||presetDue||'';
   _tfToday=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');
+  _tfPin=!!x?.pin;
   _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;
-  _tfDueOpen=!!_tfDue;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
+  _tfDueOpen=false;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
   tfRender(true);}
 function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
+  const fresh=focus===true; // 開き直し＝前に開いていたフォームの残りDOMから値を拾わない
   // 入力中の値は再描画でも保つ（別の項目を触ると消える、を防ぐ）
-  const keep={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,pin:$('#tmPin')?.checked,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
+  const keep=fresh?{}:{title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
   const st=keep.st??(x?.status||'todo');
   const prio=+(keep.prio??x?.priority??2);
+  const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0); // ボタンを押すたび上に戻らないように
   $('#dlg').innerHTML=`<div class="dm tform">
     <div class="tfh"><b>${x?'タスクを編集':'タスクを追加'}</b><button type="button" onclick="dlgEnd()">✕</button></div>
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??x?.title??'')}" placeholder="やること"></div>
     <div class="frow"><label>グループ</label>${tfGroupHtml()}</div>
     <div class="frow"><label>いつやる（つけなければ、ためておくタスク）</label>
-      <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}</div></div>
-    <div class="frow"><label>優先度</label>
+      <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}
+        <button type="button" class="${_tfPin?'on':''}" onclick="tfPickPin()">🔁 継続</button></div>
+      ${_tfPin?'<div class="mini" style="padding:3px 0 0;">完了するまで毎日「今日」に出ます</div>':''}</div>
+    <div class="frow f2"><div><label>優先度</label>
       <div class="btnrow" id="tmPrioRow">${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button type="button" data-v="${p}" class="${prio===p?'on':''}" onclick="pickBtn('tmPrioRow','tmPrio','${p}')">${l}</button>`).join('')}</div>
       <input type="hidden" id="tmPrio" value="${prio}"></div>
+      <div><label>期限</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()">📅 ${_tfDue?fmtDateJa(_tfDue):'なし'}</button></div></div></div>
+    ${_tfDueOpen?`<div class="frow">${tfDueCalHtml()}</div>`:''}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??x?.estMin??15)}</div>
-    <div class="frow"><label>期限</label>${tfDueHtml()}</div>
     <div class="frow"><label>繰り返し</label>${tfRepeatHtml()}</div>
     <div class="frow"><label>状態</label>
       <div class="btnrow" id="tmStRow">${Object.entries(STATUS).map(([k,v])=>`<button type="button" data-v="${k}" class="${st===k?'on':''}" onclick="pickBtn('tmStRow','tmSt','${k}')">${v}</button>`).join('')}</div>
       <input type="hidden" id="tmSt" value="${st}"></div>
     <div class="frow" id="tmWaitRow" style="display:${st==='wait'?'block':'none'};"><label>誰の・何の対応待ち？</label><input id="tmWait" value="${esc(keep.wait??x?.waitNote??'')}" placeholder="例）B様の返信待ち"></div>
-    <div class="frow tfchk"><input type="checkbox" id="tmPin" ${(keep.pin??x?.pin)?'checked':''}>
-      <span>継続タスク（完了するまで毎日「今日」に出す）</span></div>
     <div class="frow"><label>メモ</label><textarea id="tmMemo" rows="2">${esc(keep.memo??x?.memo??'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     <div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>
@@ -2675,7 +2677,8 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
   </div>
   <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`;
   $('#dlgWrap').classList.add('show');
-  if(focus)setTimeout(()=>{const el=$('#tmTitle');if(el&&!_tfId)el.focus();},120);}
+  const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;
+  if(focus&&!_tfId){const el=$('#tmTitle');if(el)el.focus();}} // ＋を押した流れのままフォーカス＝すぐ入力できる
 /* グループ＝親タブを選んだ時点で決定。子があればその下にもう1段出る */
 function tfGroupHtml(){const chain=[];let cur=S.groups.find(g=>g.id===_tfGroup);
   while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
@@ -2689,10 +2692,11 @@ function tfGroupHtml(){const chain=[];let cur=S.groups.find(g=>g.id===_tfGroup);
   return rows.join('');}
 function tfPickGroup(gid){_tfGroup=gid;tfRender();}
 function tfAddGroup(){groupInlinePop(null,gid=>{_tfGroup=gid;tfRender();});}
-function tfPickToday(v){_tfToday=(_tfToday===v?'':v);tfRender();}
-/* 期限＝他の予定も点で見えるカレンダーから選ぶ */
-function tfDueHtml(){
-  if(!_tfDueOpen)return `<div class="btnrow"><button type="button" onclick="tfDueOpen()">📅 ${_tfDue?fmtDateJa(_tfDue):'期限をえらぶ'}</button>${_tfDue?`<button type="button" onclick="tfDueClear()">なし</button>`:''}</div>`;
+function tfPickToday(v){_tfToday=(_tfToday===v?'':v);if(_tfToday)_tfPin=false;tfRender();}
+function tfPickPin(){_tfPin=!_tfPin;if(_tfPin)_tfToday='';tfRender();} // 継続は毎日出るので今日/明日は不要
+/* 期限＝優先度の横のボタン。押すと下にカレンダーが開く（他の予定がある日には点） */
+function tfDueToggle(){if(_tfDueOpen){_tfDueOpen=false;}else{_tfDueOpen=true;const d=parseDs(_tfDue||todayStr());_tfDueY=d.getFullYear();_tfDueX=d.getMonth();}tfRender();}
+function tfDueCalHtml(){
   const ws=S.settings.weekStart||0;
   const start=(new Date(_tfDueY,_tfDueX,1).getDay()-ws+7)%7,dim=new Date(_tfDueY,_tfDueX+1,0).getDate();
   let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
@@ -2701,10 +2705,9 @@ function tfDueHtml(){
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
   return `<div class="dpnav"><button type="button" onclick="tfDueNav(-1)">‹</button><span>${_tfDueY}年${_tfDueX+1}月</span><button type="button" onclick="tfDueNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
-    <div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">期限なしにする</button></div>`;}
-function tfDueOpen(){_tfDueOpen=true;const d=parseDs(_tfDue||todayStr());_tfDueY=d.getFullYear();_tfDueX=d.getMonth();tfRender();}
+    ${_tfDue?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">期限なしにする</button></div>`:''}`;}
 function tfDueNav(k){_tfDueX+=k;if(_tfDueX<0){_tfDueX=11;_tfDueY--;}if(_tfDueX>11){_tfDueX=0;_tfDueY++;}tfRender();}
-function tfPickDue(ds){_tfDue=(_tfDue===ds?'':ds);tfRender();}
+function tfPickDue(ds){_tfDue=(_tfDue===ds?'':ds);if(_tfDue)_tfDueOpen=false;tfRender();} // 選んだら閉じる
 function tfDueClear(){_tfDue='';_tfDueOpen=false;tfRender();}
 /* 繰り返し＝毎週は曜日（複数可）、毎月は何日かを選ぶ */
 function tfRepeatHtml(){
@@ -2715,9 +2718,9 @@ function tfRepeatHtml(){
     detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
       return `<button type="button" class="${_tfRepDays.includes(d)?'on':''}" onclick="tfToggleRepDay(${d})">${WD[d]}</button>`;}).join('')}</div>
       <div class="mini">${_tfRepDays.length?`毎週 ${_tfRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:'曜日を選ばないと「完了した日の7日後」になります'}</div>`;}
-  if(_tfRepeat==='monthly'){
-    detail=`<div class="domsel">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
-      <div class="mini">${_tfRepDom?`毎月 ${_tfRepDom}日`:'日を選ばないと「完了した日の1か月後」になります'}</div>`;}
+  if(_tfRepeat==='monthly'){ // カレンダーと同じ見た目の1〜31グリッド
+    detail=`<div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+      <div class="mini">${_tfRepDom?`毎月 ${_tfRepDom}日にくり返します`:'日を選ばないと「完了した日の1か月後」になります'}</div>`;}
   return `<div class="btnrow" id="tmRepRow">${tabs}</div>${detail}`;}
 function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly')_tfRepDom=null;tfRender();}
 function tfToggleRepDay(d){const i=_tfRepDays.indexOf(d);i>=0?_tfRepDays.splice(i,1):_tfRepDays.push(d);tfRender();}
@@ -2733,7 +2736,7 @@ function saveTask(id){
     due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
-    pin:$('#tmPin').checked};
+    pin:_tfPin};
   if(id){const old=S.tasks.find(t=>t.id===id);
     if(data.pin&&!old.pin)data.snooze=null;
     Object.assign(old,data);touchPicked(old);}
@@ -4061,7 +4064,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.20（2026-08-01）タスクの追加・編集画面を作り直し</b><br>
+  <div class="mini"><b>v2.21（2026-08-01）追加・編集画面の操作感を改善</b><br>
+  ・<b>ボタンを押すと画面が上に戻ってしまう不具合を修正</b>（スクロール位置を保つように）<br>
+  ・<b>閉じる判定を落ち着かせました</b>：グループの横スライドや中身のスクロールでは閉じず、<b>上端から縦にしっかり引き下げた時だけ</b>閉じます（外タップ閉じはそのまま）<br>
+  ・<b>＋を押すとすぐタスク名に入力できる</b>ように（キーボードが直接開きます）<br>
+  ・<b>毎週の曜日・毎月の日えらびを青色に</b>して他のボタンと見分けやすく。<b>毎月はカレンダーと同じ見た目のグリッド</b>になりました<br>
+  ・<b>「🔁 継続」は「いつやる」の並びのボタンに</b>（今日／明日と同じ形。継続を選ぶと今日/明日は外れます）<br>
+  ・<b>期限は優先度の横のボタンに</b>。押すと下にカレンダーが開き、日を選ぶと自動で閉じます<br>
+  ・新規追加を開いた時に<b>前回の入力が残ってしまう不具合も修正</b><br>
+  <b>v2.20（2026-08-01）タスクの追加・編集画面を作り直し</b><br>
   ・<b>追加と編集を1つの画面に統一</b>しました（「詳細も書く」は廃止）。<b>ポップの外をタップ／下にスワイプでも閉じられ</b>、余白を詰めて「やめる・保存」は指の届く下に置いています<br>
   ・<b>グループはタブで選ぶ形に</b>：親を押すとその場で決まり、子があれば下の段に出てさらに絞り込めます（例：仕事 ▸ クライアントA ▸ 顧客X）<br>
   ・<b>「4つの部屋」を廃止</b>し、<b>優先度（高・中・低）</b>だけにしました。※これまで部屋で付いていた色は、そのまま色として引き継がれます<br>
@@ -4651,21 +4662,28 @@ function closeModal(){$('#modalWrap').classList.remove('show');taskAddAfter=null
 /* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
 let dlgResolve=null;
 function dlgEnd(v){$('#dlgWrap').classList.remove('show');$('#dlg').style.transform='';const r=dlgResolve;dlgResolve=null;if(r)r(v);}
-/* ポップの外をタップ／下へスワイプで閉じる */
+/* ポップの外をタップ／下へしっかり引き下げで閉じる。
+   横スライド（グループタブ等）や中身のスクロールでは閉じないよう、縦優位を確かめてから動かす */
 (function bindDlgClose(){const wrap=$('#dlgWrap'),box=$('#dlg');if(!wrap||!box)return;
   wrap.addEventListener('click',e=>{if(e.target===wrap)dlgEnd(false);});
-  let sy=0,dragging=false,moved=0;
+  let sx=0,sy=0,armed=false,axis=null,moved=0;
   box.addEventListener('touchstart',e=>{
+    axis=null;moved=0;armed=false;
     if(e.touches.length!==1)return;
-    const sc=e.target.closest&&e.target.closest('.tform,.dpgrid,textarea,select');
-    // 中身をスクロールできる時は、いちばん上にいる時だけ引き下げを受け付ける
-    if(sc&&sc.classList&&sc.classList.contains('tform')&&sc.scrollTop>0){dragging=false;return;}
-    sy=e.touches[0].clientY;dragging=true;moved=0;},{passive:true});
-  box.addEventListener('touchmove',e=>{if(!dragging)return;
-    const dy=e.touches[0].clientY-sy;if(dy<=0){moved=0;box.style.transform='';return;}
-    moved=dy;box.style.transform=`translateY(${Math.min(dy,260)}px)`;},{passive:true});
-  const end=()=>{if(!dragging)return;dragging=false;
-    if(moved>90){box.style.transform='';dlgEnd(false);}else box.style.transform='';};
+    // 横スクロールや選択グリッドの上からは引き下げを始めない
+    if(e.target.closest&&e.target.closest('.gtabs,.daysel,.dpgrid,.minchips,textarea,select,input'))return;
+    // 中身がスクロール済みなら（＝上端にいない）引き下げにしない
+    const f=box.querySelector('.tform');if(f&&f.scrollTop>0)return;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;armed=true;},{passive:true});
+  box.addEventListener('touchmove',e=>{
+    if(!armed)return;
+    const dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
+    if(axis===null&&(Math.abs(dx)>10||Math.abs(dy)>14))axis=(dy>14&&dy>Math.abs(dx)*1.5)?'pull':'other';
+    if(axis!=='pull'){if(axis==='other')armed=false;return;}
+    moved=Math.max(0,dy);
+    box.style.transform=moved>0?`translateY(${Math.min(moved,260)}px)`:'';},{passive:true});
+  const end=()=>{const m=moved;armed=false;axis=null;moved=0;
+    if(m>130){box.style.transform='';dlgEnd(false);}else box.style.transform='';};
   box.addEventListener('touchend',end);box.addEventListener('touchcancel',end);})();
 function uiAlert(msg){return new Promise(res=>{dlgResolve=res;
   $('#dlg').innerHTML=`<div class="dm">${esc(msg)}</div><div class="db"><button class="ok" onclick="dlgEnd()">OK</button></div>`;
