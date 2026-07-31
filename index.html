@@ -915,7 +915,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.00';
+const APP_VERSION='v2.01';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1252,7 +1252,8 @@ function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+i
 let swipeBound=false,swSx=0,swSy=0,swT=0,swValid=false,swRow=null,swAxis=null,swSuppress=false;
 function swRowReset(){if(!swRow)return;swRow.style.transform='';swRow.style.transition='';swRow.classList.remove('swR','swL');swRow=null;}
 function attachCalSwipe(){
-  if(swipeBound)return;const el=$('#view');if(!el)return;swipeBound=true;
+  // 受け口は画面全体（#view だと日表示のように中身が短い時、下の余白でスワイプが効かない）
+  if(swipeBound)return;const el=document;swipeBound=true;
   el.addEventListener('touchstart',e=>{
     if(e.touches.length!==1){swValid=false;return;}
     const t=e.touches[0];swSx=t.clientX;swSy=t.clientY;swT=Date.now();swValid=true;swAxis=null;
@@ -1267,7 +1268,7 @@ function attachCalSwipe(){
   // カレンダーの横スワイプ：軸を固定して縦揺れ（縦スクロール混入）を止める
   el.addEventListener('touchmove',e=>{
     if(!swValid||view!=='cal'||e.touches.length!==1)return;
-    if(e.target.closest&&e.target.closest('.tlwrap,.chips,input,textarea,select'))return; // 横スクロール領域は触らない（週グリッド.wkbodyはスワイプ対象）
+    if(e.target.closest&&e.target.closest('.tlwrap,.chips,input,textarea,select,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール領域・重なるUIは触らない（週グリッド.wkbodyはスワイプ対象）
     const t=e.touches[0],dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(swAxis===null&&(Math.abs(dx)>8||Math.abs(dy)>8))swAxis=Math.abs(dx)>Math.abs(dy)?'h':'v';
     if(swAxis==='h')e.preventDefault(); // 横スワイプ確定→縦スクロール抑止
@@ -1277,7 +1278,7 @@ function attachCalSwipe(){
     if(!swValid)return;swValid=false;const wasAxis=swAxis;swAxis=null;
     const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
-    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap'))return; // 横スクロール/ドラッグ/リンク等は邪魔しない
+    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(!(Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15))return;
     // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
@@ -3897,7 +3898,9 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.00（2026-07-31）</b><br>
+  <div class="mini"><b>v2.01（2026-07-31）</b><br>
+  ・<b>日カレンダーの前後スライドが効いたり効かなかったりする不具合を修正</b>：中身が短い日は画面下の余白でスワイプが反応していませんでした。画面のどこでも効きます（下のタブの上ではスライドしません）<br>
+  <b>v2.00（2026-07-31）</b><br>
   ・<b>継続タスクがどの画面からでも「完全に完了」できるように</b>：タスクタブ・日カレンダーのチェックも今日タブと同じ完了ポップになりました（今まで他の画面から完了すると翌日また出てきていました）<br>
   ・<b>色をつけた日・タスクでもタップの手ごたえが出る</b>ように：色を消さず、うすい墨が重なる見え方に<br>
   ・<b>1回目のグレーが別の日に飛ぶ不具合を修正</b>（指を離した場所の日で判定。画面が更新されても消えません）<br>
