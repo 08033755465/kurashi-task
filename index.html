@@ -937,7 +937,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.10';
+const APP_VERSION='v2.11';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1788,7 +1788,7 @@ function doItemRowDense(it,t,tok){
   const bc=bandColorOf(it);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;
     return `<div class="ditem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}border-left:3px solid ${bc};">
-      <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?CHK:''}</div>
+      <div class="chk" onclick="event.stopPropagation();${dn?`routineUndoneTap('${r.id}',null,event)`:`toggleRoutine('${r.id}')`}">${dn?CHK:''}</div>
       <div class="dt" onclick="setAnchor('${tok}');routineModal('${r.id}')">${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}${r.memo?' 📝':''}${r.images&&r.images.length?' 📷':''}</div>
       <span class="typetag r">ルーティン</span>
       <div class="dtime">${SLOTS[r.slot].slice(0,1)}・${fmtMin(r.estMin)}</div>
@@ -1796,7 +1796,7 @@ function doItemRowDense(it,t,tok){
   const x=it.obj;const done=x.status==='done';
   const bg=taskBg(x); // カレンダーと同じパステルカラー（自分で色分け→なければ4つの部屋から）
   return `<div class="ditem ${done?'done':''}" data-lp="t_${x.id}" data-do="${tok}" style="${bg?`background:${bg};`:''}border-left:3px solid ${bg||bc};">
-    <div class="chk" onclick="event.stopPropagation();toggleTaskDone('${x.id}')">${done?CHK:''}</div>
+    <div class="chk" onclick="event.stopPropagation();${done?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${done?CHK:''}</div>
     <div class="dt" onclick="setAnchor('${tok}');taskModal('${x.id}')">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.status==='wait'?'<span class="wtag">待</span>':''}${x.memo?' 📝':''}${x.images&&x.images.length?' 📷':''}</div>
     <span class="typetag t">タスク</span>
     <div class="dtime">${done?doneLabel(x,t):(x.estMin?fmtMin(x.estMin):'')}</div>
@@ -1807,7 +1807,7 @@ function doItemRow(it,t){
   const arrows=todayArrows(tok);
   if(it.type==='r'){const r=it.obj;const dn=dayLog(t).routines[r.id]?.done;const st=r.stats||{n:0,total:0};
     return `<div class="ritem ${dn?'done':''}" data-lp="r_${r.id}" data-do="${tok}" style="${pastelBg(r)}">
-      <div class="chk" onclick="event.stopPropagation();toggleRoutine('${r.id}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
+      <div class="chk" onclick="event.stopPropagation();${dn?`routineUndoneTap('${r.id}',null,event)`:`toggleRoutine('${r.id}')`}">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
       <div class="rb" onclick="setAnchor('${tok}');routineModal('${r.id}')"><div class="rt">${esc(r.title)} <span class="rtag">ルーティン</span>${r.optional?'<span class="rtag opt">時間があれば</span>':''}</div>
       <div class="rm">${SLOTS[r.slot]}・目安${fmtMin(r.estMin)}${st.n?'・平均'+fmtMin(st.total/st.n/60):''}</div>${r.memo?`<div class="memoline">${linkify(r.memo)}</div>`:''}${linkChips(r.links)}${rowImgs(r.images)}</div>
       ${arrows}</div>`;}
@@ -2116,7 +2116,7 @@ function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const row=(ev&&ev.target&&ev.target.closest('.tchkr'))||document.querySelector(`.tchkr[data-lp="t_${id}"]`);
   const done=x.status==='done';
   const html=`<div class="miniacts">
-    ${done?`<button onclick="cpClose();toggleTaskDone('${id}')"><span>↩</span>戻す</button>`
+    ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
       :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
     <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
@@ -2136,7 +2136,7 @@ function todayTaskChecklist(t){
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
   return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${taskBg(x)?`background:${taskBg(x)};`:''}">
-      <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`toggleTaskDone('${x.id}')`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?CHK:''}</div>
+      <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?CHK:''}</div>
       <div class="tct ${(x.pin||x.repeat)?'cont':''}" onclick="chkTaskMenu('${x.id}',event)">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
       <div class="tcm">${x.status==='done'?doneLabel(x,t):((at['t_'+x.id]!=null?'🕐'+min2hm(at['t_'+x.id])+'・':'')+(x.estMin?fmtMin(x.estMin):''))}</div>
       ${x.status==='done'?'':`<div class="arrows h"><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveChecklistTask('${x.id}',1)">▼</button></div>`}</div>`).join('')}</div></div>`;}
@@ -2215,10 +2215,8 @@ function blockDragStart(ev,id,edge){ev.stopPropagation();ev.preventDefault();
   document.addEventListener('pointermove',mv);
   document.addEventListener('pointerup',up);}
 /* タイムラインの完了ゴーストをタップ→未完了に戻す（誤操作リカバリ・全タブ共通の考え方） */
-function tlUndone(tk){const t=todayStr();const type=tk[0],id=tk.slice(2);snapUndo();
-  if(type==='r'){const log=dayLog(t);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
-  else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='todo';delete x.doneAt;delete x.doneMin;}}
-  save();render();flashUndo('未完了に戻しました');}
+function tlUndone(tk){const type=tk[0],id=tk.slice(2);
+  type==='r'?undoneRoutine(id):undoneTask(id);}
 /* 未配置を「今」から順に自動配置（5分刻み・24時間軸） */
 function autoPlacePool(){const t=todayStr();const w=hm2min(dayWake(t)),end=w+1440;const at=(dayLog(t).at)||{};
   const pool=doItems(t).filter(it=>!flowItemDone(it)&&at[it.type+'_'+it.obj.id]==null);
@@ -2429,7 +2427,7 @@ function taskRow(x,o={}){
   const onclick=o.tabAction?`setTaskActive('${x.id}')`:`${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')`;
   return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}" style="${active?'':(taskBg(x)?`background:${taskBg(x)};`:'')}">
     <div class="bar" style="${markCss(x.groupId,180)}"></div>
-    <div class="chk" onclick="event.stopPropagation();${x.status==='done'?`toggleTaskDone('${x.id}')`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
+    <div class="chk" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
       <div class="tt ${x.status==='done'?'done':''} ${(x.pin||x.repeat)?'cont':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${x.repeat?`<span class="pinbadge">${REPEAT_LABEL_T[x.repeat]||''}</span>`:''}</div>
       <div class="meta"><span class="gmark" style="${markCss(x.groupId)}"></span><span>${esc(groupPath(x.groupId))}</span>
@@ -3056,19 +3054,54 @@ function fullyCompleteTask(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;s
   x.pin=false;x.repeat='';delete x.dayDone;delete x.repeatPrev; // 復活条件から外す＝真の完了
   const at=dayLog(todayStr()).at;if(at)delete at['t_'+id];
   sinkDoItem('t_'+id);markJustDone('t_'+id);save();render();flashUndo('完全に完了しました🎉');checkCelebrate();}
+/* 「未完了に戻す」の後始末はここに一本化（経路ごとに消し忘れがあったのを統一） */
+function undoTaskFields(x){x.status='todo';
+  delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
+  if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
+function undoneTask(id,quiet){const x=S.tasks.find(v=>v.id===id);if(!x||x.status!=='done')return;
+  setAnchor('t_'+id);snapUndo();undoTaskFields(x);save();render();
+  if(!quiet)flashUndo('未完了に戻しました');}
+function undoneRoutine(id,dstr){const t=dstr||todayStr();const log=dayLog(t);
+  if(!log.routines[id]?.done)return;
+  setAnchor('r_'+id);snapUndo();
+  log.routines[id]={...log.routines[id],done:false};delete log.routines[id].doneMin;delete log.routines[id].sec;
+  save();render();flashUndo('未完了に戻しました');}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
-  if(x.status==='done'){x.status='todo';delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
-    if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
+  if(x.status==='done'){undoTaskFields(x);}
   else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);markJustDone('t_'+id);
     if(!advanceRepeatTask(x)&&x.pin)toast('今日の分を完了！明日また表示します📌');}
   save();render();checkCelebrate();}
+/* 完了を取り消す時のワンクッション（完了POPと対の近接ポップ） */
+function taskUndoneTap(id,anchor,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id+'_undo'){cpClose();return;}
+  const rowSel='.tchkr[data-lp="t_'+id+'"],.titem[data-lp="t_'+id+'"],.dtask[data-lp="t_'+id+'"],.ditem[data-lp="t_'+id+'"]';
+  const a=anchor
+    ||(ev&&ev.target&&ev.target.closest?ev.target.closest('.tchkr,.titem,.dtask,.ditem,.tltask,.poolitem'):null)
+    ||document.querySelector(rowSel);
+  const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
+    <button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>
+    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(a,html,{forId:id+'_undo',rowSel:'.tchkr[data-lp^="t_"],.titem[data-lp^="t_"],.dtask[data-lp^="t_"],.ditem[data-lp^="t_"]'});}
+function routineUndoneTap(id,anchor,ev){const r=S.routines.find(v=>v.id===id);if(!r)return;
+  if(_cpForId===id+'_rundo'){cpClose();return;}
+  const a=anchor
+    ||(ev&&ev.target&&ev.target.closest?ev.target.closest('.ritem,.ditem,.rrow,.tltask'):null)
+    ||document.querySelector('[data-lp="r_'+id+'"]');
+  const html=`<div class="miniacts"><div class="cptitle">${esc(r.title)}</div>
+    <button class="hi" onclick="cpClose();undoneRoutine('${id}')"><span>↩</span>未完了に戻す</button>
+    <button onclick="cpClose();routineModal('${id}')"><span>✎</span>編集</button>
+    <button onclick="cpClose();delRoutine('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(a,html,{forId:id+'_rundo',rowSel:'.ritem[data-lp^="r_"],.ditem[data-lp^="r_"]'});}
 function dayScheduleHtml(dstr){
   const evs=eventsOn(dstr);
   const wake=dstr===todayStr()?dayWake(dstr):S.settings.wakeDef;
   const dtasks=S.tasks.filter(x=>x.due===dstr||x.today===dstr).sort((a,b)=>(a.status==='done')-(b.status==='done')||a.priority-b.priority);
   const tl=scheduleListHtml(evs,wake,dstr);
   const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}" data-lp="t_${x.id}">
-    <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`toggleTaskDone('${x.id}')`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
+    <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="dtb" onclick="taskModal('${x.id}')"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
     <div class="dtm"><span class="gmark" style="${markCss(x.groupId)}"></span> ${esc(group(x.groupId).name)}${x.estMin?' ・'+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}${x.status==='done'?' ・'+doneLabel(x,dstr):''}</div></div></div>`).join('');
   return `<div class="daycols">
@@ -3091,11 +3124,9 @@ function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=
       <div class="drb"><div class="drx">${it.icon} ${esc(it.text)}</div><div class="drs">${esc(it.sub)}</div></div></div>`).join('')}
     ${canEdit?`<button class="drecadd" onclick="addTodayLog('event')">＋ 記録を追加（出来事・メモ・場所・やったこと）</button>`:''}</div>`;}
 async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
-  if(!await uiConfirm('このタスクを未完了に戻しますか？','戻す'))return;
-  snapUndo();
-  if(type==='r'){const log=dayLog(dstr);if(log.routines[id]){log.routines[id].done=false;delete log.routines[id].doneMin;}}
-  else{const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr){x.status='todo';delete x.doneAt;delete x.doneMin;}}
-  save();render();flashUndo('未完了に戻しました');}
+  if(!await uiConfirm(type==='r'?'このルーティンを未完了に戻しますか？':'このタスクを未完了に戻しますか？','戻す'))return;
+  if(type==='r'){undoneRoutine(id,dstr);return;}
+  const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr)undoneTask(id);}
 /* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
 function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dues=dueTasksOn(dstr);
   const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
@@ -3230,10 +3261,12 @@ function restoreAllHidden(){const t=todayStr();dayLog(t).hiddenR=[];
 async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
   if(type==='r'){const r=S.routines.find(x=>x.id===id);if(!r)return;const log=dayLog(t);const done=!!log.routines[id]?.done;
     if(!await uiConfirm(`「${r.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    log.routines[id]={...(log.routines[id]||{}),done:!done,doneMin:!done?curMin():undefined};if(!done)sinkDoItem(tok);save();render();if(!done)checkCelebrate();}
+    if(done){undoneRoutine(id);return;}
+    log.routines[id]={...(log.routines[id]||{}),done:true,doneMin:curMin()};sinkDoItem(tok);save();render();checkCelebrate();}
   else{const x=S.tasks.find(v=>v.id===id);if(!x)return;const done=x.status==='done';
     if(!await uiConfirm(`「${x.title}」を${done?'未完了に戻し':'完了にし'}ますか？`,done?'戻す':'完了'))return;
-    x.status=done?'todo':'done';if(!done){x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);advanceRepeatTask(x);}save();render();if(!done)checkCelebrate();}}
+    if(done){undoneTask(id);return;} // 戻す時の後始末は undoneTask に一本化
+    x.status='done';x.doneAt=t;x.doneMin=curMin();sinkDoItem(tok);advanceRepeatTask(x);save();render();checkCelebrate();}}
 /* (a) 単日の色分け＝押したセルの下に小さくポップ表示 */
 function openCellColorPop(dstr,el){
   const cur=S.dayColors[dstr];
@@ -3998,7 +4031,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.10（2026-07-31）操作感の改善</b><br>
+  <div class="mini"><b>v2.11（2026-07-31）</b><br>
+  ・<b>完了を取り消す時もワンクッション</b>：完了済みのチェックを押すと、すぐには戻らず<b>「↩未完了に戻す／✎編集／🗑削除／‹やめる」</b>が出ます（タスク・ルーティンとも／今日タブ・省スペース表示・タスクタブ・日カレンダーのすべて）<br>
+  ・<b>「⊟ 省スペース」表示だけ確認ポップが出ていなかったのを修正</b>（完了も取り消しも素通りしていました）<br>
+  ・戻した時に<b>かかった時間や記録が消え残らない</b>よう処理を統一し、<b>戻す操作も取り消せる</b>ようになりました<br>
+  <b>v2.10（2026-07-31）操作感の改善</b><br>
   ・<b>長押しが軽くなりました</b>：押している間じわっと濃くなって「効いている」のが分かり、反応も少し早く（0.6秒→0.45秒）<br>
   ・<b>色えらびが1行に</b>：6色＋なしが横一列になり、<b>今の色に印</b>がつくようになりました（1タップで即反映）<br>
   ・<b>今日のタスクの並び順</b>：<b>色の順 → 優先度 → 最近えらんだ順</b>。色や優先度をえらび直すと、その仲間の中でいちばん上に来ます<br>
