@@ -979,7 +979,7 @@ body.swiping .lpress{animation:none;}
 <nav id="nav">
   <button data-v="today" onclick="switchView('today')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>今日</button>
   <button data-v="shop" onclick="switchView('shop')"><svg viewBox="0 0 24 24"><path d="M3 5h2l2.2 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>買い物</button>
-  <button data-v="cal" onclick="switchView('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
+  <button data-v="cal" onclick="switchView('cal')" onpointerdown="calTabDown(event)" onpointerup="calTabUp()" onpointercancel="calTabUp()" onpointermove="calTabMove(event)" oncontextmenu="event.preventDefault()"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
   <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>習慣</button>
   <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
@@ -1022,7 +1022,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.51';
+const APP_VERSION='v2.52';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1696,19 +1696,29 @@ let view='today';
 let calMode='month', calMonthAll=false, calY,calX,calDate=todayStr();
 let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 {const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
-let _calTapT=0;
-function switchView(v){
-  if(v==='cal'&&view==='cal'){ // 押すたびに 月 → 週 → 日。すばやく2回押すと、いつもの表示に戻る
-    calMonthAll=false;
-    const now=Date.now(),dbl=(now-_calTapT)<400;_calTapT=now;
-    calMode=dbl?(S.settings.calDefault||'month')
-      :(calMode==='month'?'week':calMode==='week'?'day':'month');
-    if(!calDate)calDate=todayStr();
-    if(dbl){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();} // 今日に戻す
-    else{const d=parseDs(calDate);calY=d.getFullYear();calX=d.getMonth();}
+/* カレンダータブ：タップ＝月→週→日の切替／長押し＝いつもの表示（設定）と今日に戻す
+   ※タップで切り替わる以上、ダブルタップは「2歩目の切替」と区別できないため長押しにしている */
+let _calLongFired=false,_calLongT=null,_calLongY=0;
+function calTabDown(ev){clearTimeout(_calLongT);_calLongFired=false;_calLongY=ev.clientY;
+  const btn=ev.currentTarget;
+  _calLongT=setTimeout(()=>{_calLongT=null;_calLongFired=true;
+    try{navigator.vibrate&&navigator.vibrate([12,26,18]);}catch(_){}
+    btn.classList.add('lpfire');setTimeout(()=>btn.classList.remove('lpfire'),240);
+    calMonthAll=false;calMode=S.settings.calDefault||'month';
+    const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();
+    view='cal';$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==='cal'));
     render();toTop();
-    if(dbl)toast(`いつもの表示（${{month:'月',week:'週',day:'日'}[calMode]}）に戻しました`);
-    return;}
+    toast(`いつもの表示（${{month:'月',week:'週',day:'日'}[calMode]}）と今日に戻しました`);},450);}
+function calTabUp(){clearTimeout(_calLongT);_calLongT=null;}
+function calTabMove(ev){if(_calLongT&&Math.abs(ev.clientY-_calLongY)>10)calTabUp();}
+function switchView(v){
+  if(v==='cal'&&view==='cal'){ // 押すたびに 月 → 週 → 日（いつもの表示に戻すのは長押し）
+    if(_calLongFired){_calLongFired=false;return;} // 長押しで戻した直後のタップは無視
+    calMonthAll=false;
+    calMode=calMode==='month'?'week':calMode==='week'?'day':'month';
+    if(!calDate)calDate=todayStr();
+    const d=parseDs(calDate);calY=d.getFullYear();calX=d.getMonth();
+    render();toTop();return;}
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v!=='cal'){cellSelMode=false;cellSel=new Set();}
   clearPrime();
@@ -3208,7 +3218,7 @@ function renderCal(){
       </div>`;}
     const gridAll=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     body=`<div id="calGrid" class="${gridAll?'allmode':''}" style="--mfs:${(MONTH_FONTS[S.settings.monthFont]||MONTH_FONTS.m).px}px;">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
-    <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示。見せ方は<b>設定→表示設定</b>でも変えられます</div>
+    <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示。下の<b>カレンダーを押すたびに 月→週→日</b>、<b>長押しでいつもの表示と今日に戻ります</b></div>
     ${periodNoteHtml('m:'+calY+'-'+pad(calX+1),`${calX+1}月のメモ`)}`;
   }else if(calMode==='week'){
     const base=parseDs(calDate);const ws=S.settings.weekStart;
@@ -4498,7 +4508,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.51（2026-08-01）</b><br>
+  <div class="mini"><b>v2.52（2026-08-01）</b><br>
+  ・<b>カレンダーの表示切替が勝手に月へ戻ってしまう不具合を修正</b>しました。タップするたびに切り替わる仕組みのため、「日」へ進むための2回目のタップが<b>ダブルタップと区別できず</b>、必ず月に戻ってしまっていました<br>
+  ・<b>いつもの表示（と今日）に戻すのは、下の「カレンダー」を長押し</b>に変わりました。タップは今まで通り 月→週→日 の切り替えです<br>
+  <b>v2.51（2026-08-01）</b><br>
   ・<b>「完了しました」などのメッセージを、画面上部の細い帯に変えました</b>（これまでは下に黒く大きく出て、下のボタンや一覧が隠れていました）。「元に戻す」もそのまま押せます<br>
   <b>v2.50（2026-08-01）週カレンダーをなぞって入力できるように</b><br>
   ・<b>週カレンダーの時間の上をタテになぞる</b>と範囲がえらべ、離すと<b>「📅 予定を入れる／🎨 色をつける」</b>が出ます（15分きざみ）<br>
