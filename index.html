@@ -988,7 +988,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.30';
+const APP_VERSION='v2.31';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1432,18 +1432,105 @@ const SYNCKEY='homehub_sync_cfg';
 let SYNC={};try{SYNC=JSON.parse(localStorage.getItem(SYNCKEY)||'{}');}catch(e){}
 let syncTimer=null,syncState={msg:'未設定',t:0,err:''};
 let _dirty=false; // この端末に未同期の変更があるか（編集した端末を優先し、削除の復活を防ぐ）
+/* ===== 3方向マージ =====
+   「最後に保存した端末が丸ごと勝つ」だと、古い画面のまま入力した端末が
+   他の端末の変更を消してしまう。そこで
+   ①前回同期した時点(base) ②この端末の今(local) ③クラウドの今(remote)
+   を突き合わせ、「この端末で実際に変えたところだけ」をクラウドの最新に乗せる。 */
+/* 自動バックアップ：クラウドから取り込む直前などに、その時の状態を端末内に残す（最大8件） */
+const BAKKEY='homehub_backups';
+function loadBackups(){try{return JSON.parse(localStorage.getItem(BAKKEY)||'[]');}catch(e){return [];}}
+function backupLocal(why){
+  try{const list=loadBackups();
+    const snap={at:Date.now(),why:why||'',n:{tasks:(S.tasks||[]).length,events:(S.events||[]).length,shopping:(S.shopping||[]).length},data:JSON.stringify(S)};
+    if(list.length&&list[0].data===snap.data)return; // 中身が同じなら残さない
+    list.unshift(snap);
+    while(list.length>8)list.pop();
+    localStorage.setItem(BAKKEY,JSON.stringify(list));
+  }catch(e){/* 容量オーバー等は無視（保険なので本体を止めない） */}}
+async function restoreBackup(i){const list=loadBackups();const b=list[i];if(!b)return;
+  if(!await uiConfirm(`${fmtBakTime(b.at)} の状態にもどしますか？\n（いまの状態もバックアップに残ります）`,'もどす'))return;
+  backupLocal('もどす前');
+  try{S=JSON.parse(b.data);migrate();S.updatedAt=Date.now();_dirty=true;
+    localStorage.setItem(LSKEY,JSON.stringify(S));
+    setBase(null);scheduleSync();render();toast('もどしました');
+  }catch(e){uiAlert('もどせませんでした');}}
+function fmtBakTime(t){const d=new Date(t);
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+const BASEKEY='homehub_sync_base';
+let _base=null; // 前回同期した時点の状態（マージの土台）
+try{_base=JSON.parse(localStorage.getItem(BASEKEY)||'null');}catch(e){_base=null;}
+function setBase(st){try{if(st===null){_base=null;localStorage.removeItem(BASEKEY);return;}
+  _base=JSON.parse(JSON.stringify(st));localStorage.setItem(BASEKEY,JSON.stringify(_base));}catch(e){}}
+const ID_LISTS=['tasks','routines','events','templates','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
+const MAP_KEYS=['dayLog','dayColors','periodNotes','lastNotify'];
+const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+/* id付きの配列：この端末での「追加・変更・削除」だけをクラウド側に反映する */
+function mergeList(base,local,remote){
+  base=base||[];local=local||[];remote=remote||[];
+  const bI=new Map(base.map(o=>[o.id,o])),lI=new Map(local.map(o=>[o.id,o])),rI=new Map(remote.map(o=>[o.id,o]));
+  const out=[];const seen=new Set();
+  remote.forEach(r=>{
+    const b=bI.get(r.id),l=lI.get(r.id);
+    if(b&&!l){return;}                       // この端末で消した → 消えたまま
+    if(!l){out.push(r);seen.add(r.id);return;} // クラウド側で増えた
+    if(b&&!eq(b,l)){out.push(l);}            // この端末で変えた → こちらを採用
+    else out.push(r);                        // 変えていない → クラウドを採用
+    seen.add(r.id);});
+  local.forEach(l=>{if(!seen.has(l.id)&&!bI.has(l.id))out.push(l);}); // この端末で増えた
+  return out;}
+/* 日付などをキーにしたオブジェクト：キーごとに同じ考え方で寄せる */
+function mergeMap(base,local,remote){
+  base=base||{};local=local||{};remote=remote||{};
+  const out={...remote};
+  Object.keys(local).forEach(k=>{
+    if(!(k in base)||!eq(base[k],local[k]))out[k]=local[k];});   // 増やした・変えた
+  Object.keys(base).forEach(k=>{if(!(k in local))delete out[k];}); // 消した
+  return out;}
+function mergeStates(base,local,remote){
+  // 土台が無い（この機能を入れる前・読み込み直後など）＝どちらが正しいか判断できないので
+  // 「消さない」側に倒して両方を残す。取りこぼしより重複のほうが直しやすいため
+  if(!base){const out=JSON.parse(JSON.stringify(remote));
+    ID_LISTS.forEach(k=>{const r=remote[k]||[],l=local[k]||[];
+      if(!Array.isArray(r)&&!Array.isArray(l))return;
+      const m=new Map(r.map(o=>[o.id,o]));l.forEach(o=>m.set(o.id,o));out[k]=[...m.values()];});
+    MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]={...(remote[k]||{}),...(local[k]||{})};});
+    out.settings={...(remote.settings||{}),...(local.settings||{})};
+    return out;}
+  const out=JSON.parse(JSON.stringify(remote));
+  ID_LISTS.forEach(k=>{if(Array.isArray(local[k])||Array.isArray(remote[k]))out[k]=mergeList(base[k],local[k],remote[k]);});
+  MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]=mergeMap(base[k],local[k],remote[k]);});
+  out.settings=mergeMap(base.settings,local.settings,remote.settings);
+  ['notes','ver'].forEach(k=>{if(!eq(base[k],local[k]))out[k]=local[k];});
+  return out;}
 function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
 function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
 function syncBase(){return SYNC.url.replace(/\/+$/,'')+'/rest/v1/kurashi_state';}
 function scheduleSync(){if(!syncReady())return;clearTimeout(syncTimer);syncTimer=setTimeout(pushState,1200);}
 async function pushState(){if(!syncReady())return;
   try{
+    // 上げる前にクラウドを確認。こちらが古い土台のままなら、他の端末の変更を消さないようマージする
+    let merged=false;
+    try{
+      const chk=await fetch(syncBase()+`?room=eq.${encodeURIComponent(SYNC.room)}&select=data,updated_at`,{headers:syncHeaders()});
+      if(chk.ok){const rows=await chk.json();
+        if(rows.length&&rows[0].data){
+          const rT=new Date(rows[0].updated_at).getTime()||0;
+          const baseT=(_base&&_base.updatedAt)||0;
+          if(rT>baseT){ // クラウドの方が新しい＝この端末が知らない変更がある
+            const sy=window.scrollY;
+            S=mergeStates(_base,S,rows[0].data);migrate();merged=true;
+            localStorage.setItem(LSKEY,JSON.stringify(S));
+            if(!adoptBusy()){render();window.scrollTo(0,sy);}}}}
+    }catch(e){/* 確認に失敗したら従来どおり上げる */}
+    S.updatedAt=Date.now();
     const res=await fetch(syncBase(),{method:'POST',
       headers:{...syncHeaders(),'Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify([{room:SYNC.room,data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()}])});
+      body:JSON.stringify([{room:SYNC.room,data:S,updated_at:new Date(S.updatedAt).toISOString()}])});
     if(!res.ok)throw new Error('HTTP '+res.status);
     _dirty=false; // アップ完了＝この端末の変更はクラウドに反映済み
-    syncState={msg:'同期済み',t:Date.now(),err:''};
+    setBase(S);   // ここが次回マージの土台になる
+    syncState={msg:merged?'他の端末の変更と合わせました':'同期済み',t:Date.now(),err:''};
   }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};}
   updateSyncDot();if(view==='set'&&!adoptBusy())render();}
 // 同期インジケーター（左下）。エラー時のみ常時表示、正常時は同期直後だけ薄く出す
@@ -1483,8 +1570,12 @@ async function pullState(manual){if(!syncReady()||_pulling)return;_pulling=true;
     // 取得中に編集し始めていたら反映しない（画面が飛ばないように）
     if(_dirty||(!manual&&adoptBusy())){syncState={msg:'保留',t:Date.now(),err:''};return;}
     // 未編集の端末はクラウドに合わせる（時刻が違えば必ず取り込む＝削除の復活を防ぐ）
-    if(rT!==(S.updatedAt||0)){const sy=window.scrollY;S=rows[0].data||S;S.updatedAt=rT;_dirty=false;migrate();
+    if(rT!==(S.updatedAt||0)){const sy=window.scrollY;
+      backupLocal('クラウドから取り込む前'); // 万一に備えて直前の状態を残す
+      S=rows[0].data||S;S.updatedAt=rT;_dirty=false;migrate();
+      setBase(S); // 取り込んだ状態が次回マージの土台
       localStorage.setItem(LSKEY,JSON.stringify(S));render();window.scrollTo(0,sy);updateSyncDot();}
+    else if(!_base)setBase(S); // 初回：土台を作っておく
     syncState={msg:'同期済み',t:Date.now(),err:''};
   }catch(e){syncState={msg:'同期エラー',t:Date.now(),err:String(e).slice(0,140)};updateSyncDot();}
   finally{_pulling=false;if(view==='set'&&!adoptBusy())render();}}
@@ -4237,6 +4328,12 @@ function renderSettings(){
         <span style="font-size:12px;color:${syncState.err?'var(--danger)':'var(--sub)'};">${esc(syncState.msg)}${syncState.t?'・'+new Date(syncState.t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):''}</span></div>
       ${syncState.err?`<div class="mini" style="padding:6px 0 0;color:var(--danger);">${esc(syncState.err)}</div>`:''}</div>
     <div class="mini">未設定でもローカルだけで完全に動きます。設定すると保存のたびに自動でクラウドへ。手順は README_セットアップ.md 参照。</div>
+    <div class="sec-h">自動バックアップ</div>
+    <div class="mini" style="padding:2px 16px 8px;">クラウドから取り込む直前などに、この端末の中へ自動で控えを残しています（最大8件）</div>
+    ${(()=>{const l=loadBackups();return l.length?l.map((b,i)=>`<div class="setrow"><div><div class="sl">${fmtBakTime(b.at)}</div>
+      <div class="sd">${esc(b.why||'')}　タスク${b.n?b.n.tasks:'-'}件・予定${b.n?b.n.events:'-'}件${b.n&&b.n.shopping?'・買い物'+b.n.shopping+'件':''}</div></div>
+      <button style="border:1px solid var(--ink);padding:7px 14px;font-size:13px;" onclick="restoreBackup(${i})">もどす</button></div>`).join('')
+      :'<div class="mini" style="padding:0 16px 12px;">まだありません</div>';})()}
     <div class="sec-h">バックアップ</div>
     <div class="setrow"><div><div class="sl">書き出す</div><div class="sd">JSON形式で保存</div></div><button style="border:1px solid var(--ink);padding:7px 16px;font-size:13px;" onclick="exportData()">書き出し</button></div>
     <div class="setrow"><div><div class="sl">読み込む</div></div>
@@ -4252,7 +4349,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.30（2026-08-01）買い物タブができました</b><br>
+  <div class="mini"><b>v2.31（2026-08-01）⚠ 同期でデータが消える不具合を修正</b><br>
+  ・<b>古い画面のまま入力すると、他の端末で入れた内容が消えてしまう不具合を修正しました</b>。これまでは「最後に保存した端末が丸ごと勝つ」方式だったため、PCが古い状態のまま入力すると、スマホで入れた内容が上書きされていました<br>
+  ・これからは<b>「前回同期した時点」と見くらべて、その端末で実際に変えたところだけ</b>をクラウドに反映します。<b>両方の端末の追加・変更・完了が残ります</b>（削除した内容が復活することもありません）<br>
+  ・<b>自動バックアップを追加</b>：クラウドから取り込む直前などに、この端末の中へ控えを自動保存します（最大8件）。<b>設定 → 同期・データ → 自動バックアップ</b> から、いつでも元の状態にもどせます<br>
+  <b>v2.30（2026-08-01）買い物タブができました</b><br>
   ・<b>「買い物」タブを新設</b>しました（下のタブの「タスク」と入れ替え）。買うものをためて、買ったら記録に残ります<br>
   ・<b>お店で分けられます</b>（スーパー／ドラッグストア／コンビニ／100均／楽天／その他。<b>追加・名前の変更・削除もできます</b>）<br>
   ・<b>金額は「だいたいの金額」と「実際に払った金額」の両方</b>を持てます。買うものの予定合計・<b>今月買った分の合計</b>・<b>お店ごとの合計</b>が上に出ます<br>
@@ -4849,7 +4950,8 @@ function importData(inp){const f=inp.files[0];if(!f)return;
   r.onload=async()=>{try{const d=JSON.parse(r.result);
     if(!d.tasks||!d.settings)throw 0;
     if(!await uiConfirm('現在のデータを読み込んだ内容で置き換えます。よろしいですか？'))return;
-    S=d;save();render();uiAlert('読み込みました');}catch(e){uiAlert('ファイルを読み込めませんでした');}};
+    backupLocal('読み込む前');
+    S=d;migrate();setBase(null);save();render();uiAlert('読み込みました');}catch(e){uiAlert('ファイルを読み込めませんでした');}};
   r.readAsText(f);}
 
 /* ========================= modal共通・ダイアログ・通知 ========================= */
