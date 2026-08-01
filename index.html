@@ -33,7 +33,8 @@ body{
 #app{max-width:960px;margin:0 auto;min-height:100dvh;padding-bottom:calc(50px + env(safe-area-inset-bottom));padding-top:max(env(safe-area-inset-top),6px);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);box-sizing:border-box;}
 /* 上部（時計・ダイナミックアイランド）にコンテンツが潜り込まないよう不透明マスク */
 #safetop{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:70;pointer-events:none;}
-#syncdot{position:fixed;left:8px;bottom:calc(52px + env(safe-area-inset-bottom));font-size:10px;color:var(--sub);z-index:49;opacity:.7;display:none;}
+/* 同期の状態も上に小さく（下の操作のじゃまをしない） */
+#syncdot{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 4px);font-size:10px;color:var(--sub);z-index:49;opacity:.7;display:none;background:var(--bg);padding:2px 8px;border:1px solid var(--line2);border-radius:10px !important;}
 #syncdot.err{color:var(--danger);opacity:1;}
 button{font-family:inherit;font-size:inherit;background:none;border:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 /* iOSは16px未満の入力欄にフォーカスすると勝手に拡大するため、入力系は必ず16px以上にする */
@@ -1022,7 +1023,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.52';
+const APP_VERSION='v2.53';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -3022,15 +3023,14 @@ function weekLayout(evs,minMin,PXM){
   flush();
   return res.map(it=>({e:it.e,top:(it.s-minMin)*PXM,h:Math.max(15,(it.en-it.s)*PXM),lane:it.lane,lanes:it.lanes}));}
 function calGoto(dstr){clearPrime();closeDayPopup();calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
-/* ===== 週カレンダー：タテになぞって時間の範囲をえらぶ =====
-   なぞる＝範囲を選ぶ／1回タップ＝15分ぶんを選ぶ／すばやく2回＝その日をひらく
-   離すと選んだ帯の横にメニュー（予定を入れる・色をつける） */
-const WK_STEP=15; // 15分きざみ
+/* ===== 週カレンダー：長押ししてからタテになぞると時間の範囲をえらべる =====
+   すぐ動かした指は今まで通り「スクロール」。指を少し止める（長押し）と範囲えらびに切り替わる。
+   1回タップ＝その1時間をえらぶ／すばやく2回＝その日をひらく。刻みは1時間 */
+const WK_STEP=60; // 1時間きざみ
 let _wk=null,_wkTapT=0,_wkTapKey='';
 function wkY2min(col,clientY){const r=col.getBoundingClientRect();
   const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
   return {mn:min0+(clientY-r.top)/pxm,min0,pxm,r};}
-function wkSnap(v){return Math.round(v/WK_STEP)*WK_STEP;}
 function wkClearSel(){$$('.wksel').forEach(el=>el.remove());}
 function wkDrawSel(col,s,e){
   const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
@@ -3039,35 +3039,52 @@ function wkDrawSel(col,s,e){
   el.style.top=((s-min0)*pxm)+'px';el.style.height=((e-s)*pxm)+'px';
   el.firstChild.textContent=min2hm(s)+'〜'+min2hm(e);
   return el;}
+function wkCleanup(){if(!_wk)return;
+  clearTimeout(_wk.tmr);
+  document.removeEventListener('pointermove',_wk.mv);
+  document.removeEventListener('pointerup',_wk.up);
+  document.removeEventListener('pointercancel',_wk.cancel);
+  document.removeEventListener('touchmove',_wk.tm);
+  _wk=null;}
 function wkDown(ev){
   if(ev.pointerType==='mouse'&&ev.button!==0)return;
   const band=ev.target.closest&&ev.target.closest('.wkband');
   if(band){wkBandTap(band,ev);return;}                      // 色帯をタップ→色を変える・消す
   if(ev.target.closest&&ev.target.closest('.wkev'))return;  // 予定の上は既存の eventTap にまかせる
   const col=ev.target.closest&&ev.target.closest('.wkcol');if(!col)return;
-  cpClose();wkClearSel();
+  cpClose();
   const {mn}=wkY2min(col,ev.clientY);
-  const a=wkSnap(mn);
-  _wk={col,d:col.dataset.d,a,s:a,e:a+WK_STEP,moved:false,y0:ev.clientY};
-  wkDrawSel(col,_wk.s,_wk.e);
-  const mv=e2=>{if(!_wk)return;
-    if(Math.abs(e2.clientY-_wk.y0)>8)_wk.moved=true;
-    const {mn:m2}=wkY2min(_wk.col,e2.clientY);
-    let b=wkSnap(m2);
-    const lo=Math.min(_wk.a,b),hi=Math.max(_wk.a,b);
-    _wk.s=Math.max(0,lo);_wk.e=Math.min(1440,Math.max(hi,lo+WK_STEP));
-    wkDrawSel(_wk.col,_wk.s,_wk.e);
-    if(_wk.moved)e2.preventDefault();};
-  const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);
-    if(!_wk)return;
-    const w=_wk;_wk=null;swSuppress=true; // 直後の click（日へ飛ぶ等）を1回だけ止める
-    if(w.moved){wkRangePop(w.col,w.d,w.s,w.e);return;}
-    // 動いていない＝タップ。すばやく2回で その日をひらく
-    const key=w.d+'@'+w.s,now=Date.now();
-    if(_wkTapKey===key&&(now-_wkTapT)<400){_wkTapKey='';wkClearSel();calGoto(w.d);return;}
-    _wkTapKey=key;_wkTapT=now;};
-  document.addEventListener('pointermove',mv,{passive:false});
-  document.addEventListener('pointerup',up);}
+  const anchor=Math.max(0,Math.min(1440-WK_STEP,Math.floor(mn/WK_STEP)*WK_STEP)); // 押した所の1時間
+  const w={col,d:col.dataset.d,anchor,s:anchor,e:anchor+WK_STEP,armed:false,moved:false,y0:ev.clientY,x0:ev.clientX};
+  // 指を約0.3秒とめたら「範囲えらび」開始（すぐ動かせば今まで通りスクロール）
+  w.tmr=setTimeout(()=>{if(!_wk||_wk!==w)return;
+    w.armed=true;wkClearSel();wkDrawSel(w.col,w.s,w.e);
+    try{navigator.vibrate&&navigator.vibrate([12,26,18]);}catch(_){}},ev.pointerType==='mouse'?0:300);
+  w.mv=e2=>{if(_wk!==w)return;
+    if(!w.armed){ // まだ長押し前：8px動いたらスクロール/スワイプに譲る
+      if(Math.abs(e2.clientY-w.y0)>8||Math.abs(e2.clientX-w.x0)>8)wkCleanup();
+      return;}
+    w.moved=true;
+    const {mn:m2}=wkY2min(w.col,e2.clientY);
+    const lo=Math.min(w.anchor,m2),hi=Math.max(w.anchor+WK_STEP,m2);
+    w.s=Math.max(0,Math.floor(lo/WK_STEP)*WK_STEP);
+    w.e=Math.min(1440,Math.ceil(hi/WK_STEP)*WK_STEP);
+    wkDrawSel(w.col,w.s,w.e);};
+  w.tm=e2=>{if(_wk===w&&w.armed)e2.preventDefault();}; // 範囲えらび中は画面スクロールを止める
+  w.up=()=>{const armed=w.armed,moved=w.moved,d=w.d,s=w.s,e=w.e,colEl=w.col;
+    wkCleanup();swSuppress=true; // 直後の click を1回だけ止める
+    if(armed){wkDrawSel(colEl,s,e);wkRangePop(colEl,d,s,e);return;} // 長押し（＋なぞり）＝メニュー
+    // 長押し前に離した＝タップ。すばやく2回で その日をひらく
+    const key=d+'@'+w.anchor,now=Date.now();
+    if(_wkTapKey===key&&(now-_wkTapT)<400){_wkTapKey='';wkClearSel();calGoto(d);return;}
+    _wkTapKey=key;_wkTapT=now;
+    wkClearSel();wkDrawSel(colEl,w.anchor,w.anchor+WK_STEP);};
+  w.cancel=()=>{wkClearSel();wkCleanup();}; // スクロールに切り替わった時は何もしない
+  _wk=w;
+  document.addEventListener('pointermove',w.mv);
+  document.addEventListener('pointerup',w.up);
+  document.addEventListener('pointercancel',w.cancel);
+  document.addEventListener('touchmove',w.tm,{passive:false});}
 /* 選んだ範囲の横に出るメニュー */
 function wkRangePop(col,d,s,e){
   const sel=col.querySelector('.wksel');
@@ -3256,7 +3273,7 @@ function renderCal(){
         return `<div class="wkband" data-bid="${b.id}" data-d="${dd.dstr}" style="top:${top}px;height:${h}px;background:${(PASTELS[b.c]||PASTELS[0]).c};"></div>`;}).join('');
       return `<div class="wkcol ${isT?'today':''}" data-d="${dd.dstr}" data-min0="${minMin}" data-pxm="${PXM}">${bands}${hline}${blocks}${now}</div>`;}).join('');
     body=`<div class="wkcal">${header}${alldayRow}<div class="wkbody" style="height:${H}px" onpointerdown="wkDown(event)"><div class="wkgutter">${hlab}</div>${cols}</div></div>
-      <div class="mini">時間の上を<b>タテになぞる</b>と、その範囲に予定や色をつけられます。1回タップで選択、すばやく2回でその日を開きます。</div>
+      <div class="mini">時間の上を<b>長押ししてからタテになぞる</b>と、その範囲に予定や色をつけられます（1時間きざみ）。1回タップで選択、すばやく2回でその日を開きます。</div>
       ${periodNoteHtml(weekKeyOf(dsOf(start)),`今週のメモ（${start.getMonth()+1}/${start.getDate()}〜）`)}`;
   }else{
     const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
@@ -4508,7 +4525,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.52（2026-08-01）</b><br>
+  <div class="mini"><b>v2.53（2026-08-01）</b><br>
+  ・<b>週カレンダーのなぞり入力が効かない不具合を修正</b>：画面スクロールと取り合いになっていたのが原因でした。<b>長押ししてからなぞる</b>方式に変更（すぐ動かせば今まで通りスクロール）。刻みも<b>1時間</b>にして選びやすくしました（細かい時刻は予定の追加画面で直せます）<br>
+  ・左下に出ていた<b>「☁︎ 同期済み」も右上の小さな表示に移動</b>しました（下に出るメッセージはこれで全部なくなりました）<br>
+  <b>v2.52（2026-08-01）</b><br>
   ・<b>カレンダーの表示切替が勝手に月へ戻ってしまう不具合を修正</b>しました。タップするたびに切り替わる仕組みのため、「日」へ進むための2回目のタップが<b>ダブルタップと区別できず</b>、必ず月に戻ってしまっていました<br>
   ・<b>いつもの表示（と今日）に戻すのは、下の「カレンダー」を長押し</b>に変わりました。タップは今まで通り 月→週→日 の切り替えです<br>
   <b>v2.51（2026-08-01）</b><br>
