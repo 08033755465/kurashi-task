@@ -492,6 +492,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .wkev .wkevm{font-size:7.5px;opacity:.82;line-height:1.2;margin-top:1px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums;}
 .wkev .wkevm .cki{width:7px;height:7px;vertical-align:-1px;margin-right:1px;}
 .wkev.mkonly,.wkev.plain{background:none !important;box-shadow:none;}
+/* 週：その日だけの色帯（いちばん背面）となぞって選んだ範囲 */
+.wkband{position:absolute;left:0;right:0;z-index:0;opacity:.75;}
+.wksel{position:absolute;left:0;right:0;z-index:5;background:rgba(47,111,237,.20);border:1.5px solid #2F6FED;border-radius:4px !important;
+  touch-action:none;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;overflow:visible;}
+.wksel span{font-size:9px;font-weight:700;color:#fff;background:#2F6FED;padding:1px 5px;border-radius:0 0 4px 4px !important;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.wkbody{touch-action:pan-y;}
 .wknow{position:absolute;left:0;right:0;border-top:2px solid #E5484D;z-index:4;}
 .wknow::before{content:'';position:absolute;left:-2px;top:-3px;width:5px;height:5px;border-radius:50% !important;background:#E5484D;}
 /* 色並び順の設定リスト */
@@ -1007,7 +1013,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.40';
+const APP_VERSION='v2.50';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1202,7 +1208,7 @@ function defaultState(){
     ],
     events:[],templates:[],
     birthdays:[],marks:[],
-    dayColors:{},dayLog:{},notes:'',lastNotify:{}
+    dayColors:{},dayBands:{},dayLog:{},notes:'',lastNotify:{}
   };
 }
 function migrate(){const st=S.settings;
@@ -1227,6 +1233,7 @@ function migrate(){const st=S.settings;
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
+  if(!S.dayBands)S.dayBands={}; // 週カレンダーの色帯（その日だけ）
   // 買い物（買うものリスト＋買った記録）
   if(!S.shopping)S.shopping=[];
   if(!S.shops)S.shops=SHOP_DEFAULTS.map((n,i)=>({id:'sh'+i,name:n}));
@@ -1395,7 +1402,7 @@ function attachCalSwipe(){
     if(!swValid)return;swValid=false;const wasAxis=swAxis;swAxis=null;
     const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
-    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない
+    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wkbody,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない（週グリッドはなぞって範囲えらび）
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(!(Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15))return;
     // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
@@ -1483,7 +1490,7 @@ try{_base=JSON.parse(localStorage.getItem(BASEKEY)||'null');}catch(e){_base=null
 function setBase(st){try{if(st===null){_base=null;localStorage.removeItem(BASEKEY);return;}
   _base=JSON.parse(JSON.stringify(st));localStorage.setItem(BASEKEY,JSON.stringify(_base));}catch(e){}}
 const ID_LISTS=['tasks','routines','events','templates','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
-const MAP_KEYS=['dayLog','dayColors','periodNotes','lastNotify'];
+const MAP_KEYS=['dayLog','dayColors','dayBands','periodNotes','lastNotify'];
 const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
 /* id付きの配列：この端末での「追加・変更・削除」だけをクラウド側に反映する */
 function mergeList(base,local,remote){
@@ -2993,6 +3000,86 @@ function weekLayout(evs,minMin,PXM){
   flush();
   return res.map(it=>({e:it.e,top:(it.s-minMin)*PXM,h:Math.max(15,(it.en-it.s)*PXM),lane:it.lane,lanes:it.lanes}));}
 function calGoto(dstr){clearPrime();closeDayPopup();calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
+/* ===== 週カレンダー：タテになぞって時間の範囲をえらぶ =====
+   なぞる＝範囲を選ぶ／1回タップ＝15分ぶんを選ぶ／すばやく2回＝その日をひらく
+   離すと選んだ帯の横にメニュー（予定を入れる・色をつける） */
+const WK_STEP=15; // 15分きざみ
+let _wk=null,_wkTapT=0,_wkTapKey='';
+function wkY2min(col,clientY){const r=col.getBoundingClientRect();
+  const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
+  return {mn:min0+(clientY-r.top)/pxm,min0,pxm,r};}
+function wkSnap(v){return Math.round(v/WK_STEP)*WK_STEP;}
+function wkClearSel(){$$('.wksel').forEach(el=>el.remove());}
+function wkDrawSel(col,s,e){
+  const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
+  let el=col.querySelector('.wksel');
+  if(!el){el=document.createElement('div');el.className='wksel';el.innerHTML='<span></span>';col.appendChild(el);}
+  el.style.top=((s-min0)*pxm)+'px';el.style.height=((e-s)*pxm)+'px';
+  el.firstChild.textContent=min2hm(s)+'〜'+min2hm(e);
+  return el;}
+function wkDown(ev){
+  if(ev.pointerType==='mouse'&&ev.button!==0)return;
+  const band=ev.target.closest&&ev.target.closest('.wkband');
+  if(band){wkBandTap(band,ev);return;}                      // 色帯をタップ→色を変える・消す
+  if(ev.target.closest&&ev.target.closest('.wkev'))return;  // 予定の上は既存の eventTap にまかせる
+  const col=ev.target.closest&&ev.target.closest('.wkcol');if(!col)return;
+  cpClose();wkClearSel();
+  const {mn}=wkY2min(col,ev.clientY);
+  const a=wkSnap(mn);
+  _wk={col,d:col.dataset.d,a,s:a,e:a+WK_STEP,moved:false,y0:ev.clientY};
+  wkDrawSel(col,_wk.s,_wk.e);
+  const mv=e2=>{if(!_wk)return;
+    if(Math.abs(e2.clientY-_wk.y0)>8)_wk.moved=true;
+    const {mn:m2}=wkY2min(_wk.col,e2.clientY);
+    let b=wkSnap(m2);
+    const lo=Math.min(_wk.a,b),hi=Math.max(_wk.a,b);
+    _wk.s=Math.max(0,lo);_wk.e=Math.min(1440,Math.max(hi,lo+WK_STEP));
+    wkDrawSel(_wk.col,_wk.s,_wk.e);
+    if(_wk.moved)e2.preventDefault();};
+  const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);
+    if(!_wk)return;
+    const w=_wk;_wk=null;swSuppress=true; // 直後の click（日へ飛ぶ等）を1回だけ止める
+    if(w.moved){wkRangePop(w.col,w.d,w.s,w.e);return;}
+    // 動いていない＝タップ。すばやく2回で その日をひらく
+    const key=w.d+'@'+w.s,now=Date.now();
+    if(_wkTapKey===key&&(now-_wkTapT)<400){_wkTapKey='';wkClearSel();calGoto(w.d);return;}
+    _wkTapKey=key;_wkTapT=now;};
+  document.addEventListener('pointermove',mv,{passive:false});
+  document.addEventListener('pointerup',up);}
+/* 選んだ範囲の横に出るメニュー */
+function wkRangePop(col,d,s,e){
+  const sel=col.querySelector('.wksel');
+  const html=`<div class="miniacts"><div class="cptitle">${fmtDateJa(d)} ${min2hm(s)}〜${min2hm(e)}</div>
+    <button class="hi" onclick="cpClose();wkAddEvent('${d}',${s},${e})"><span>📅</span>予定を入れる</button>
+    <button onclick="wkColorPop('${d}',${s},${e})"><span>🎨</span>色をつける</button>
+    <button onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(sel,html,{forId:'wkrange'});}
+function wkAddEvent(d,s,e){wkClearSel();eventModal(null,d,min2hm(s),null,min2hm(e));}
+function wkColorPop(d,s,e){
+  const sel=document.querySelector('.wksel');
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="wkSetBand('${d}',${s},${e},${i})" title="${p.n}"></button>`).join('')}
+    <button class="clear" onclick="cpClose();wkClearSel()">やめる</button></div>`;
+  cellpopAt(sel,html,{wide:true,forId:'wkcolor'});}
+function wkSetBand(d,s,e,c){snapUndo();
+  if(!S.dayBands)S.dayBands={};
+  if(!S.dayBands[d])S.dayBands[d]=[];
+  S.dayBands[d].push({id:uid(),s,e,c});
+  wkClearSel();cpClose();save();render();
+  flashUndo(`${min2hm(s)}〜${min2hm(e)} に色をつけました`);}
+/* 既にある色帯をタップ→色を変える・消す */
+function wkBandTap(el,ev){
+  const d=el.dataset.d,bid=el.dataset.bid;
+  if(_cpForId==='wkband_'+bid){cpClose();return;}
+  const b=((S.dayBands||{})[d]||[]).find(x=>x.id===bid);if(!b)return;
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button class="${b.c===i?'on':''}" style="background:${p.c}" onclick="wkBandColor('${d}','${bid}',${i})" title="${p.n}"></button>`).join('')}
+    <button class="clear" onclick="wkBandDel('${d}','${bid}')">消す</button></div>`;
+  cellpopAt(el,html,{wide:true,forId:'wkband_'+bid});}
+function wkBandColor(d,bid,c){const b=((S.dayBands||{})[d]||[]).find(x=>x.id===bid);if(!b)return;
+  b.c=c;save();cpClose();render();}
+function wkBandDel(d,bid){snapUndo();
+  S.dayBands[d]=(S.dayBands[d]||[]).filter(x=>x.id!==bid);
+  if(!S.dayBands[d].length)delete S.dayBands[d];
+  save();cpClose();render();flashUndo('色を消しました');}
 function eventsOn(d){const ids=visibleGroups(calSel);
   return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 function dueTasksOn(d){if(!S.settings.showDue)return[];const ids=visibleGroups(calSel);
@@ -3141,9 +3228,13 @@ function renderCal(){
         const rng=o.h>=26?`<div class="wkevm">${CLOCKI}${e.start}${e.end?'–'+e.end:''}</div>`:'';
         return `<div class="${cls}" style="${st}" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}',event)"><div class="wkevt">${evLabel(e)}</div>${rng}</div>`;}).join('');
       const now=isT&&nowM>=minMin&&nowM<=maxMin?`<div class="wknow" style="top:${(nowM-minMin)*PXM}px"></div>`:'';
-      return `<div class="wkcol ${isT?'today':''}" onclick="calGoto('${dd.dstr}')">${hline}${blocks}${now}</div>`;}).join('');
-    body=`<div class="wkcal">${header}${alldayRow}<div class="wkbody" style="height:${H}px"><div class="wkgutter">${hlab}</div>${cols}</div></div>
-      <div class="mini">日付をタップでその日を開く／終日欄をタップで予定追加。時間指定の予定はブロックで表示。重なりは横並びになります。</div>
+      // その日だけの色帯（週カレンダーでのみ表示）
+      const bands=((S.dayBands||{})[dd.dstr]||[]).map(b=>{const top=(b.s-minMin)*PXM,h=(b.e-b.s)*PXM;
+        if(h<=0)return '';
+        return `<div class="wkband" data-bid="${b.id}" data-d="${dd.dstr}" style="top:${top}px;height:${h}px;background:${(PASTELS[b.c]||PASTELS[0]).c};"></div>`;}).join('');
+      return `<div class="wkcol ${isT?'today':''}" data-d="${dd.dstr}" data-min0="${minMin}" data-pxm="${PXM}">${bands}${hline}${blocks}${now}</div>`;}).join('');
+    body=`<div class="wkcal">${header}${alldayRow}<div class="wkbody" style="height:${H}px" onpointerdown="wkDown(event)"><div class="wkgutter">${hlab}</div>${cols}</div></div>
+      <div class="mini">時間の上を<b>タテになぞる</b>と、その範囲に予定や色をつけられます。1回タップで選択、すばやく2回でその日を開きます。</div>
       ${periodNoteHtml(weekKeyOf(dsOf(start)),`今週のメモ（${start.getMonth()+1}/${start.getDate()}〜）`)}`;
   }else{
     const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
@@ -3510,7 +3601,7 @@ function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選�
   save();render();attachCellPress();openMultiColorSheet();toast((i===null?'色を消しました':'色をつけました')+'（'+cellSel.size+'日）');}
 
 /* ===== event modal ===== */
-function eventModal(id,presetDate,presetStart,occDate){
+function eventModal(id,presetDate,presetStart,occDate,presetEnd){
   const e=id?S.events.find(v=>v.id===id):null;
   _emOcc=(e&&e.repeat)?(occDate||e.date):null; // 繰り返し編集の対象回
   editLinks=(e?.links||[]).map(l=>({...l}));editImages=(e?.images||[]).slice();
@@ -3531,7 +3622,7 @@ function eventModal(id,presetDate,presetStart,occDate){
       <div style="display:flex;gap:6px;"><select id="emGroup" style="flex:1;">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
       <button type="button" class="inlineadd" onclick="addGroupInline('emGroup')">＋新規</button></div></div>
     <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||presetStart||'',{clear:true,next:'emEnd'})}</div>
-      <div><label>終了</label>${timeField('emEnd',e?.end||'',{clear:true})}</div></div>
+      <div><label>終了</label>${timeField('emEnd',e?.end||presetEnd||'',{clear:true})}</div></div>
     <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
     <div class="frow"><label>色（未選択＝グループの色。この予定だけ変えたいとき選択）</label>
       <div class="huepick labeled" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span class="pop" style="background:#ccc;"></span><span class="hpl">グループの色</span></button>${HUES12.map((_,i)=>{const h=HUE(i);const lab=hueLabel(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${esc(lab||h.n)}"><span class="pop" style="background:${h.v}"></span><span class="hpl">${esc(lab||h.n)}</span></button>`;}).join('')}</div></div>
@@ -4395,7 +4486,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.40（2026-08-01）</b><br>
+  <div class="mini"><b>v2.50（2026-08-01）週カレンダーをなぞって入力できるように</b><br>
+  ・<b>週カレンダーの時間の上をタテになぞる</b>と範囲がえらべ、離すと<b>「📅 予定を入れる／🎨 色をつける」</b>が出ます（15分きざみ）<br>
+  ・「予定を入れる」を選ぶと、<b>開始と終了が入った状態</b>で予定の追加がひらきます（時刻はあとから直せます）<br>
+  ・<b>時間帯に色をつけられます</b>（例：仕事の時間、保育園の時間）。<b>その日だけの帯</b>で、<b>週カレンダーにだけ</b>表示されます。帯をタップで色の変更・削除<br>
+  ・<b>タップしただけでその日に飛ぶのをやめました</b>。1回タップ＝その時間をえらぶ／<b>すばやく2回</b>＝その日をひらく。予定の上は1回でメニュー、2回でその日へ<br>
+  ・※前後の週へのスワイプは、上の日付の帯・終日欄・週メモの上で行えます（時間の表はなぞる操作に使うため）<br>
+  <b>v2.40（2026-08-01）</b><br>
   ・<b>「継続タスク」をやめ、どのタスクも「完了／記録」から選べる</b>ようにしました。<b>完了＝もう出さない</b>／<b>記録＝今日のぶんは済み（明日もつづく）</b>。タスク追加の「継続」チェックは不要になったので外しました<br>
   ・<b>右下の＋が、開いているタブに合わせた追加メニュー</b>になりました。押すと＋が回って、まわりに丸いボタンが弧を描いて出ます（今日＝タスク／予定／記録／ルーティン、カレンダー＝予定／タスク／記録、買い物＝買うもの／お店）。<b>片手で届く場所に主な追加をまとめています</b><br>
   ・上の見出しにあった「＋追加」は右下の＋に集約し、見出しをすっきりさせました<br>
