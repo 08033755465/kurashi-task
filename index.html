@@ -500,8 +500,14 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* 週：その日だけの色帯（いちばん背面）となぞって選んだ範囲 */
 .wkband{position:absolute;left:0;right:0;z-index:0;opacity:.75;}
 .wksel{position:absolute;left:0;right:0;z-index:5;background:rgba(47,111,237,.20);border:1.5px solid #2F6FED;border-radius:4px !important;
-  touch-action:none;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;overflow:visible;}
-.wksel span{font-size:9px;font-weight:700;color:#fff;background:#2F6FED;padding:1px 5px;border-radius:0 0 4px 4px !important;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  touch-action:none;display:flex;align-items:flex-start;justify-content:center;overflow:visible;cursor:grab;}
+.wksel span{font-size:9px;font-weight:700;color:#fff;background:#2F6FED;padding:1px 5px;border-radius:0 0 4px 4px !important;white-space:nowrap;font-variant-numeric:tabular-nums;pointer-events:none;}
+/* 上下のつまみ（開始・終了を直す） */
+.wksel .wkh{position:absolute;left:50%;transform:translateX(-50%);width:46px;height:18px;touch-action:none;cursor:ns-resize;
+  display:flex;align-items:center;justify-content:center;}
+.wksel .wkh::after{content:'';width:26px;height:3px;border-radius:2px !important;background:#2F6FED;box-shadow:0 0 0 1.5px #fff;}
+.wksel .wkh.top{top:-9px;}
+.wksel .wkh.bot{bottom:-9px;}
 .wkbody{touch-action:pan-y;}
 .wknow{position:absolute;left:0;right:0;border-top:2px solid #E5484D;z-index:4;}
 .wknow::before{content:'';position:absolute;left:-2px;top:-3px;width:5px;height:5px;border-radius:50% !important;background:#E5484D;}
@@ -1023,7 +1029,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.53';
+const APP_VERSION='v2.54';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1412,7 +1418,7 @@ function attachCalSwipe(){
     if(!swValid)return;swValid=false;const wasAxis=swAxis;swAxis=null;
     const row=swRow;swRowReset();
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
-    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wkbody,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない（週グリッドはなぞって範囲えらび）
+    if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wksel,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない（週グリッドは長押ししてから範囲えらびなので横スワイプは通す）
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(!(Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15))return;
     // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
@@ -1747,7 +1753,7 @@ function render(){
   else if(view==='habit')el.innerHTML=renderHabits();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,sy); // 再描画でスクロール位置を保つ（チェック操作で上に飛ばない）
-  updateFlowBar();attachCellPress();attachCalSwipe();
+  updateFlowBar();attachCellPress();attachCalSwipe();wkRestoreSel();
   if(_tlPendingScroll&&view==='today'){_tlPendingScroll=false;
     const n=$('.tlnow')||$('.tl');if(n){const r=n.getBoundingClientRect();window.scrollBy(0,r.top-140);}}
   if(_reorderFollow){const row=document.querySelector(_reorderFollow);_reorderFollow=null;
@@ -3026,19 +3032,65 @@ function calGoto(dstr){clearPrime();closeDayPopup();calDate=dstr;calMode='day';c
 /* ===== 週カレンダー：長押ししてからタテになぞると時間の範囲をえらべる =====
    すぐ動かした指は今まで通り「スクロール」。指を少し止める（長押し）と範囲えらびに切り替わる。
    1回タップ＝その1時間をえらぶ／すばやく2回＝その日をひらく。刻みは1時間 */
-const WK_STEP=60; // 1時間きざみ
-let _wk=null,_wkTapT=0,_wkTapKey='';
+const WK_STEP=60,WK_ADJ=15; // えらぶ時は1時間きざみ／つかんで直す時は15分きざみ
+let _wk=null,_wkTapT=0,_wkTapKey='',_wkSel=null;
 function wkY2min(col,clientY){const r=col.getBoundingClientRect();
   const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
   return {mn:min0+(clientY-r.top)/pxm,min0,pxm,r};}
-function wkClearSel(){$$('.wksel').forEach(el=>el.remove());}
+function wkClearSel(){_wkSel=null;$$('.wksel').forEach(el=>el.remove());}
 function wkDrawSel(col,s,e){
   const min0=+col.dataset.min0,pxm=+col.dataset.pxm;
+  $$('.wksel').forEach(x=>{if(x.parentElement!==col)x.remove();}); // 箱は同時に1つだけ
   let el=col.querySelector('.wksel');
-  if(!el){el=document.createElement('div');el.className='wksel';el.innerHTML='<span></span>';col.appendChild(el);}
+  if(!el){el=document.createElement('div');el.className='wksel';
+    el.innerHTML='<span></span><i class="wkh top"></i><i class="wkh bot"></i>';col.appendChild(el);}
   el.style.top=((s-min0)*pxm)+'px';el.style.height=((e-s)*pxm)+'px';
-  el.firstChild.textContent=min2hm(s)+'〜'+min2hm(e);
+  el.querySelector('span').textContent=min2hm(s)+'〜'+min2hm(e);
+  _wkSel={d:col.dataset.d,s,e};
   return el;}
+/* 再描画されても選んだ箱を保つ */
+function wkRestoreSel(){if(!_wkSel||calMode!=='week'||view!=='cal')return;
+  const col=document.querySelector(`.wkcol[data-d="${_wkSel.d}"]`);if(!col)return;
+  wkDrawSel(col,_wkSel.s,_wkSel.e);}
+/* 選んだ箱：上下のつまみで開始・終了を直す／まん中をつかむと（同じ日の中で）上下に動かす */
+function wkSelDown(ev,sel){
+  const col=sel.closest('.wkcol');if(!col||!_wkSel)return;
+  ev.preventDefault();
+  const isTop=ev.target.classList&&ev.target.classList.contains('top');
+  const isBot=ev.target.classList&&ev.target.classList.contains('bot');
+  const mode=isTop?'s':isBot?'e':'move';
+  const pxm=+col.dataset.pxm;
+  const st={mode,col,d:_wkSel.d,s0:_wkSel.s,e0:_wkSel.e,y0:ev.clientY,x0:ev.clientX,moved:false,axis:null};
+  const snap=v=>Math.round(v/WK_ADJ)*WK_ADJ;
+  const mv=e2=>{
+    const dy=e2.clientY-st.y0,dx=e2.clientX-st.x0;
+    if(mode==='move'&&st.axis===null&&(Math.abs(dx)>8||Math.abs(dy)>8)){
+      st.axis=Math.abs(dy)>=Math.abs(dx)?'v':'h';
+      if(st.axis==='h'){done(true);return;} // 横に動いた＝週めくりにゆずる
+    }
+    if(Math.abs(dy)>6)st.moved=true;
+    const dmin=snap(dy/pxm);
+    let s=st.s0,e=st.e0;
+    if(mode==='s')s=Math.min(st.e0-WK_ADJ,Math.max(0,st.s0+dmin));
+    else if(mode==='e')e=Math.max(st.s0+WK_ADJ,Math.min(1440,st.e0+dmin));
+    else{const len=st.e0-st.s0;s=Math.max(0,Math.min(1440-len,st.s0+dmin));e=s+len;}
+    wkDrawSel(col,s,e);};
+  const tm=e2=>{if(st.axis!=='h')e2.preventDefault();}; // 直している間は画面を動かさない
+  const done=(cancel)=>{
+    document.removeEventListener('pointermove',mv);
+    document.removeEventListener('pointerup',end);
+    document.removeEventListener('pointercancel',end);
+    document.removeEventListener('touchmove',tm);
+    if(cancel){wkDrawSel(col,st.s0,st.e0);return;}
+    swSuppress=true;
+    if(st.moved)wkRangePop(col,st.d,_wkSel.s,_wkSel.e); // 直し終わったらメニュー
+    else wkRangePop(col,st.d,_wkSel.s,_wkSel.e);        // 箱をタップしてもメニュー
+  };
+  const end=()=>done(false);
+  document.addEventListener('pointermove',mv);
+  document.addEventListener('pointerup',end);
+  document.addEventListener('pointercancel',end);
+  document.addEventListener('touchmove',tm,{passive:false});}
 function wkCleanup(){if(!_wk)return;
   clearTimeout(_wk.tmr);
   document.removeEventListener('pointermove',_wk.mv);
@@ -3048,6 +3100,8 @@ function wkCleanup(){if(!_wk)return;
   _wk=null;}
 function wkDown(ev){
   if(ev.pointerType==='mouse'&&ev.button!==0)return;
+  const sel=ev.target.closest&&ev.target.closest('.wksel');
+  if(sel){wkSelDown(ev,sel);return;}                        // えらんだ箱＝つまみで調整・つかんで移動
   const band=ev.target.closest&&ev.target.closest('.wkband');
   if(band){wkBandTap(band,ev);return;}                      // 色帯をタップ→色を変える・消す
   if(ev.target.closest&&ev.target.closest('.wkev'))return;  // 予定の上は既存の eventTap にまかせる
@@ -4525,7 +4579,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.53（2026-08-01）</b><br>
+  <div class="mini"><b>v2.54（2026-08-01）</b><br>
+  ・<b>週カレンダーの横スライド（前後の週）が効かなくなっていたのを修正</b>しました<br>
+  ・<b>えらんだ時間の箱を、あとから直せる</b>ようになりました：<b>上下のつまみ</b>で開始・終了を調整、<b>まん中をつかむ</b>とその日の中で上下に移動できます（15分きざみ・長さは変わりません）。直し終わるとメニューが出ます<br>
+  ・箱をタップするだけでもメニューが出ます。横に引いた時は週めくりを優先します<br>
+  <b>v2.53（2026-08-01）</b><br>
   ・<b>週カレンダーのなぞり入力が効かない不具合を修正</b>：画面スクロールと取り合いになっていたのが原因でした。<b>長押ししてからなぞる</b>方式に変更（すぐ動かせば今まで通りスクロール）。刻みも<b>1時間</b>にして選びやすくしました（細かい時刻は予定の追加画面で直せます）<br>
   ・左下に出ていた<b>「☁︎ 同期済み」も右上の小さな表示に移動</b>しました（下に出るメッセージはこれで全部なくなりました）<br>
   <b>v2.52（2026-08-01）</b><br>
