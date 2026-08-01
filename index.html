@@ -874,6 +874,24 @@ body.swiping .lpress{animation:none;}
 .daysel button{flex:1;padding:10px 0;border:1px solid var(--line);font-size:13px;color:var(--ink);border-radius:8px !important;}
 .daysel button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;}
 .dpgrid.domcal{margin-top:6px;}
+/* 買い物タブ */
+.backbtn{font-size:24px;line-height:1;color:var(--sub);padding:0 8px 0 0;}
+.shsum{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2);}
+.shsum>div{flex:1;display:flex;flex-direction:column;gap:2px;}
+.shsum span{font-size:10.5px;color:var(--sub);letter-spacing:.04em;}
+.shsum b{font-size:19px;font-variant-numeric:tabular-nums;}
+.shshops{padding:6px 16px 10px;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:3px;}
+.shshop{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);}
+.shshop .v{font-variant-numeric:tabular-nums;color:var(--ink);}
+.shitem{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line2);position:relative;}
+.shitem .cb{width:24px;height:24px;flex:none;border:2px solid var(--line);border-radius:50% !important;display:flex;align-items:center;justify-content:center;}
+.shitem .cb svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:3;}
+.shitem .cb.on{background:var(--ink);border-color:var(--ink);}
+.shitem .shb{flex:1;min-width:0;}
+.shitem .shn{font-size:14.5px;display:flex;align-items:center;gap:6px;}
+.shitem .shq{font-size:11px;color:var(--sub);border:1px solid var(--line);padding:0 5px;}
+.shitem .shm{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.shitem.done .shn{text-decoration:line-through;color:var(--sub);}
 #dlg .dpgrid button.td{border-color:var(--accent);color:var(--accent);font-weight:700;}
 
 /* celebrate */
@@ -927,7 +945,7 @@ body.swiping .lpress{animation:none;}
 
 <nav id="nav">
   <button data-v="today" onclick="switchView('today')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>今日</button>
-  <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h16M4 18h9"/><path d="M18 5l2 2 3-3" /></svg>タスク</button>
+  <button data-v="shop" onclick="switchView('shop')"><svg viewBox="0 0 24 24"><path d="M3 5h2l2.2 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>買い物</button>
   <button data-v="cal" onclick="switchView('cal')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
   <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>習慣</button>
@@ -940,7 +958,7 @@ body.swiping .lpress{animation:none;}
 <div id="colorSheet"></div>
 <div id="cellpop"></div>
 <div id="multibar"></div>
-<button id="quickadd" onclick="taskModal(null)" title="タスクを追加">＋</button>
+<button id="quickadd" onclick="fabAdd()" title="追加">＋</button>
 <div id="flowbar"></div>
 <div id="flow"></div>
 <div id="lightbox" onclick="if(event.target===this)closeLightbox()"></div>
@@ -952,6 +970,8 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=> 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const escq=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const SHOP_DEFAULTS=['スーパー','ドラッグストア','コンビニ','100均','楽天','その他'];
+const yen=n=>'¥'+Math.round(+n||0).toLocaleString('ja-JP');
 const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m)}-${pad(d)}`;
 const dsOf=dt=>ds(dt.getFullYear(),dt.getMonth()+1,dt.getDate());
@@ -968,7 +988,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.21';
+const APP_VERSION='v2.30';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1188,6 +1208,11 @@ function migrate(){const st=S.settings;
   if(!S.patterns)S.patterns=[];
   if(!S.habits)S.habits=[];
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
+  // 買い物（買うものリスト＋買った記録）
+  if(!S.shopping)S.shopping=[];
+  if(!S.shops)S.shops=SHOP_DEFAULTS.map((n,i)=>({id:'sh'+i,name:n}));
+  S.shopping.forEach(it=>{if(it.plan===undefined)it.plan=null;if(it.paid===undefined)it.paid=null;
+    if(it.qty===undefined)it.qty=1;if(!it.shopId)it.shopId='';});
   if(st.dense===undefined)st.dense=true;
   if(st.timeline===undefined)st.timeline=true;
   S.tasks.forEach(x=>{if(x.pin===undefined)x.pin=false;if(x.snooze===undefined)x.snooze=null;
@@ -1545,6 +1570,12 @@ let calMode='month', calMonthAll=false, calY,calX,calDate=todayStr();
 let taskSel=new Set(), taskSort='pr', calSel=new Set(), qSel=null;
 {const n=new Date();calY=n.getFullYear();calX=n.getMonth();}
 function switchView(v){
+  if(v==='cal'&&view==='cal'){ // カレンダータブを押すたびに 月 → 週 → 日 と切り替わる
+    calMonthAll=false;
+    calMode=calMode==='month'?'week':calMode==='week'?'day':'month';
+    if(!calDate)calDate=todayStr();
+    const d=parseDs(calDate);calY=d.getFullYear();calX=d.getMonth();
+    render();toTop();return;}
   if(v==='cal'){calMode=S.settings.calDefault||'month';calMonthAll=false;const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();}
   if(v!=='cal'){cellSelMode=false;cellSel=new Set();}
   clearPrime();
@@ -1552,6 +1583,7 @@ function switchView(v){
   if(v!=='routine'){routineReorder=false;routineSel=[];routineActiveRow=null;}
   if(v!=='today'){todayReorder=false;todaySel=[];tlSel=[];tlEvSel=null;placeToks=null;}
   if(v!=='tasks'){taskReorder=false;taskRSel=[];taskActiveRow=null;taskQuery='';}
+  if(v!=='shop'){shopHist=false;}
   // 今日タブは先頭（トップ）から表示。「今へ」は右下の常時ボタンで移動できる
   view=v;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();toTop();
   maybePull();}
@@ -1564,6 +1596,7 @@ function markJustDone(tok){_justDoneTok=tok;try{navigator.vibrate&&navigator.vib
 function render(){
   const el=$('#view');const sy=window.scrollY;
   if(view==='today')el.innerHTML=renderToday();
+  else if(view==='shop')el.innerHTML=renderShopping();
   else if(view==='tasks')el.innerHTML=renderTasks();
   else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();attachCalSwipe();}
   else if(view==='routine')el.innerHTML=renderRoutines();
@@ -1664,7 +1697,7 @@ function renderToday(){
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   <div class="sec"><div class="sec-h">今日やること（ルーティン＋タスク・${doneR+doneT}/${routines.length+tasks.length}）
     ${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>　<button class="act" onclick="enterTodayReorder()">並び替え</button>`}　<button class="act" style="color:var(--accent);" onclick="addTodayItem(event)">＋追加</button>`}</div>
+      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`　<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 詳しく':'⊟ 省スペース'}</button>　<button class="act" onclick="enterTodayReorder()">並び替え</button>`}　<button class="act" onclick="switchView('tasks')">タスク一覧 ▸</button>　<button class="act" style="color:var(--accent);" onclick="addTodayItem(event)">＋追加</button>`}</div>
     ${todayReorder?todayReorderHtml(doList):(S.settings.timeline?todayTimelineHtml(t):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
@@ -2171,11 +2204,23 @@ function chkTaskMenuFull(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
     <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
     <button onclick="chkTaskMenu('${id}')"><span>‹</span>戻る</button></div>`;
   cellpopAt(row,html,{forId:id+'_full',rowSel:'.tchkr[data-lp^="t_"]'});}
+/* 日カレンダーのタスク＝他の画面と同じ近接メニュー（編集モーダル直行をやめる） */
+function dayTaskTap(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id+'_day'){cpClose();return;}
+  const row=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.dtask'):document.querySelector(`.dtask[data-lp="t_${id}"]`);
+  const done=x.status==='done';
+  const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
+    ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
+      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
+    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(row,html,{forId:id+'_day',rowSel:'.dtask[data-lp^="t_"]'});}
 function todayTaskChecklist(t){
   const tasks=todayTasks(t).slice().sort(chkTaskSort);
   if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
-  return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></div>
+  return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<span style="display:flex;gap:12px;"><button class="act" onclick="switchView('tasks')">タスク一覧 ▸</button><button class="act" style="color:var(--accent);" onclick="taskModal(null,'',true)">＋追加</button></span></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${taskBg(x)?`background:${taskBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?CHK:''}</div>
       <div class="tct ${(x.pin||x.repeat)?'cont':''}" onclick="chkTaskMenu('${x.id}',event)">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
@@ -2530,7 +2575,7 @@ function renderTasks(){
   else{ // 旧「4つの箱」は廃止したので優先度順にフォールバック
     body=open.length?open.slice().sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>';}
   return `
-  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
+  <div class="vhead"><h1><button class="backbtn" onclick="switchView('today')">‹</button>タスク一覧</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   ${groupChipsHtml(taskSel,'tglTaskSel')}
   <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
@@ -2628,6 +2673,9 @@ function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightbox').
 function lastTaskGroupId(){const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
 /* 「さっと追加」は廃止し、追加・編集を1つのフォームに統一（旧呼び出しは転送） */
+/* 右下の＋は、開いているタブに合わせて追加するものを変える */
+function fabAdd(){if(view==='shop'){const el=$('#shAdd');if(el){el.focus();el.scrollIntoView({block:'center'});}return;}
+  taskModal(null,'',view==='today');}
 function quickAddPop(){taskModal(null,'',true);}
 function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
@@ -3135,12 +3183,12 @@ function dayScheduleHtml(dstr){
   const tl=scheduleListHtml(evs,wake,dstr);
   const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}" data-lp="t_${x.id}">
     <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
-    <div class="dtb" onclick="taskModal('${x.id}')"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
+    <div class="dtb" onclick="dayTaskTap('${x.id}',event)"><div class="dtn">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
     <div class="dtm"><span class="gmark" style="${markCss(x.groupId)}"></span> ${esc(group(x.groupId).name)}${x.estMin?' ・'+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}${x.status==='done'?' ・'+doneLabel(x,dstr):''}</div></div></div>`).join('');
   return `<div class="daycols">
     <div class="daycol"><div class="dch"><b>予定</b><button onclick="eventModal(null,'${dstr}')">＋</button></div>
       ${evs.length?tl:'<div class="dempty">予定なし</div>'}</div>
-    <div class="daycol"><div class="dch"><b>タスク</b><button onclick="taskModalWithDue('${dstr}')">＋</button></div>
+    <div class="daycol"><div class="dch"><b>タスク</b><span style="display:flex;gap:8px;align-items:center;"><button onclick="switchView('tasks')" style="font-size:11px;">一覧▸</button><button onclick="taskModalWithDue('${dstr}')">＋</button></span></div>
       ${dtasks.length?tk:'<div class="dempty">タスクなし</div>'}</div>
   </div>${dayRecordHtml(dstr)}`;}
 /* その日の記録・流れ（予定・記録・完了タスク/ルーティンを時系列で） */
@@ -3913,6 +3961,146 @@ function updateFlowBar(){const bar=$('#flowbar');if(!bar)return;
     bar.innerHTML=`<span>⏱ 実行中：${esc(it.obj.title)}</span><button onclick="flowResume()">▶ 再開</button>`;bar.classList.add('show');}
   else bar.classList.remove('show');}
 
+/* ========================= 買い物 =========================
+   買うものをためて、買ったら記録に残る。予定額と実際の金額、お店ごとの合計も出す */
+let shopSel='',shopHist=false;
+function shopName(id){const s=(S.shops||[]).find(v=>v.id===id);return s?s.name:'';}
+function shopOpen(){return (S.shopping||[]).filter(x=>!x.boughtAt);}
+function shopDone(){return (S.shopping||[]).filter(x=>x.boughtAt).sort((a,b)=>(b.boughtAt||'').localeCompare(a.boughtAt||''));}
+function renderShopping(){
+  const open=shopOpen().filter(x=>!shopSel||x.shopId===shopSel);
+  const planSum=open.reduce((s,x)=>s+((+x.plan||0)*(+x.qty||1)),0);
+  // お店ごとの合計（買うもの＝予定／今月買った分＝実際）
+  const ym=todayStr().slice(0,7);
+  const monthBought=shopDone().filter(x=>(x.boughtAt||'').slice(0,7)===ym);
+  const paidSum=monthBought.reduce((s,x)=>s+((+x.paid||0)*(+x.qty||1)),0);
+  const byShop=(S.shops||[]).map(sh=>({sh,
+    plan:shopOpen().filter(x=>x.shopId===sh.id).reduce((s,x)=>s+((+x.plan||0)*(+x.qty||1)),0),
+    paid:monthBought.filter(x=>x.shopId===sh.id).reduce((s,x)=>s+((+x.paid||0)*(+x.qty||1)),0),
+    n:shopOpen().filter(x=>x.shopId===sh.id).length})).filter(o=>o.n||o.plan||o.paid);
+  const chips=`<div class="chips"><button class="chip ${!shopSel?'on':''}" onclick="shopFilter('')">全体</button>
+    ${(S.shops||[]).map(sh=>{const n=shopOpen().filter(x=>x.shopId===sh.id).length;
+      return `<button class="chip ${shopSel===sh.id?'on':''}" onclick="shopFilter('${sh.id}')">${esc(sh.name)}${n?`（${n}）`:''}</button>`;}).join('')}
+    <button class="chip" style="color:var(--accent);" onclick="shopEditShops()">＋ お店</button></div>`;
+  const list=open.length?open.map(x=>`<div class="shitem" data-lp="s_${x.id}">
+      <div class="cb" onclick="event.stopPropagation();shopBuyTap('${x.id}',event)"></div>
+      <div class="shb" onclick="shopItemTap('${x.id}',event)">
+        <div class="shn">${esc(x.name)}${(+x.qty||1)>1?`<span class="shq">×${+x.qty}</span>`:''}</div>
+        <div class="shm">${x.shopId?esc(shopName(x.shopId)):'お店えらんでない'}${x.plan?' ・予定 '+yen(x.plan):''}${x.memo?' 📝':''}</div>
+      </div></div>`).join('')
+    :'<div class="mini" style="padding:10px 16px;">買うものはありません。下の入力から足せます</div>';
+  const hist=shopHist?`<div class="sec"><div class="sec-h">買ったもの（新しい順）</div>
+    ${shopDone().slice(0,60).map(x=>`<div class="shitem done" data-lp="s_${x.id}">
+      <div class="cb on">${CHK}</div>
+      <div class="shb" onclick="shopItemTap('${x.id}',event)">
+        <div class="shn">${esc(x.name)}${(+x.qty||1)>1?`<span class="shq">×${+x.qty}</span>`:''}</div>
+        <div class="shm">${fmtDateJa(x.boughtAt)}${x.shopId?' ・'+esc(shopName(x.shopId)):''}${x.paid?' ・'+yen((+x.paid)*(+x.qty||1)):''}</div>
+      </div></div>`).join('')||'<div class="mini" style="padding:10px 16px;">まだありません</div>'}</div>`:'';
+  return `<div class="vhead"><h1>買い物</h1><span class="sub">${open.length}件 ・ 予定 ${yen(planSum)}</span></div>
+  ${chips}
+  <div class="shsum"><div><span>買うもの（予定）</span><b>${yen(planSum)}</b></div>
+    <div><span>今月 買った分</span><b>${yen(paidSum)}</b></div></div>
+  ${byShop.length?`<div class="shshops">${byShop.map(o=>`<div class="shshop"><span>${esc(o.sh.name)}</span>
+    <span class="v">${o.n?`${o.n}件・${yen(o.plan)}`:'—'}${o.paid?` ／ 今月 ${yen(o.paid)}`:''}</span></div>`).join('')}</div>`:''}
+  <div class="qadd"><input id="shAdd" placeholder="買うものを入力してEnter" onkeydown="if(event.key==='Enter'&&!event.isComposing)shopQuickAdd()">
+    <button onclick="shopQuickAdd()">追加</button></div>
+  <div class="sec"><div class="sec-h">買うもの（${open.length}）${shopDone().length?`<button class="act" style="color:var(--accent);" onclick="shopToggleHist()">${shopHist?'履歴を隠す':'買ったもの ▸'}</button>`:''}</div>${list}</div>
+  ${hist}`;}
+function shopFilter(id){shopSel=(shopSel===id?'':id);render();}
+function shopToggleHist(){shopHist=!shopHist;render();}
+function shopQuickAdd(){const el=$('#shAdd');const v=(el?.value||'').trim();if(!v)return;
+  S.shopping.push({id:uid(),name:v,shopId:shopSel||'',qty:1,plan:null,paid:null,memo:'',boughtAt:null,createdAt:todayStr()});
+  el.value='';save();render();const e2=$('#shAdd');if(e2)e2.focus();}
+/* 買う→実際に払った金額を入れて記録に残す */
+function shopBuyTap(id,ev){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id+'_buy'){cpClose();return;}
+  const a=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.shitem'):null;
+  const html=`<div class="miniacts"><div class="cptitle">${esc(x.name)} を買った？</div>
+    <button class="hi" onclick="cpClose();shopBought('${id}',0)"><span>✓</span>買った${x.plan?'（'+yen(x.plan)+'）':''}</button>
+    <button onclick="cpClose();shopBoughtPop('${id}')"><span>💴</span>金額を入れて</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(a,html,{forId:id+'_buy',rowSel:'.shitem'});}
+function shopBought(id,paid){const x=S.shopping.find(v=>v.id===id);if(!x)return;snapUndo();
+  x.boughtAt=todayStr();x.paid=(paid||x.plan||null);save();render();
+  flashUndo(`「${x.name}」を買いました${x.paid?'（'+yen((+x.paid)*(+x.qty||1))+'）':''}`);}
+function shopBoughtPop(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>💴 いくらだった？</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="frow"><label>${esc(x.name)}${(+x.qty||1)>1?` ×${+x.qty}`:''}</label>
+      <input id="shPaid" type="text" inputmode="numeric" pattern="[0-9]*" value="${x.plan||''}" placeholder="金額（円）" style="font-size:20px;font-weight:700;text-align:center;padding:12px;" onfocus="this.select()"></div>
+    <div class="frow"><label>お店</label>${shopPickHtml('shPaidShop',x.shopId)}</div></div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopBoughtSave('${id}')">買った</button></div>`;
+  $('#dlgWrap').classList.add('show');const el=$('#shPaid');if(el)el.focus();}
+function shopBoughtSave(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  const p=+($('#shPaid')?.value||0);snapUndo();
+  x.paid=p||null;x.shopId=_shPick??x.shopId;x.boughtAt=todayStr();
+  save();dlgEnd();render();flashUndo(`「${x.name}」を買いました${x.paid?'（'+yen(x.paid*(+x.qty||1))+'）':''}`);}
+/* 買うもののメニュー（編集・買った取り消し・削除） */
+function shopItemTap(id,ev){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  if(_cpForId===id+'_it'){cpClose();return;}
+  const a=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.shitem'):null;
+  const html=`<div class="miniacts"><div class="cptitle">${esc(x.name)}</div>
+    ${x.boughtAt?`<button class="hi" onclick="cpClose();shopUnbuy('${id}')"><span>↩</span>買う前に戻す</button>`:''}
+    <button onclick="cpClose();shopEdit('${id}')"><span>✎</span>編集</button>
+    ${!x.boughtAt?`<button onclick="cpClose();shopAgainFromHistory('${id}')"><span>⧉</span>複製</button>`:`<button onclick="cpClose();shopAgain('${id}')"><span>🛒</span>また買う</button>`}
+    <button onclick="cpClose();shopDel('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+  cellpopAt(a,html,{forId:id+'_it',rowSel:'.shitem'});}
+function shopUnbuy(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;snapUndo();
+  x.boughtAt=null;save();render();flashUndo('買う前に戻しました');}
+function shopAgain(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;snapUndo(); // 履歴から、また買うものへ
+  S.shopping.push({id:uid(),name:x.name,shopId:x.shopId,qty:x.qty||1,plan:x.paid||x.plan||null,paid:null,memo:x.memo||'',boughtAt:null,createdAt:todayStr()});
+  save();render();flashUndo(`「${x.name}」を買うものに入れました`);}
+function shopAgainFromHistory(id){shopAgain(id);}
+async function shopDel(id){if(!await uiConfirm('この買うものを削除しますか？','削除'))return;
+  snapUndo();S.shopping=S.shopping.filter(v=>v.id!==id);save();render();flashUndo('削除しました');}
+/* 買うものの編集（名前・お店・数・予定額・メモ） */
+let _shPick=null;
+function shopPickHtml(id,cur){_shPick=cur||'';
+  return `<div class="gtabs">${(S.shops||[]).map(sh=>`<button type="button" class="${cur===sh.id?'on':''}" onclick="shopPick(this,'${sh.id}')">${esc(sh.name)}</button>`).join('')}
+    <button type="button" class="gadd" onclick="shopEditShops()">＋</button></div>`;}
+function shopPick(btn,id){_shPick=(_shPick===id?'':id);
+  [...btn.parentElement.querySelectorAll('button')].forEach(b=>b.classList.remove('on'));
+  if(_shPick)btn.classList.add('on');}
+function shopEdit(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>買うものを編集</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="frow"><label>なにを買う？</label><input id="shName" value="${esc(x.name)}"></div>
+    <div class="frow"><label>お店</label>${shopPickHtml('shShop',x.shopId)}</div>
+    <div class="frow f2"><div><label>いくつ</label><input id="shQty" type="text" inputmode="numeric" value="${+x.qty||1}"></div>
+      <div><label>だいたいの金額（円）</label><input id="shPlan" type="text" inputmode="numeric" value="${x.plan||''}" placeholder="任意"></div></div>
+    ${x.boughtAt?`<div class="frow"><label>実際に払った金額（円）</label><input id="shPaidE" type="text" inputmode="numeric" value="${x.paid||''}"></div>`:''}
+    <div class="frow"><label>メモ</label><textarea id="shMemo" rows="2">${esc(x.memo||'')}</textarea></div>
+    <div class="frow tfsub"><button type="button" class="del" onclick="shopDel('${id}')">🗑 削除</button></div></div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopSave('${id}')">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function shopSave(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
+  const nm=($('#shName')?.value||'').trim();if(!nm){uiAlert('なにを買うか入力してください');return;}
+  snapUndo();x.name=nm;x.shopId=_shPick??x.shopId;x.qty=Math.max(1,+($('#shQty')?.value||1));
+  x.plan=+($('#shPlan')?.value||0)||null;
+  if($('#shPaidE'))x.paid=+($('#shPaidE').value||0)||null;
+  x.memo=$('#shMemo')?.value||'';
+  save();dlgEnd();render();flashUndo('保存しました');}
+/* お店（ジャンル）の追加・編集 */
+function shopEditShops(){
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>お店</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="mini" style="padding:0 0 6px;">よく行くお店やジャンルを登録できます</div>
+    ${(S.shops||[]).map(sh=>`<div class="frow" style="display:flex;gap:8px;align-items:center;">
+      <input value="${esc(sh.name)}" onchange="shopRename('${sh.id}',this.value)" style="flex:1;">
+      <button type="button" class="del" style="border:1px solid var(--danger);color:var(--danger);padding:8px 12px;" onclick="shopDelShop('${sh.id}')">削除</button></div>`).join('')}
+    <div class="frow" style="display:flex;gap:8px;"><input id="shNewShop" placeholder="お店・ジャンルを追加" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.isComposing)shopAddShop()">
+      <button type="button" class="inlineadd" onclick="shopAddShop()">追加</button></div></div>
+    <div class="db"><button class="ok" onclick="dlgEnd();render()">とじる</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function shopAddShop(){const el=$('#shNewShop');const v=(el?.value||'').trim();if(!v)return;
+  S.shops.push({id:uid(),name:v});save();shopEditShops();}
+function shopRename(id,v){const sh=S.shops.find(s=>s.id===id);if(!sh)return;
+  const nm=(v||'').trim();if(!nm)return;sh.name=nm;save();}
+async function shopDelShop(id){const used=(S.shopping||[]).filter(x=>x.shopId===id).length;
+  if(!await uiConfirm(used?`このお店を削除しますか？（${used}件のお店指定が「なし」になります）`:'このお店を削除しますか？','削除'))return;
+  S.shops=S.shops.filter(s=>s.id!==id);
+  S.shopping.forEach(x=>{if(x.shopId===id)x.shopId='';});
+  if(shopSel===id)shopSel='';
+  save();shopEditShops();}
+
 /* ========================= 設定 ========================= */
 let setPage='';
 function goSet(p){setPage=p;render();toTop();}
@@ -4064,7 +4252,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.21（2026-08-01）追加・編集画面の操作感を改善</b><br>
+  <div class="mini"><b>v2.30（2026-08-01）買い物タブができました</b><br>
+  ・<b>「買い物」タブを新設</b>しました（下のタブの「タスク」と入れ替え）。買うものをためて、買ったら記録に残ります<br>
+  ・<b>お店で分けられます</b>（スーパー／ドラッグストア／コンビニ／100均／楽天／その他。<b>追加・名前の変更・削除もできます</b>）<br>
+  ・<b>金額は「だいたいの金額」と「実際に払った金額」の両方</b>を持てます。買うものの予定合計・<b>今月買った分の合計</b>・<b>お店ごとの合計</b>が上に出ます<br>
+  ・<b>一度買ったものは履歴に残り、「また買う」で戻せます</b>（前回の金額が予定額として入ります）<br>
+  ・<b>タスク一覧は「今日」タブと日カレンダーの「タスク一覧 ▸」から</b>開けます<br>
+  ・<b>カレンダータブを押すたびに 月 → 週 → 日</b> と切り替わるようになりました<br>
+  ・<b>日カレンダーのタスク</b>も、他の画面と同じメニュー（完了・編集・削除）に揃えました<br>
+  <b>v2.21（2026-08-01）追加・編集画面の操作感を改善</b><br>
   ・<b>ボタンを押すと画面が上に戻ってしまう不具合を修正</b>（スクロール位置を保つように）<br>
   ・<b>閉じる判定を落ち着かせました</b>：グループの横スライドや中身のスクロールでは閉じず、<b>上端から縦にしっかり引き下げた時だけ</b>閉じます（外タップ閉じはそのまま）<br>
   ・<b>＋を押すとすぐタスク名に入力できる</b>ように（キーボードが直接開きます）<br>
