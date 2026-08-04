@@ -915,6 +915,32 @@ body.swiping .lpress{animation:none;}
 .daysel button{flex:1;padding:10px 0;border:1px solid var(--line);font-size:13px;color:var(--ink);border-radius:8px !important;}
 .daysel button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;}
 .dpgrid.domcal{margin-top:6px;}
+/* 予定の入力：時間・見た目・よく使う予定 */
+.emtime{display:flex;align-items:center;gap:6px;}
+.emtime .tfrow{flex:1;}
+.emtime .tf{width:100%;font-size:17px;}
+.emtw{color:var(--sub);font-size:13px;flex:none;}
+.emallday{flex:none;padding:9px 11px;border:1px solid var(--line);font-size:12px;color:var(--sub);border-radius:8px !important;}
+.emallday.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+.emprev{padding:7px 10px;border-radius:6px !important;font-size:13px;margin-bottom:7px;min-height:32px;display:flex;align-items:center;gap:5px;}
+.emprev svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
+#dlg .cpsw.emsw{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;flex-wrap:nowrap;}
+#dlg .cpsw.emsw button{flex:0 0 30px;height:30px;border:1px solid var(--line);border-radius:50% !important;position:relative;}
+#dlg .cpsw.emsw button.on{border-color:var(--ink);border-width:2px;}
+#dlg .cpsw.emsw button.on::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50% !important;background:var(--ink);}
+.gtabs.emcat{margin-top:7px;}
+.gtabs.emcat button{padding:5px 10px;font-size:12px;}
+.emicons{display:flex;gap:5px;overflow-x:auto;padding:4px 0 3px;-webkit-overflow-scrolling:touch;}
+.emicons button{flex:0 0 auto;min-width:38px;height:38px;border:1px solid var(--line);border-radius:8px !important;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub);padding:0 6px;}
+.emicons button svg{width:19px;height:19px;fill:none;stroke:var(--ink);stroke-width:1.6;}
+.emicons button.on{border-color:var(--ink);border-width:2px;background:var(--bg2);}
+.btnrow.emopt{margin-top:7px;}
+.mtrow{border-bottom:1px solid var(--line2);padding-bottom:8px;}
+.mtrow .mtsub{font-size:11px;color:var(--sub);margin-top:3px;}
+.mtacts{display:flex;gap:5px;margin-top:5px;}
+.mtacts button{flex:1;padding:7px 0;border:1px solid var(--line);font-size:11.5px;color:var(--sub);}
+.mtacts button[disabled]{opacity:.35;}
+.mtacts .del{color:var(--danger);border-color:var(--danger);}
 /* 買い物タブ */
 .backbtn{font-size:24px;line-height:1;color:var(--sub);padding:0 8px 0 0;}
 .shsum{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2);}
@@ -1030,7 +1056,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.55';
+const APP_VERSION='v2.60';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1251,6 +1277,10 @@ function migrate(){const st=S.settings;
   if(!S.habits)S.habits=[];
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(!S.dayBands)S.dayBands={}; // 週カレンダーの色帯（その日だけ）
+  // よく使う予定（テンプレ）：並び順と「時刻も覚える」を補完
+  (S.templates||[]).forEach((t,i)=>{if(t.order===undefined)t.order=i;if(t.keepTime===undefined)t.keepTime=true;});
+  // 予定の繰り返し：曜日/日にち指定のいれもの
+  (S.events||[]).forEach(e=>{if(e.repDays===undefined)e.repDays=[];});
   // 買い物（買うものリスト＋買った記録）
   if(!S.shopping)S.shopping=[];
   if(!S.shops)S.shops=SHOP_DEFAULTS.map((n,i)=>({id:'sh'+i,name:n}));
@@ -1364,7 +1394,7 @@ function timeField(id,val,opts={}){
   return `<span class="tfrow">
     <input type="hidden" id="${id}" value="${val||''}">
     <input class="tf" id="${id}_v" type="text" inputmode="numeric" maxlength="5" value="${val||''}" placeholder="--:--"
-      onfocus="this.select()" oninput="tfType('${id}',${opts.next?`'${opts.next}'`:'null'})" onblur="tfNorm('${id}')">
+      onfocus="this.select()" oninput="tfType('${id}',${opts.next?`'${opts.next}'`:'null'})" onblur="tfNorm('${id}');${opts.onchange||''}">
     ${opts.clear?`<button type="button" class="tf-clear" onclick="tfClear('${id}')">終日</button>`:''}
   </span>`;}
 function tfType(id,next){
@@ -1436,9 +1466,17 @@ function eventOccursOn(e,dstr){
   if(dstr<e.date)return false;
   if(e.until&&dstr>e.until)return false; // この予定以降で分割した終端
   const diff=Math.round((parseDs(dstr)-parseDs(e.date))/86400000);
-  if(e.repeat==='weekly')return diff%7===0;
+  // 毎週：曜日を選んでいればその曜日すべて（選んでいなければ元の曜日）
+  if(e.repeat==='weekly'){
+    if(e.repDays&&e.repDays.length)return e.repDays.includes(parseDs(dstr).getDay());
+    return diff%7===0;}
   if(e.repeat==='biweekly')return diff%14===0;
-  if(e.repeat==='monthly')return parseDs(e.date).getDate()===parseDs(dstr).getDate();
+  // 毎月：日にちを選んでいればその日（月末より大きい指定は月末に寄せる）
+  if(e.repeat==='monthly'){
+    const t=parseDs(dstr);
+    if(e.repDom){const dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
+      return t.getDate()===Math.min(e.repDom,dim);}
+    return parseDs(e.date).getDate()===t.getDate();}
   return e.date===dstr;}
 function evTitle(e){return e.title&&e.title.trim()?e.title:(e.start?e.start+'の予定':'予定');}
 function repTag(e){return e.repeat?`<span class="rep">🔁${REPEAT_LABEL[e.repeat]||''}</span>`:'';}
@@ -3697,101 +3735,227 @@ function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選�
   save();render();attachCellPress();openMultiColorSheet();toast((i===null?'色を消しました':'色をつけました')+'（'+cellSel.size+'日）');}
 
 /* ===== event modal ===== */
+/* ===== 予定の入力（タスクと同じ中央ポップ／状態は変数に集約して毎回描き直す） ===== */
+let _emId=null,_emDate='',_emStart='',_emEnd='',_emGroup='',_emHue=-1,_emMark='',_emCat='イベント',
+    _emRepeat='',_emRepDays=[],_emRepDom=null,_emUntil='',_emImp=false,_emMarkOnly=false,_emNoFill=false,
+    _emCalOpen=false,_emCalY=0,_emCalX=0,_emStash=null;
 function eventModal(id,presetDate,presetStart,occDate,presetEnd){
   const e=id?S.events.find(v=>v.id===id):null;
   _emOcc=(e&&e.repeat)?(occDate||e.date):null; // 繰り返し編集の対象回
   editLinks=(e?.links||[]).map(l=>({...l}));editImages=(e?.images||[]).slice();
-  openModal(`<div class="mh"><b>${e?'予定の編集':'予定の追加'}</b><button onclick="closeModal()">✕</button></div>
-  <div class="mbody">
-    ${!e&&S.templates.length?`<label>よく使う予定から</label><div class="tmplchips">${S.templates.map(t=>`
-      <button class="chip" onclick="applyTmpl('${t.id}')"><span class="dot" style="${markCss(t.groupId)}"></span>${esc(t.title)}</button>
-      `).join('')}<button class="chip" style="color:var(--danger);" onclick="manageTmpl()">管理</button></div>`:''}
-    <div class="frow"><label>日付 <span id="emDow" style="color:var(--ink);font-weight:600;"></span></label>
-      <input id="emDate" type="date" value="${e?.date||presetDate||todayStr()}" onchange="emDowUpd()"></div>
-    <div class="frow"><label>繰り返し</label>
-      <select id="emRepeat" onchange="emDowUpd()">
-        <option value="" ${!e?.repeat?'selected':''}>なし（1回だけ）</option>
-        <option value="weekly" ${e?.repeat==='weekly'?'selected':''}>毎週（同じ曜日）</option>
-        <option value="biweekly" ${e?.repeat==='biweekly'?'selected':''}>隔週</option>
-        <option value="monthly" ${e?.repeat==='monthly'?'selected':''}>毎月（同じ日）</option></select></div>
-    <div class="frow"><label>グループ</label>
-      <div style="display:flex;gap:6px;"><select id="emGroup" style="flex:1;">${S.groups.map(g=>`<option value="${g.id}" ${e?.groupId===g.id?'selected':''}>${esc(groupPath(g.id))}</option>`).join('')}</select>
-      <button type="button" class="inlineadd" onclick="addGroupInline('emGroup')">＋新規</button></div></div>
-    <div class="frow f2"><div><label>開始（終日ボタンで時間なし）</label>${timeField('emStart',e?.start||presetStart||'',{clear:true,next:'emEnd'})}</div>
-      <div><label>終了</label>${timeField('emEnd',e?.end||presetEnd||'',{clear:true})}</div></div>
-    <div class="frow"><label>予定名（任意・空欄なら時間だけ表示）</label><input id="emTitle" value="${esc(e?.title||'')}" placeholder="例）通院、打合せ など"></div>
-    <div class="frow"><label>色（未選択＝グループの色。この予定だけ変えたいとき選択）</label>
-      <div class="huepick labeled" id="emHue"><button type="button" data-h="-1" class="${(e?.hue??-1)===-1?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="グループの色にする"><span class="pop" style="background:#ccc;"></span><span class="hpl">グループの色</span></button>${HUES12.map((_,i)=>{const h=HUE(i);const lab=hueLabel(i);return `<button type="button" data-h="${i}" class="${(e?.hue??-1)===i?'on':''}" style="background:${h.p}" onclick="$$('#emHue button').forEach(b=>b.classList.remove('on'));this.classList.add('on')" title="${esc(lab||h.n)}"><span class="pop" style="background:${h.v}"></span><span class="hpl">${esc(lab||h.n)}</span></button>`;}).join('')}</div></div>
-    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emImp" style="width:auto;" ${e?.important?'checked':''}>
-      <span style="font-size:13px;">★ 重要な予定（枠を太くして目立たせる）</span></div>
-    <div class="frow"><label>マーク（予定名の頭に表示・任意）</label>
-      <div class="icontabs" id="emIconTabs"></div>
-      <div class="icongrid" id="emIconGrid"></div>
-      <div style="margin-top:6px;"><button type="button" class="inlineadd" onclick="emIconPick('')">マークなし</button></div></div>
-    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emMarkOnly" style="width:auto;" ${e?.markOnly?'checked':''}>
-      <span style="font-size:13px;">マークのみ表示（名前を隠して線画だけ／タップで内容）</span></div>
-    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emNoFill" style="width:auto;" ${e?.noFill?'checked':''}>
-      <span style="font-size:13px;">付箋カラーを付けない（色文字だけで表示）</span></div>
-    <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(e?.memo||'')}</textarea></div>
+  _emId=id||null;
+  _emDate=e?.date||presetDate||todayStr();
+  _emStart=e?.start??presetStart??'';_emEnd=e?.end??presetEnd??'';
+  _emGroup=e?.groupId||lastEvGroupId();
+  _emHue=(e?.hue??-1);_emMark=e?.mark||'';_emCat=(e?.mark&&ICONS[e.mark]?ICONS[e.mark].c:'イベント');
+  _emRepeat=e?.repeat||'';_emRepDays=(e?.repDays||[]).slice();_emRepDom=e?.repDom??null;_emUntil=e?.until||'';
+  _emImp=!!e?.important;_emMarkOnly=!!e?.markOnly;_emNoFill=!!e?.noFill;
+  _emCalOpen=false;const d0=parseDs(_emDate);_emCalY=d0.getFullYear();_emCalX=d0.getMonth();
+  emRender(true);}
+function lastEvGroupId(){const g=S.settings.lastEvGroup;
+  return (g&&S.groups.some(x=>x.id===g))?g:((S.groups[0]||{}).id||'');}
+function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
+  const keep=fresh?{}:{title:$('#emTitle')?.value,memo:$('#emMemo')?.value};
+  const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0);
+  const allday=!_emStart&&!_emEnd;
+  $('#dlg').innerHTML=`<div class="dm tform">
+    <div class="tfh"><b>${e?'予定を編集':'予定を追加'}</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    ${!e&&S.templates.length?`<div class="frow"><label>よく使う予定から</label>
+      <div class="gtabs">${tmplSorted().map(t=>`<button type="button" onclick="applyTmpl('${t.id}')"><span class="gdot" style="${markCss(t.groupId)}"></span>${esc(t.title||'（名前なし）')}</button>`).join('')}
+        <button type="button" class="gadd" onclick="manageTmpl()">管理</button></div></div>`:''}
+    <div class="frow"><label>予定名</label><input id="emTitle" value="${esc(keep.title??e?.title??'')}" placeholder="例）通院、打合せ など"></div>
+    <div class="frow"><label>日付</label>
+      <div class="btnrow"><button type="button" class="on" onclick="emCalToggle()">📅 ${fmtDateJa(_emDate)}</button></div></div>
+    ${_emCalOpen?`<div class="frow">${emCalHtml()}</div>`:''}
+    <div class="frow"><label>時間</label>
+      <div class="emtime">${timeField('emStart',_emStart,{next:'emEnd',onchange:'emSyncTime()'})}
+        <span class="emtw">〜</span>${timeField('emEnd',_emEnd,{onchange:'emSyncTime()'})}
+        <button type="button" class="emallday ${allday?'on':''}" onclick="emAllDay()">終日</button></div></div>
+    <div class="frow"><label>グループ</label>${emGroupHtml()}</div>
+    <div class="frow"><label>見た目</label>${emLookHtml()}</div>
+    <div class="frow"><label>繰り返し</label>${emRepeatHtml()}</div>
+    <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(keep.memo??e?.memo??'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
-    <div class="frow"><label>画像メモ（写真・スクショ）</label>${imagesEditorHtml()}</div>
-    <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="emTmpl" style="width:auto;">
-      <span style="font-size:13px;">よく使う予定として登録（テンプレ化）</span></div>
+    <div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>
+    <div class="frow tfsub"><button type="button" onclick="emSaveTmpl()">⭐ よく使う予定に保存</button>
+      ${e?`<button type="button" onclick="dupEventPick('${e.id}')">⧉ 複製</button><button type="button" class="del" onclick="delEvent('${e.id}')">🗑 削除</button>`:''}</div>
   </div>
-  <div class="mbtns">
-    ${e?`<button class="del" onclick="delEvent('${e.id}')">削除</button><button onclick="dupEvent('${e.id}')">複製</button>`:''}
-    <button class="save" onclick="saveEvent('${e?.id||''}')">保存</button>
-  </div>`);
-  emDowUpd();
-  window._emIcon=e?.mark||'';window._emCat=(e?.mark&&ICONS[e.mark]?ICONS[e.mark].c:'イベント');emIconRefresh();
-  if(!id){const el=$('#emTitle');if(el){setTimeout(()=>{el.focus();el.scrollIntoView({block:'center'});},120);}} // 新規はすぐ入力モード
-}
-function emIconRefresh(){const tabs=$('#emIconTabs'),grid=$('#emIconGrid');if(!tabs)return;
-  tabs.innerHTML=ICON_CATS.map(c=>`<button type="button" class="${window._emCat===c?'on':''}" onclick="emIconTab('${c}')">${c}</button>`).join('');
-  grid.innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._emCat)
-    .map(([key])=>`<button type="button" class="${window._emIcon===key?'on':''}" onclick="emIconPick('${key}')">${icSvg(key)}</button>`).join('');}
-function emIconTab(c){window._emCat=c;emIconRefresh();}
-function emIconPick(key){window._emIcon=key;if(key&&ICONS[key])window._emCat=ICONS[key].c;emIconRefresh();}
-function emDowUpd(){const v=$('#emDate')?.value;const el=$('#emDow');if(!el)return;
-  if(!v){el.textContent='';return;}
-  const d=parseDs(v);let s='（'+WD[d.getDay()]+'）';
-  const rep=$('#emRepeat')?.value;
-  if(rep==='weekly')s+=' 毎週'+WD[d.getDay()]+'曜';
-  else if(rep==='biweekly')s+=' 隔週'+WD[d.getDay()]+'曜';
-  else if(rep==='monthly')s+=' 毎月'+d.getDate()+'日';
-  el.textContent=s;}
+  <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveEvent('${_emId||''}')">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  const box=document.querySelector('#dlg .tform');
+  // フォーカスが画面を引っぱらないように（先に当ててから位置を戻す）
+  if(fresh&&!_emId){const el=$('#emTitle');if(el){try{el.focus({preventScroll:true});}catch(_){el.focus();}}}
+  if(box)box.scrollTop=prevScroll;}
+/* 時刻：入力したら状態に取り込む */
+function emSyncTime(){_emStart=$('#emStart')?.value||'';_emEnd=$('#emEnd')?.value||'';
+  const b=document.querySelector('.emallday');if(b)b.classList.toggle('on',!_emStart&&!_emEnd);}
+function emAllDay(){_emStart='';_emEnd='';emRender();}
+/* 日付＝アプリ内カレンダー（予定のある日に点） */
+function emCalToggle(){if(_emCalOpen){_emCalOpen=false;}else{_emCalOpen=true;const d=parseDs(_emDate);_emCalY=d.getFullYear();_emCalX=d.getMonth();}emSyncTime();emRender();}
+function emCalHtml(){const ws=S.settings.weekStart||0;
+  const start=(new Date(_emCalY,_emCalX,1).getDay()-ws+7)%7,dim=new Date(_emCalY,_emCalX+1,0).getDate();
+  let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
+  for(let dn=1;dn<=dim;dn++){const ds=`${_emCalY}-${pad(_emCalX+1)}-${pad(dn)}`;
+    cells+=`<button type="button" class="${ds===_emDate?'on':''}${ds===todayStr()?' td':''}" onclick="emPickDate('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
+  const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
+  return `<div class="dpnav"><button type="button" onclick="emCalNav(-1)">‹</button><span>${_emCalY}年${_emCalX+1}月</span><button type="button" onclick="emCalNav(1)">›</button></div>
+    <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>`;}
+function emCalNav(k){_emCalX+=k;if(_emCalX<0){_emCalX=11;_emCalY--;}if(_emCalX>11){_emCalX=0;_emCalY++;}emSyncTime();emRender();}
+function emPickDate(ds){_emDate=ds;_emCalOpen=false;emSyncTime();emRender();}
+/* グループ＝タスクと同じ親子タブ */
+function emGroupHtml(){const chain=[];let cur=S.groups.find(g=>g.id===_emGroup);
+  while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
+  const rows=[];let parentId=null,level=0;
+  while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
+    if(!opts.length)break;
+    const sel=chain[level]||null;
+    rows.push(`<div class="gtabs">${opts.map(g=>`<button type="button" class="${sel===g.id?'on':''}" onclick="emPickGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}</button>`).join('')}${level===0?`<button type="button" class="gadd" onclick="emAddGroup()">＋</button>`:''}</div>`);
+    if(!sel)break;
+    parentId=sel;level++;}
+  return rows.join('');}
+function emPickGroup(g){_emGroup=g;emSyncTime();emRender();}
+function emAddGroup(){emSyncTime();groupInlinePop(null,gid=>{_emGroup=gid;emRender();});}
+/* 見た目＝色・マーク・表示のしかたを1か所に。上に実際の見え方を出す */
+function emLookHtml(){
+  const fake={title:$('#emTitle')?.value||'予定',groupId:_emGroup,hue:_emHue>=0?_emHue:null,mark:_emMark,
+    important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,start:_emStart,end:_emEnd};
+  const bg=evColor(fake),tc=evTextColor(bg),ln=evLine(fake);
+  const prevStyle=_emMarkOnly||_emNoFill?`color:${ln};background:none;box-shadow:none;`:`background:${bg};color:${tc};`;
+  return `<div class="emprev" style="${prevStyle}${_emImp?'font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.18);':''}">${evLabel(fake)}</div>
+    <div class="cpsw emsw">
+      <button type="button" class="${_emHue<0?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px)" onclick="emPickHue(-1)" title="グループの色"></button>
+      ${HUES12.map((_,i)=>`<button type="button" class="${_emHue===i?'on':''}" style="background:${HUE(i).p}" onclick="emPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}"></button>`).join('')}</div>
+    <div class="gtabs emcat">${ICON_CATS.map(c=>`<button type="button" class="${_emCat===c?'on':''}" onclick="emIconTab('${c}')">${c}</button>`).join('')}</div>
+    <div class="emicons"><button type="button" class="${!_emMark?'on':''}" onclick="emIconPick('')">なし</button>
+      ${Object.entries(ICONS).filter(([,v])=>v.c===_emCat).map(([k])=>`<button type="button" class="${_emMark===k?'on':''}" onclick="emIconPick('${k}')">${icSvg(k)}</button>`).join('')}</div>
+    <div class="btnrow emopt">
+      <button type="button" class="${_emImp?'on':''}" onclick="emTgl('imp')">★ 重要</button>
+      <button type="button" class="${_emMarkOnly?'on':''}" onclick="emTgl('mo')">マークだけ</button>
+      <button type="button" class="${_emNoFill?'on':''}" onclick="emTgl('nf')">色は文字だけ</button></div>`;}
+function emPickHue(i){_emHue=i;emSyncTime();emRender();}
+function emIconTab(c){_emCat=c;emSyncTime();emRender();}
+function emIconPick(k){_emMark=k;if(k&&ICONS[k])_emCat=ICONS[k].c;emSyncTime();emRender();}
+function emTgl(w){if(w==='imp')_emImp=!_emImp;else if(w==='mo')_emMarkOnly=!_emMarkOnly;else _emNoFill=!_emNoFill;
+  emSyncTime();emRender();}
+/* 繰り返し＝毎週は曜日（複数可）、毎月は日にち、終わりの日も指定できる */
+function emRepeatHtml(){
+  const tabs=[['','なし'],['weekly','毎週'],['biweekly','隔週'],['monthly','毎月']]
+    .map(([v,l])=>`<button type="button" class="${_emRepeat===v?'on':''}" onclick="emPickRepeat('${v}')">${l}</button>`).join('');
+  let detail='';
+  if(_emRepeat==='weekly'){const ws=S.settings.weekStart||0;
+    detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
+      return `<button type="button" class="${_emRepDays.includes(d)?'on':''}" onclick="emTglDay(${d})">${WD[d]}</button>`;}).join('')}</div>
+      <div class="mini">${_emRepDays.length?`毎週 ${_emRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:`曜日を選ばないと「${WD[parseDs(_emDate).getDay()]}曜日」だけになります`}</div>`;}
+  if(_emRepeat==='monthly'){
+    detail=`<div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_emRepDom===i+1?'on':''}" onclick="emPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+      <div class="mini">${_emRepDom?`毎月 ${_emRepDom}日（ない月は月末）`:`日を選ばないと「${parseDs(_emDate).getDate()}日」になります`}</div>`;}
+  const until=_emRepeat?`<div class="btnrow" style="margin-top:6px;">
+    <button type="button" class="${_emUntil?'on':''}" onclick="emUntilPick()">${_emUntil?'～'+fmtDateJa(_emUntil)+' まで':'ずっと'}</button>
+    ${_emUntil?`<button type="button" onclick="emUntilClear()">ずっとに戻す</button>`:''}</div>`:'';
+  return `<div class="btnrow">${tabs}</div>${detail}${until}`;}
+function emPickRepeat(v){_emRepeat=v;if(v!=='weekly')_emRepDays=[];if(v!=='monthly')_emRepDom=null;if(!v)_emUntil='';emSyncTime();emRender();}
+function emTglDay(d){const i=_emRepDays.indexOf(d);i>=0?_emRepDays.splice(i,1):_emRepDays.push(d);emSyncTime();emRender();}
+function emPickDom(n){_emRepDom=(_emRepDom===n?null:n);emSyncTime();emRender();}
+function emUntilClear(){_emUntil='';emRender();}
+function emUntilPick(){emSyncTime();emStashOpen();
+  let y=parseDs(_emUntil||_emDate).getFullYear(),m=parseDs(_emUntil||_emDate).getMonth();
+  window._euY=y;window._euX=m;euRender();}
+function euRender(){const ws=S.settings.weekStart||0,Y=window._euY,X=window._euX;
+  const start=(new Date(Y,X,1).getDay()-ws+7)%7,dim=new Date(Y,X+1,0).getDate();
+  let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
+  for(let dn=1;dn<=dim;dn++){const ds=`${Y}-${pad(X+1)}-${pad(dn)}`;
+    cells+=`<button type="button" class="${ds===_emUntil?'on':''}" onclick="euPick('${ds}')">${dn}</button>`;}
+  const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>いつまで繰り返す？</b><button type="button" onclick="emStashBack()">✕</button></div>
+    <div class="frow"><div class="dpnav"><button type="button" onclick="euNav(-1)">‹</button><span>${Y}年${X+1}月</span><button type="button" onclick="euNav(1)">›</button></div>
+      <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div></div></div>
+    <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function euNav(k){window._euX+=k;if(window._euX<0){window._euX=11;window._euY--;}if(window._euX>11){window._euX=0;window._euY++;}euRender();}
+function euPick(ds){_emUntil=ds;emStashBack();}
+/* 予定フォームを一時的に退避して、別のポップ（範囲えらび等）を同じ場所に出す */
+function emStashOpen(){_emStash=true;}
+function emStashBack(){_emStash=null;emRender();}
+/* よく使う予定（テンプレ） */
+function tmplSorted(){return (S.templates||[]).slice().sort((a,b)=>(a.order??1e9)-(b.order??1e9));}
 function applyTmpl(tid){const t=S.templates.find(x=>x.id===tid);if(!t)return;
-  $('#emTitle').value=t.title||'';$('#emGroup').value=t.groupId;setTf('emStart',t.start||'');setTf('emEnd',t.end||'');$('#emMemo').value=t.memo||'';
-  editLinks=(t.links||[]).map(l=>({...l}));refreshLinksEd();}
-function manageTmpl(){
-  openModal(`<div class="mh"><b>よく使う予定の管理</b><button onclick="closeModal()">✕</button></div>
-  <div class="mbody">${S.templates.length?S.templates.map(t=>`
-    <div class="listrow" style="cursor:default;"><span class="dot" style="background:${group(t.groupId).color}"></span>
-    <span class="lt">${esc(t.title)}</span><span class="ls">${t.start||'終日'}</span>
-    <button style="color:var(--danger);font-size:13px;" onclick="delTmpl('${t.id}')">削除</button></div>`).join('')
-    :'<div class="mini" style="padding:0;">テンプレはありません。予定の保存時に「よく使う予定として登録」にチェックすると追加されます。</div>'}
-  </div>`);}
-async function delTmpl(id){if(!await uiConfirm('このテンプレを削除しますか？','削除'))return;
-  S.templates=S.templates.filter(t=>t.id!==id);save();manageTmpl();}
+  _emGroup=t.groupId||_emGroup;
+  if(t.keepTime!==false){_emStart=t.start||'';_emEnd=t.end||'';}
+  _emHue=(t.hue??-1);_emMark=t.mark||'';if(t.mark&&ICONS[t.mark])_emCat=ICONS[t.mark].c;
+  _emImp=!!t.important;_emMarkOnly=!!t.markOnly;_emNoFill=!!t.noFill;
+  _emRepeat=t.repeat||'';_emRepDays=(t.repDays||[]).slice();_emRepDom=t.repDom??null;
+  editLinks=(t.links||[]).map(l=>({...l}));
+  emRender();
+  // 描き直したあとに文字を入れる（再描画で消えないように）
+  const el=$('#emTitle');if(el)el.value=t.title||'';
+  const m2=$('#emMemo');if(m2)m2.value=t.memo||'';
+  toast(`「${t.title||'よく使う予定'}」を入れました`);}
+function emCurrentTmplData(){return {title:($('#emTitle')?.value||'').trim(),groupId:_emGroup,
+  start:$('#emStart')?.value||'',end:$('#emEnd')?.value||'',memo:$('#emMemo')?.value||'',links:collectLinks(),
+  hue:_emHue>=0?_emHue:null,mark:_emMark,important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,
+  repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom};}
+/* 「よく使う予定に保存」＝新規登録 or 既存を上書き */
+let _emTmplData=null;
+function emSaveTmpl(){emSyncTime();const d=emCurrentTmplData();
+  if(!d.title){uiAlert('先に予定名を入れてください');return;}
+  _emTmplData=d; // この後に画面を差し替えるので、今の内容をここで確保しておく
+  emStashOpen();
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>⭐ よく使う予定に保存</b><button type="button" onclick="emStashBack()">✕</button></div>
+    <div class="frow"><label>この内容で</label>
+      <div class="cpmenu"><button type="button" onclick="emTmplSave(null)">＋ 新しく登録する（${esc(d.title)}）</button>
+      ${tmplSorted().map(t=>`<button type="button" onclick="emTmplSave('${t.id}')">⟳ 「${esc(t.title||'（名前なし）')}」を今の内容で上書き</button>`).join('')}</div></div>
+    <div class="frow"><label>呼び出した時に時刻も入れる？</label>
+      <div class="btnrow" id="emKeepRow"><button type="button" class="on" data-v="1" onclick="pickBtn('emKeepRow','emKeep','1')">入れる（${d.start||'終日'}${d.end?'〜'+d.end:''}）</button>
+        <button type="button" data-v="0" onclick="pickBtn('emKeepRow','emKeep','0')">入れない</button></div>
+      <input type="hidden" id="emKeep" value="1"></div></div>
+    <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function emTmplSave(tid){const d=Object.assign({},_emTmplData||emCurrentTmplData());
+  d.keepTime=($('#emKeep')?.value||'1')==='1';_emTmplData=null;
+  if(tid){const t=S.templates.find(x=>x.id===tid);if(t)Object.assign(t,d);}
+  else S.templates.push({id:uid(),...d,order:(S.templates||[]).length});
+  save();emStashBack();toast(tid?'よく使う予定を更新しました':'よく使う予定に登録しました');}
+function manageTmpl(){emSyncTime();emStashOpen();mtRender();}
+function mtRender(){const list=tmplSorted();
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>よく使う予定</b><button type="button" onclick="emStashBack()">✕</button></div>
+    ${list.length?list.map((t,i)=>`<div class="frow mtrow">
+      <input value="${esc(t.title||'')}" onchange="mtRename('${t.id}',this.value)" placeholder="名前">
+      <div class="mtsub">${t.keepTime===false?'時刻を入れない':(t.start?esc(t.start)+(t.end?'〜'+esc(t.end):''):'終日')}　${esc(group(t.groupId).name||'')}</div>
+      <div class="mtacts"><button type="button" onclick="mtMove('${t.id}',-1)" ${i===0?'disabled':''}>▲</button>
+        <button type="button" onclick="mtMove('${t.id}',1)" ${i===list.length-1?'disabled':''}>▼</button>
+        <button type="button" onclick="mtKeep('${t.id}')">${t.keepTime===false?'時刻なし':'時刻あり'}</button>
+        <button type="button" class="del" onclick="delTmpl('${t.id}')">削除</button></div></div>`).join('')
+      :'<div class="mini" style="padding:6px 0;">まだありません。予定を作る画面の「⭐ よく使う予定に保存」から登録できます。</div>'}
+  </div><div class="db"><button class="ok" onclick="emStashBack()">とじる</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function mtRename(id,v){const t=S.templates.find(x=>x.id===id);if(!t)return;t.title=(v||'').trim();save();}
+function mtKeep(id){const t=S.templates.find(x=>x.id===id);if(!t)return;t.keepTime=(t.keepTime===false);save();mtRender();}
+function mtMove(id,dir){const list=tmplSorted();const i=list.findIndex(t=>t.id===id);const j=i+dir;
+  if(i<0||j<0||j>=list.length)return;
+  [list[i],list[j]]=[list[j],list[i]];list.forEach((t,k)=>t.order=k);save();mtRender();}
+async function delTmpl(id){if(!await uiConfirm('このよく使う予定を削除しますか？','削除'))return;
+  S.templates=S.templates.filter(t=>t.id!==id);save();mtRender();}
 let _emOcc=null,_pendingEvt=null;
 function saveEvent(id){
-  const date=$('#emDate').value;if(!date){uiAlert('日付を選んでください');return;}
-  const hueBtn=$('#emHue button.on');const hv=hueBtn?+hueBtn.dataset.h:-1;
-  const data={title:$('#emTitle').value.trim(),date,groupId:$('#emGroup').value,repeat:$('#emRepeat').value,
-    start:$('#emStart').value,end:$('#emEnd').value,memo:$('#emMemo').value,important:$('#emImp').checked,
-    mark:window._emIcon||'',markOnly:$('#emMarkOnly').checked,noFill:$('#emNoFill').checked,
-    hue:hv>=0?hv:null,links:collectLinks(),images:editImages.slice()};
-  const tmpl=$('#emTmpl').checked;
+  emSyncTime();
+  const date=_emDate;if(!date){uiAlert('日付を選んでください');return;}
+  if(_emStart&&_emEnd&&hm2min(_emEnd)<hm2min(_emStart)){uiAlert('終了が開始より前になっています');return;}
+  const data={title:($('#emTitle')?.value||'').trim(),date,groupId:_emGroup,repeat:_emRepeat,
+    repDays:_emRepDays.slice(),repDom:_emRepDom,until:_emUntil||undefined,
+    start:_emStart,end:_emEnd,memo:$('#emMemo')?.value||'',important:_emImp,
+    mark:_emMark,markOnly:_emMarkOnly,noFill:_emNoFill,
+    hue:_emHue>=0?_emHue:null,links:collectLinks(),images:editImages.slice()};
+  S.settings.lastEvGroup=_emGroup;
   const orig=id?S.events.find(e=>e.id===id):null;
   // 繰り返し予定を編集→範囲を選ぶ
-  if(orig&&orig.repeat){_pendingEvt={id,data,tmpl,occ:_emOcc||orig.date};recurScopePop();return;}
-  applyEventSave(id,data,tmpl);}
+  if(orig&&orig.repeat){_pendingEvt={id,data,tmpl:false,occ:_emOcc||orig.date};emStashOpen();recurScopePop();return;}
+  applyEventSave(id,data,false);}
 function recurScopePop(){const occ=_pendingEvt.occ;const d=parseDs(occ);const md=`${d.getMonth()+1}/${d.getDate()}`;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 繰り返しの予定です。<br>どの範囲を変更しますか？
     <div class="scopebtns"><button onclick="applyRecur('one')">この予定のみ（${md}）</button>
       <button onclick="applyRecur('future')">この予定以降（${md}〜）</button>
       <button onclick="applyRecur('all')">すべての予定</button></div></div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button></div>`;
+    <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyRecur(scope){const p=_pendingEvt;if(!p)return;const orig=S.events.find(e=>e.id===p.id);if(!orig){dlgEnd();return;}
   snapUndo();
@@ -3804,33 +3968,33 @@ function applyRecur(scope){const p=_pendingEvt;if(!p)return;const orig=S.events.
     S.events.push({...p.data,id:uid(),date:p.occ,repeat:orig.repeat,exdates:[],until:undefined}); // 以降を新シリーズに
   }
   if(p.tmpl)S.templates.push({id:uid(),title:p.data.title,groupId:p.data.groupId,start:p.data.start,end:p.data.end,memo:p.data.memo,links:p.data.links});
-  _pendingEvt=null;dlgEnd();save();closeModal();render();attachCellPress();
+  _pendingEvt=null;_emStash=null;dlgEnd();save();closeModal();render();attachCellPress();
   flashUndo(scope==='one'?'この予定だけ変更しました':scope==='future'?'この予定以降を変更しました':'すべての予定を変更しました');}
 function applyEventSave(id,data,tmpl){snapUndo();
   if(id)Object.assign(S.events.find(e=>e.id===id),data);
   else S.events.push({id:uid(),...data});
   if(tmpl)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
-  save();closeModal();render();attachCellPress();flashUndo(id?'予定を更新しました':'予定を追加しました');}
+  _emStash=null;save();dlgEnd();closeModal();render();attachCellPress();flashUndo(id?'予定を更新しました':'予定を追加しました');}
 async function delEvent(id,occDate){const e=S.events.find(v=>v.id===id);if(!e)return;
   if(e.repeat){delRecurPop(id,occDate||_emOcc||e.date);return;}
   if(!await uiConfirm('この予定を削除しますか？','削除'))return;
-  snapUndo();S.events=S.events.filter(x=>x.id!==id);save();closeModal();render();attachCellPress();flashUndo('予定を削除しました');}
+  snapUndo();S.events=S.events.filter(x=>x.id!==id);_emStash=null;save();dlgEnd();closeModal();render();attachCellPress();flashUndo('予定を削除しました');}
 function delRecurPop(id,occ){const d=parseDs(occ);const md=`${d.getMonth()+1}/${d.getDate()}`;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 繰り返しの予定です。<br>どの範囲を削除しますか？
     <div class="scopebtns"><button onclick="applyDelRecur('${id}','${occ}','one')">この予定のみ（${md}）</button>
       <button onclick="applyDelRecur('${id}','${occ}','future')">この予定以降（${md}〜）</button>
       <button onclick="applyDelRecur('${id}','${occ}','all')" style="color:var(--danger);">すべての予定を削除</button></div></div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button></div>`;
+    <div class="db"><button onclick="${_emStash?'emStashBack()':'dlgEnd()'}">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyDelRecur(id,occ,scope){const e=S.events.find(v=>v.id===id);if(!e){dlgEnd();return;}snapUndo();
   if(scope==='all')S.events=S.events.filter(x=>x.id!==id);
   else if(scope==='one')e.exdates=[...(e.exdates||[]),occ];
   else if(scope==='future')e.until=shiftDs(occ,-1);
-  dlgEnd();save();closeModal();render();attachCellPress();
+  _emStash=null;dlgEnd();save();closeModal();render();attachCellPress();
   flashUndo(scope==='all'?'すべて削除しました':scope==='one'?'この予定だけ削除しました':'この予定以降を削除しました');}
 function dupEvent(id){const e=S.events.find(v=>v.id===id);if(!e)return;
   S.events.push({...JSON.parse(JSON.stringify(e)),id:uid(),title:e.title+'（コピー）'});
-  save();closeModal();render();attachCellPress();}
+  _emStash=null;save();dlgEnd();closeModal();render();attachCellPress();}
 /* 予定をタップ→詳細＋操作（編集・複製〈日付選択〉・削除） */
 function eventTap(id,occDate,ev){const e=S.events.find(x=>x.id===id);if(!e)return;
   const occ=occDate||todayStr();
@@ -4582,7 +4746,16 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
-  <div class="mini"><b>v2.55（2026-08-01）</b><br>
+  <div class="mini"><b>v2.60（2026-08-04）予定の入力画面を作り直しました</b><br>
+  ・<b>いちばん上が「予定名」になり、開いた瞬間に入力できる</b>ようになりました（今までは5番目にあり、開くと日付や時間が画面の外に飛んでいました）<br>
+  ・並びを<b>「何を→いつ→どこの分類→見た目」</b>に整理し、<b>画面の長さを約3分の1短く</b>しました<br>
+  ・<b>タスクの画面と同じ形</b>に統一：<b>ポップの外をタップ／下にスワイプで閉じられます</b><br>
+  ・<b>日付はアプリのカレンダーから</b>（予定のある日に点）、<b>グループは親子のタブ</b>で選べます<br>
+  ・<b>色は横1列の丸</b>、<b>マークも横1列</b>に。<b>上に実際の見え方が出る</b>ので、重要・マークだけ・色は文字だけ の違いがひと目で分かります<br>
+  ・<b>繰り返しが強くなりました</b>：毎週は<b>曜日を複数えらべ</b>（例：毎週 火・金）、毎月は<b>何日か</b>を指定でき、<b>いつまで繰り返すか</b>も決められます<br>
+  ・<b>「よく使う予定」を刷新</b>：<b>色・マーク・繰り返しも覚え</b>、<b>呼び出した時に時刻を入れるかをテンプレごとに選べます</b>。管理画面で<b>名前の変更・並べ替え・今の内容で上書き保存</b>ができます<br>
+  ・削除と複製を保存ボタンから離しました。複製は日付を選べる形に統一しています<br>
+  <b>v2.55（2026-08-01）</b><br>
   ・<b>月カレンダーで日に色をつけると、週カレンダーの「終日」欄にも同じ色が出る</b>ようになりました<br>
   ・週で時間帯に色をつけても、<b>月でつけた日の色は消えません</b>（別々に持っています）。<b>日の色を変えるのは月カレンダーだけ</b>です<br>
   <b>v2.54（2026-08-01）</b><br>
