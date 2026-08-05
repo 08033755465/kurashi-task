@@ -368,6 +368,11 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .huepick button .pop{position:absolute;right:0;top:0;bottom:0;width:42%;}
 .huepick button .uz{position:absolute;left:3px;bottom:3px;width:5px;height:5px;border-radius:50% !important;background:rgba(0,0,0,.55);}
 /* グループ階層ツリー */
+/* グループと色の1画面（タブ2枚） */
+.gltabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:10px;}
+.gltabs button{flex:1;padding:9px 0;font-size:13px;color:var(--sub);border-bottom:2px solid transparent;}
+.gltabs button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink);}
+.grow .gname .glab{font-style:normal;font-size:9.5px;color:var(--sub);border:1px solid var(--line);padding:0 4px;margin-left:6px;border-radius:4px !important;}
 .grouptree{display:flex;flex-direction:column;}
 .grow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line2);position:relative;}
 .grow .gline{width:4px;align-self:stretch;flex:0 0 4px;border-radius:2px !important;margin-right:-2px;}
@@ -1001,6 +1006,17 @@ body.swiping .lpress{animation:none;}
 #dlg .cpsw.emsw button{flex:0 0 30px;height:30px;border:1px solid var(--line);border-radius:50% !important;position:relative;}
 #dlg .cpsw.emsw button.on{border-color:var(--ink);border-width:2px;}
 #dlg .cpsw.emsw button.on::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50% !important;background:var(--ink);}
+/* 色に付けた名前を丸の中に出す（スマホではツールチップが見えないため） */
+#dlg .cpsw.emsw button .emhl,#dlg .cpsw.emsw button .emg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:8px;font-weight:700;color:rgba(0,0,0,.55);letter-spacing:-.02em;pointer-events:none;}
+#dlg .cpsw.emsw button.on .emhl,#dlg .cpsw.emsw button.on .emg{opacity:0;}
+/* いまの色とグループの関係を文で出す */
+.emhuenow{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;}
+.emhuenow b{color:var(--ink);}
+.emhuenow .tagx{font-size:10px;}
+.emhuenow .emback{border:1px solid var(--line);padding:2px 7px;font-size:10.5px;color:var(--accent);border-radius:5px !important;}
+#dlg .gtabs button .gtl{font-style:normal;font-size:9px;color:var(--sub);margin-left:4px;}
+#dlg .gtabs button.on .gtl{color:inherit;opacity:.7;}
 .gtabs.emcat{margin-top:7px;}
 .gtabs.emcat button{padding:5px 10px;font-size:12px;}
 .emicons{display:flex;gap:5px;overflow-x:auto;padding:4px 0 3px;-webkit-overflow-scrolling:touch;}
@@ -1129,7 +1145,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.71';
+const APP_VERSION='v2.72';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -4161,7 +4177,8 @@ function emGroupHtml(){const chain=[];let cur=S.groups.find(g=>g.id===_emGroup);
   while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
     if(!opts.length)break;
     const sel=chain[level]||null;
-    rows.push(`<div class="gtabs">${opts.map(g=>`<button type="button" class="${sel===g.id?'on':''}" onclick="emPickGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}</button>`).join('')}${level===0?`<button type="button" class="gadd" onclick="emAddGroup()">＋</button>`:''}</div>`);
+    rows.push(`<div class="gtabs">${opts.map(g=>{const lb=hueLabel(groupHue(g.id));
+      return `<button type="button" class="${sel===g.id?'on':''}" onclick="emPickGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}${lb?`<i class="gtl">${esc(lb)}</i>`:''}</button>`;}).join('')}${level===0?`<button type="button" class="gadd" onclick="emAddGroup()">＋</button>`:''}</div>`);
     if(!sel)break;
     parentId=sel;level++;}
   return rows.join('');}
@@ -4173,10 +4190,15 @@ function emLookHtml(){
     important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,start:_emStart,end:_emEnd};
   const bg=evColor(fake),tc=evTextColor(bg),ln=evLine(fake);
   const prevStyle=_emMarkOnly||_emNoFill?`color:${ln};background:none;box-shadow:none;`:`background:${bg};color:${tc};`;
+  const gh=_emGroup?groupHue(_emGroup):null;                       // 選んでいるグループの色
+  const gname=_emGroup?(S.groups.find(g=>g.id===_emGroup)||{}).name||'' : '';
+  const curLab=_emHue>=0?(hueLabel(_emHue)||HUE(_emHue).n):(gh!=null?(hueLabel(gh)||HUE(gh).n):'');
   return `<div class="emprev" style="${prevStyle}${_emImp?'font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.18);':''}">${evLabel(fake)}</div>
+    <div class="emhuenow">いまの色：<b>${esc(curLab||'—')}</b>${_emHue<0?`<span class="tagx">グループ「${esc(gname||'なし')}」に合わせています</span>`
+      :`<button type="button" class="emback" onclick="emPickHue(-1)">↩ グループの色に戻す</button>`}</div>
     <div class="cpsw emsw">
-      <button type="button" class="${_emHue<0?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px)" onclick="emPickHue(-1)" title="グループの色"></button>
-      ${HUES12.map((_,i)=>`<button type="button" class="${_emHue===i?'on':''}" style="background:${HUE(i).p}" onclick="emPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}"></button>`).join('')}</div>
+      <button type="button" class="${_emHue<0?'on':''}" style="${gh!=null?`background:${HUE(gh).p};box-shadow:inset 0 0 0 2px ${HUE(gh).v};`:'background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px);'}" onclick="emPickHue(-1)" title="グループの色に合わせる"><i class="emg">G</i></button>
+      ${HUES12.map((_,i)=>`<button type="button" class="${_emHue===i?'on':''}" style="background:${HUE(i).p}" onclick="emPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}">${hueLabel(i)?`<i class="emhl">${esc(hueLabel(i).slice(0,3))}</i>`:''}</button>`).join('')}</div>
     <div class="gtabs emcat">${ICON_CATS.map(c=>`<button type="button" class="${_emCat===c?'on':''}" onclick="emIconTab('${c}')">${c}</button>`).join('')}</div>
     <div class="emicons"><button type="button" class="${!_emMark?'on':''}" onclick="emIconPick('')">なし</button>
       ${Object.entries(ICONS).filter(([,v])=>v.c===_emCat).map(([k])=>`<button type="button" class="${_emMark===k?'on':''}" onclick="emIconPick('${k}')">${icSvg(k)}</button>`).join('')}</div>
@@ -5036,33 +5058,10 @@ function renderSettings(){
       ${timeInput('setNn',s.notifyNight,{onchange:"S.settings.notifyNight=this.value;save();"})}</div>
     <div class="mini">⚠ スマホを閉じている間のプッシュ通知・メール通知は、次の段階（サーバー連携）で対応予定です。</div>`;
   if(P==='event')return back+`<div class="vhead"><h1>予定・カテゴリ・色設定</h1></div>
-    <div class="setrow" style="cursor:pointer;" onclick="groupList()"><div><div class="sl">グループ（カテゴリ）と色</div><div class="sd">${S.groups.length}件・「ままの予定」「子供」等に色を割り当て → 予定の色に反映</div></div><span style="color:var(--sub);">▸</span></div>
+    <div class="setrow" style="cursor:pointer;" onclick="groupList('group')"><div><div class="sl">グループ（カテゴリ）と色</div><div class="sd">${S.groups.length}件・並べ替え／色の割り当て／12色パレット・色の名前・タスクの色順まで、ここにまとめました</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="mini">💡 色は<b>グループ</b>に紐づきます。グループの色を変えると、そのグループの予定の色も<b>一括で変わります</b>。</div>
     <div class="setrow" style="cursor:pointer;" onclick="bdayList()"><div><div class="sl">誕生日</div><div class="sd">${S.birthdays.length}件・カレンダーにケーキ表示</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="markList()"><div><div class="sl">マーク付きの日</div><div class="sd">${S.marks.length}件・記念日など（線画50種）</div></div><span style="color:var(--sub);">▸</span></div>
-    <div class="sec-h">予定の色トーン</div>
-    <div style="padding:0 16px 4px;">
-      <div class="seg" style="margin:2px 0 0;width:100%;">
-        ${Object.keys(COLOR_TONES).map(k=>`<button style="flex:1;" class="${(s.colorTone||'pastel')===k?'on':''}" onclick="S.settings.colorTone='${k}';save();render();">${COLOR_TONES[k]}</button>`).join('')}</div>
-      <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
-      <div class="mini" style="padding:5px 0 0;">「あざやか」＝彩度高め／「くすみ」＝やわらかい落ち着いた色。予定の付箋すべてに反映されます。</div></div>
-    <div class="sec-h">タスクの色の並び順（今日タブ）</div>
-    <div style="padding:0 16px 4px;">
-      <div id="pastelOrderList" class="poList">${pastelOrder().map((i,pos)=>`<div class="poRow" data-i="${i}">
-        <span class="poSw" style="background:${PASTELS[i].c}"></span><span class="poName">${PASTELS[i].n}</span>
-        <span class="poNo">${pos+1}</span>
-        <div class="arrows h"><button onclick="movePastelOrder(${i},-1)">▲</button><button onclick="movePastelOrder(${i},1)">▼</button></div></div>`).join('')}</div>
-      <div class="mini" style="padding:6px 0 0;">今日タブのタスクはこの順で並びます（優先度「高」だけ最上部・完了は下）。</div></div>
-    <div class="sec-h">カラーパレット（12色・テスト期間中は編集可）</div>
-    <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="hueitem">
-      <div class="huerow">
-        <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="色（パステル）">
-        <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="濃い色（マーク・夜ライン用）">
-        <input type="text" class="hlabin" value="${esc(hueLabel(i))}" placeholder="${users.length?esc(users.map(g=>g.name).join('・')):'カテゴリ名（任意・重複OK）'}" onchange="setHueLabel(${i},this.value);render()">
-        <button class="huereset ${ch?'':'off'}" onclick="resetHue(${i})" title="この色を初期値に戻す">↺</button></div>
-      ${users.length?`<div class="huse2">グループ：${users.map(g=>esc(g.name)).join('・')}</div>`:''}</div>`;}).join('')}</div>
-    <div style="padding:2px 16px 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
-    <div class="mini">左の2つ＝<b>色</b>（タップで変更）、右の欄に<b>カテゴリ名</b>を入力できます（例：仕事／家族／通院。同じ色を複数カテゴリで<b>重複してOK</b>）。付けた名前は予定の色を選ぶときに表示されます。<b>テスト期間中は自由に調整OK</b>です。</div>
     <div class="setrow" style="cursor:pointer;" onclick="manageTmpl()"><div><div class="sl">よく使う予定（テンプレ）</div><div class="sd">${S.templates.length}件</div></div><span style="color:var(--sub);">▸</span></div>
     <div class="setrow" style="cursor:pointer;" onclick="linkList()"><div><div class="sl">よく使うリンク</div><div class="sd">${S.links.length}件・今日の画面から素早く開ける</div></div><span style="color:var(--sub);">▸</span></div>`;
   if(P==='data')return back+`<div class="vhead"><h1>同期・データ</h1></div>
@@ -5098,6 +5097,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v2.72（2026-08-05）グループと色の設定を1か所にまとめました</b><br>
+  ・グループの管理・カラーパレット・色の名前・タスクの色の並び順が<b>3か所に分かれていた</b>のを、<b>「グループ（カテゴリ）と色」1画面</b>に統合しました（［グループ］［色］の2タブ）<br>
+  ・グループ一覧の<b>色チップをタップするだけで色を変えられる</b>ように（編集画面を開かなくてOK）。<b>▲▼で並べ替え</b>も同じ画面にあります<br>
+  ・グループ名の横に<b>その色に付けた名前</b>が出るようになりました<br>
+  ・誕生日・マークの色が<b>独自の6色</b>だったのをやめ、<b>ほかと同じ12色</b>から選べるようにしました（今までの色はそのまま残ります）<br>
+  ・予定の追加画面：色の丸に<b>色の名前を表示</b>、「いまの色」と<b>グループとの関係が文で分かる</b>ように。12色から選んだあとは<b>「↩ グループの色に戻す」</b>で戻せます<br>
+  </div>
   <div class="mini"><b>v2.71（2026-08-05）同じタスクを1日に何度も置けるように＋PC操作の不具合</b><br>
   ・<b>同じタスクを1日に何コマでも置けます</b>（朝と夜など）。コマは<b>1つずつ「終わり」にでき、全部おわって初めてタスクが完了</b>になります<br>
   ・一覧にも<b>もう時間を決めてある印</b>（🕐9:15 +1）が出るようになり、うっかり二重に置くことがなくなりました<br>
@@ -5642,20 +5648,56 @@ function moveGroup(id,dir){const g=S.groups.find(x=>x.id===id);if(!g)return;
   const other=sibs[sj];const ai=S.groups.indexOf(g),aj=S.groups.indexOf(other);
   [S.groups[ai],S.groups[aj]]=[S.groups[aj],S.groups[ai]];save();groupList();render();}
 function addChildGroup(pid){groupModal(null,pid);}
-function groupList(){openModal(`<div class="mh"><b>グループ（カテゴリ）と色</b><button onclick="closeModal()">✕</button></div>
-  <div class="mbody">
-    <button class="addlink" style="margin-bottom:8px;" onclick="groupModal(null)">＋ グループを追加（最上位）</button>
+/* グループと色を1画面に。［グループ］＝並び・階層・色の割り当て／［色］＝パレットそのもの */
+let _glTab='group';
+function groupList(tab){if(tab)_glTab=tab;glRender();}
+function glRender(){
+  const tabs=`<div class="gltabs">
+    <button class="${_glTab==='group'?'on':''}" onclick="groupList('group')">グループ</button>
+    <button class="${_glTab==='color'?'on':''}" onclick="groupList('color')">色（パレット）</button></div>`;
+  openModal(`<div class="mh"><b>グループ（カテゴリ）と色</b><button onclick="closeModal()">✕</button></div>
+  <div class="mbody">${tabs}${_glTab==='group'?glGroupHtml():glColorHtml()}</div>`);}
+function glGroupHtml(){
+  return `<button class="addlink" style="margin-bottom:8px;" onclick="groupModal(null)">＋ グループを追加（最上位）</button>
     <div class="grouptree">
-    ${groupTreeFlat().map(({g,dep})=>{const h=HUE(groupHue(g.id));const line=HUE(rootHueOf(g.id)).v;
+    ${groupTreeFlat().map(({g,dep})=>{const h=HUE(groupHue(g.id));const line=HUE(rootHueOf(g.id)).v;const lab=hueLabel(groupHue(g.id));
       return `<div class="grow" style="padding-left:${4+dep*18}px;">
         ${dep?`<span class="gline" style="background:${line}"></span>`:''}
-        <span class="gchip" style="background:${h.p};box-shadow:inset 0 0 0 2px ${h.v};" onclick="groupModal('${g.id}')"></span>
-        <span class="gname" onclick="groupModal('${g.id}')">${esc(g.name)}</span>
+        <span class="gchip" style="background:${h.p};box-shadow:inset 0 0 0 2px ${h.v};" onclick="glHuePop('${g.id}',event)" title="色だけ変える"></span>
+        <span class="gname" onclick="groupModal('${g.id}')">${esc(g.name)}${lab?`<i class="glab">${esc(lab)}</i>`:''}</span>
         <span class="gacts"><button onclick="moveGroup('${g.id}',-1)">▲</button><button onclick="moveGroup('${g.id}',1)">▼</button><button class="addc" onclick="addChildGroup('${g.id}')">＋子</button></span>
       </div>`;}).join('')}
     </div>
-    <div class="mini" style="padding:8px 0 0;">色チップ／名前をタップで編集。<b>▲▼</b>で並べ替え、<b>＋子</b>で下の階層を追加。色を変えるとそのグループの予定色に反映されます。</div>
-  </div>`);}
+    <div class="mini" style="padding:8px 0 0;"><b>色チップ</b>をタップ＝色だけ変える／<b>名前</b>をタップ＝編集（親の変更もここ）。<b>▲▼</b>で並べ替え、<b>＋子</b>で下の階層。色を変えるとそのグループの予定色に一括で反映されます。</div>`;}
+/* 一覧の色チップから、その場で12色を選ぶ */
+function glHuePop(gid,ev){const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  if(_cpForId==='gl_'+gid){cpClose();return;}
+  const cur=groupHue(gid);
+  const html=`<div class="cpsw wide">${HUES12.map((_,i)=>`<button class="${cur===i?'on':''}" style="background:${HUE(i).p}" onclick="glSetHue('${gid}',${i})" title="${esc(hueLabel(i)||HUE(i).n)}"></button>`).join('')}</div>`;
+  cellpopAt(ev&&ev.target?ev.target.closest('.gchip'):null,html,{wide:true,forId:'gl_'+gid});}
+function glSetHue(gid,i){const g=S.groups.find(x=>x.id===gid);if(!g)return;
+  g.hue=i;save();cpClose();glRender();render();}
+function glColorHtml(){
+  return `<div class="sec-h" style="padding-top:0;">12色パレット（予定・グループの色）</div>
+    <div class="huelegend">${HUES12.map((_,i)=>{const h=HUE(i);const ch=hueChanged(i);const users=S.groups.filter(g=>groupHue(g.id)===i);return `<div class="hueitem">
+      <div class="huerow">
+        <input type="color" class="hcp" value="${h.p}" onchange="setHueColor(${i},'p',this.value)" title="色（パステル）">
+        <input type="color" class="hcp" value="${h.v}" onchange="setHueColor(${i},'v',this.value)" title="濃い色（マーク・線用）">
+        <input type="text" class="hlabin" value="${esc(hueLabel(i))}" placeholder="${users.length?esc(users.map(g=>g.name).join('・')):'色の名前（例：仕事／家族）'}" onchange="setHueLabel(${i},this.value);glRender();render()">
+        <button class="huereset ${ch?'':'off'}" onclick="resetHue(${i})" title="この色を初期値に戻す">↺</button></div>
+      ${users.length?`<div class="huse2">グループ：${users.map(g=>esc(g.name)).join('・')}</div>`:''}</div>`;}).join('')}</div>
+    <div style="padding:2px 0 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
+    <div class="mini">左の2つ＝<b>色</b>（タップで変更）、右の欄に<b>色の名前</b>を入力できます（例：仕事／家族／通院。同じ色に複数のグループを付けてOK）。付けた名前は<b>予定の色を選ぶとき</b>にも出ます。</div>
+    <div class="sec-h">予定の色トーン</div>
+    <div class="seg" style="margin:2px 0 0;width:100%;">
+      ${Object.keys(COLOR_TONES).map(k=>`<button style="flex:1;" class="${(S.settings.colorTone||'pastel')===k?'on':''}" onclick="S.settings.colorTone='${k}';save();glRender();render();">${COLOR_TONES[k]}</button>`).join('')}</div>
+    <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
+    <div class="sec-h">タスクの色（6色）の並び順</div>
+    <div class="poList">${pastelOrder().map((i,pos)=>`<div class="poRow" data-i="${i}">
+      <span class="poSw" style="background:${PASTELS[i].c}"></span><span class="poName">${PASTELS[i].n}</span>
+      <span class="poNo">${pos+1}</span>
+      <div class="arrows h"><button onclick="movePastelOrder(${i},-1);glRender();">▲</button><button onclick="movePastelOrder(${i},1);glRender();">▼</button></div></div>`).join('')}</div>
+    <div class="mini" style="padding:6px 0 0;">今日タブのタスクはこの順で並びます（優先度「高」だけ最上部・完了は下）。タスクの色は<b>行を長押し</b>して選びます。</div>`;}
 function bdayModal(id){
   const b=id?S.birthdays.find(x=>x.id===id):null;
   openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
@@ -5665,8 +5707,8 @@ function bdayModal(id){
       <div><label>日</label><input id="bmD" type="number" inputmode="numeric" min="1" max="31" value="${b?.day||''}"></div></div>
     <div class="frow" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="bmGift" style="width:auto;" ${b?.gift?'checked':''}>
       <span style="font-size:13px;">プレゼントの準備が必要（色を強調）</span></div>
-    <div class="frow"><label>強調色</label><div class="colorsel c6" id="bmColor">
-      ${['#E8618C','#D88A3D','#B8860B','#5B9E6F','#3D6FD8','#9A6BD0'].map(c=>`<button data-c="${c}" class="${(b?.color||'#E8618C')===c?'on':''}" style="background:${c}" onclick="$$('#bmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+    <div class="frow"><label>強調色</label><div class="colorsel" id="bmColor">
+      ${HUES12.map((_,i)=>{const c=HUE(i).v;return `<button data-c="${c}" class="${(b?.color||HUE(0).v)===c?'on':''}" style="background:${c}" title="${esc(hueLabel(i)||HUE(i).n)}" onclick="$$('#bmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`;}).join('')}</div></div>
   </div>
   <div class="mbtns">${b?`<button class="del" onclick="delBday('${b.id}')">削除</button>`:''}
     <button class="save" onclick="saveBday('${b?.id||''}')">保存</button></div>`);}
@@ -5691,8 +5733,8 @@ function markModal(id){
     <div class="frow"><label>マーク（5カテゴリ×10種）</label>
       <div class="icontabs" id="kmTabs"></div>
       <div class="icongrid" id="kmGrid"></div></div>
-    <div class="frow"><label>色</label><div class="colorsel c6" id="kmColor">
-      ${['#E8618C','#D88A3D','#B8860B','#5B9E6F','#3D6FD8','#9A6BD0'].map(c=>`<button data-c="${c}" class="${(k?.color||'#D88A3D')===c?'on':''}" style="background:${c}" onclick="$$('#kmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div></div>
+    <div class="frow"><label>色</label><div class="colorsel" id="kmColor">
+      ${HUES12.map((_,i)=>{const c=HUE(i).v;return `<button data-c="${c}" class="${(k?.color||HUE(1).v)===c?'on':''}" style="background:${c}" title="${esc(hueLabel(i)||HUE(i).n)}" onclick="$$('#kmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`;}).join('')}</div></div>
   </div>
   <div class="mbtns">${k?`<button class="del" onclick="delMark('${k.id}')">削除</button>`:''}
     <button class="save" onclick="saveMark('${k?.id||''}')">保存</button></div>`);
