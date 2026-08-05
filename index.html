@@ -882,6 +882,31 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #flowbar.show{display:flex;}
 #flowbar span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #flowbar button{color:#fff;border:1px solid #4A4F58;padding:7px 16px;font-size:13px;white-space:nowrap;font-weight:700;}
+/* タスクタイマー：上部の細いバー（どのタブでも見える） */
+#ttbar{position:fixed;left:0;right:0;top:0;max-width:960px;margin:0 auto;background:var(--ink);color:#fff;
+  display:none;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 7px) 14px 7px;z-index:56;cursor:pointer;
+  box-shadow:0 3px 12px rgba(0,0,0,.2);}
+#ttbar.show{display:flex;}
+#ttbar.paused{background:#5B616C;}
+#ttbar #ttname{flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#ttbar #ttwatch{font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:.03em;}
+#ttbar .tthint{font-size:9px;color:#B9BEC7;flex:0 0 auto;}
+body.tton #app{padding-top:calc(env(safe-area-inset-top) + 44px);} /* バーの下に中身が隠れないように */
+/* 時間の記録：タスク別の横棒 */
+.tsrow{padding:8px 16px;border-bottom:1px solid var(--line2);cursor:pointer;}
+.tsrow .tsl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.tsrow .tsn{font-size:13.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tsrow .tsn .merged{font-size:9px;color:var(--accent);border:1px solid var(--accent);padding:0 4px;margin-left:5px;border-radius:4px !important;vertical-align:1px;}
+.tsrow .tsv{font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink);}
+.tsrow .tsv small{color:var(--sub);font-size:10px;}
+.tsrow .gauge{height:8px;background:var(--line2);margin-top:5px;}
+.tsrow .gauge i{display:block;height:100%;background:var(--accent);}
+.tsrow.sel{background:var(--bg2);}
+.tsdays{padding:4px 16px 10px;background:var(--bg2);border-bottom:1px solid var(--line2);}
+.tsday{display:flex;gap:10px;font-size:12px;padding:3px 0;color:var(--sub);font-variant-numeric:tabular-nums;}
+.tsday b{color:var(--ink);font-weight:600;}
+.tschk{flex:0 0 20px;width:20px;height:20px;border:1.5px solid var(--line);border-radius:5px !important;display:inline-flex;align-items:center;justify-content:center;margin-right:8px;vertical-align:-4px;}
+.tsrow.msel .tschk{background:var(--accent);border-color:var(--accent);color:#fff;}
 .rtag.opt{color:#B7902E;border-color:#E3CE93;}
 .titem.rsel{background:#EEF2FF;}
 .titem.ractive{background:#F4F6FF;}
@@ -1141,6 +1166,7 @@ body.swiping .lpress{animation:none;}
 <div id="fabmenu"></div>
 <button id="quickadd" onclick="fabAdd()" title="追加">＋</button>
 <div id="flowbar"></div>
+<div id="ttbar" onclick="ttStop(event)"><span id="ttname"></span><b id="ttwatch"></b><span class="tthint">タップで中断・終了</span></div>
 <div id="flow"></div>
 <div id="lightbox" onclick="if(event.target===this)closeLightbox()"></div>
 
@@ -1169,7 +1195,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.75';
+const APP_VERSION='v2.76';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1362,7 +1388,7 @@ function defaultState(){
       {id:uid(),title:'夜の家事・かんたん掃除',slot:'night',days:[0,1,2,3,4,5,6],estMin:30,links:[],order:8,active:true,stats:{n:0,total:0}},
       {id:uid(),title:'子どもの世話（夜・寝かしつけ）',slot:'night',days:[0,1,2,3,4,5,6],estMin:40,links:[],order:9,active:true,stats:{n:0,total:0}},
     ],
-    events:[],templates:[],taskTemplates:[],
+    events:[],templates:[],taskTemplates:[],statGroups:[],
     birthdays:[],marks:[],
     dayColors:{},dayBands:{},dayLog:{},notes:'',lastNotify:{}
   };
@@ -1395,6 +1421,8 @@ function migrate(){const st=S.settings;
   // タスクのテンプレ（v2.75）
   if(!Array.isArray(S.taskTemplates))S.taskTemplates=[];
   S.taskTemplates.forEach((t,i)=>{if(t.order===undefined)t.order=i;if(t.keepEst===undefined)t.keepEst=true;});
+  // 時間の記録の「統合」グループ（v2.76）
+  if(!Array.isArray(S.statGroups))S.statGroups=[];
   // 予定の繰り返し：曜日/日にち指定のいれもの
   (S.events||[]).forEach(e=>{if(e.repDays===undefined)e.repDays=[];});
   // 買い物（買うものリスト＋買った記録）
@@ -1703,7 +1731,7 @@ let _base=null; // 前回同期した時点の状態（マージの土台）
 try{_base=JSON.parse(localStorage.getItem(BASEKEY)||'null');}catch(e){_base=null;}
 function setBase(st){try{if(st===null){_base=null;localStorage.removeItem(BASEKEY);return;}
   _base=JSON.parse(JSON.stringify(st));localStorage.setItem(BASEKEY,JSON.stringify(_base));}catch(e){}}
-const ID_LISTS=['tasks','routines','events','templates','taskTemplates','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
+const ID_LISTS=['tasks','routines','events','templates','taskTemplates','statGroups','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
 const MAP_KEYS=['dayLog','dayColors','dayBands','periodNotes','lastNotify'];
 const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
 /* id付きの配列：この端末での「追加・変更・削除」だけをクラウド側に反映する */
@@ -1948,6 +1976,7 @@ function render(){
   if(view==='today')el.innerHTML=renderToday();
   else if(view==='shop')el.innerHTML=renderShopping();
   else if(view==='tasks')el.innerHTML=renderTasks();
+  else if(view==='tstats')el.innerHTML=renderTStats();
   else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();attachCalSwipe();}
   else if(view==='routine')el.innerHTML=renderRoutines();
   else if(view==='habit')el.innerHTML=renderHabits();
@@ -2048,7 +2077,7 @@ function renderToday(){
   ${S.links.length?`<div class="linkchips" style="padding:8px 16px 2px;">${S.links.map(l=>`<a class="linkchip" href="${esc(l.url)}" target="_blank" rel="noopener">↗ ${esc(l.label)}</a>`).join('')}</div>`:''}
   <div class="sec"><div class="sec-h"><span class="secttl">今日やること（${doneR+doneT}/${routines.length+tasks.length}）</span>
     <span class="secacts">${todayReorder?`<button class="act" onclick="exitTodayReorder()">完了</button>`
-      :`<button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 省スペース':'⊟ 省スペース'}</button><button class="act" onclick="enterTodayReorder()">並び替え</button>`}`}</span></div>
+      :`<button class="act" onclick="switchView('tstats')">⏱ 記録</button><button class="act ${S.settings.timeline?'on':''}" onclick="toggleTimeline()">🕐 ${S.settings.timeline?'リスト':'タイムライン'}</button>${S.settings.timeline?'':`<button class="act" onclick="toggleDense()">${S.settings.dense?'≡ 省スペース':'⊟ 省スペース'}</button><button class="act" onclick="enterTodayReorder()">並び替え</button>`}`}</span></div>
     ${todayReorder?todayReorderHtml(doList):(S.settings.timeline?todayTimelineHtml(t):`
     <div class="qadd">
       <input id="qaToday" placeholder="今日のタスクをすぐ追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddToday()">
@@ -2574,7 +2603,8 @@ function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const done=x.status==='done';
   const html=`<div class="miniacts">
     ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
-      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
+      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
+    <button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`}
     <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
   cellpopAt(row,html,{forId:id,rowSel:'.tchkr[data-lp^="t_"]'});}
@@ -2594,7 +2624,8 @@ function dayTaskTap(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const done=x.status==='done';
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
     ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
-      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
+      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
+    <button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`}
     <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
     <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
@@ -2862,6 +2893,7 @@ function tlTaskTap(tk,ev,sid){const t=todayStr();const at=(dayLog(t).at)||{};con
       :`<button class="hi" onclick="tlOne('${tk}','complete')"><span>✓</span>完了</button>`}
     ${placed?`<button onclick="cpClose();unpinItem('${tk}'${sid?`,'${sid}'`:''})"><span>↩</span>${sls.length>1?'このコマをはずす':'未配置に'}</button>`
              :`<button class="hi" onclick="tlOne('${tk}','place')"><span>🕐</span>時間を決めて</button>`}
+    ${type==='t'?`<button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`:''}
     ${type==='t'&&placed?`<button onclick="cpClose();slotAdd('${id}')"><span>＋</span>もう1コマ足す</button>`:''}
     <button onclick="tlOne('${tk}','edit')"><span>✎</span>編集</button>
     <button onclick="tlTaskTapMore('${tk}',event)"><span>…</span>その他</button></div>`;
@@ -2915,13 +2947,18 @@ function openTimeDone(tk){const t=todayStr();const it=doItems(t).find(x=>x.type+
     <label style="font-size:12px;color:var(--sub);display:block;margin:6px 0 2px;">かかった時間</label>${minPicker('tdMin',est)}</div>
     <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTimeDone('${tk}')">完了にする</button></div>`;
   $('#dlgWrap').classList.add('show');}
+/* タスクの実測は「⏱稼働」ログ（いつ・どれだけ）に一本化して記録する（時間の記録ページの集計元） */
+function pushWorkLog(d,taskId,title,startMin,min){if(!min||min<=0)return;
+  const dl=dayLog(d);dl.logs=dl.logs||[];
+  dl.logs.push({id:uid(),kind:'work',text:title||'',at:((Math.round(startMin)%1440)+1440)%1440,dur:Math.round(min),taskId});}
 function saveTimeDone(tk){const t=todayStr();const hm=$('#tdStart')?.value;const min=Math.max(0,parseInt($('#tdMin')?.value,10)||0);
   const start=hm?hm2min(hm):curMin();const dm=((start+min)%1440+1440)%1440;
   const type=tk[0],id=tk.slice(2);snapUndo();
   if(type==='r'){const r=S.routines.find(x=>x.id===id);const st=(r&&r.stats)||{n:0,total:0};
     dayLog(t).routines[id]={done:true,sec:min*60,doneMin:dm};
     if(r)r.stats={n:st.n+1,total:st.total+min*60};}
-  else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='done';x.doneAt=t;x.doneMin=dm;x.doneSec=min*60;advanceRepeatTask(x);}}
+  else{const x=S.tasks.find(v=>v.id===id);if(x){x.status='done';x.doneAt=t;x.doneMin=dm;x.doneSec=min*60;
+    pushWorkLog(t,id,x.title,start,min);advanceRepeatTask(x);}}
   sinkDoItem(tk);chainClean(t);dlgEnd();tlSel=[];save();render();flashUndo(min2hm(start)+'から'+fmtMin(min)+'で完了にしました');checkCelebrate();}
 function tlDoUnpin(){const n=tlSel.length;if(!n)return;const t=todayStr();const dl=dayLog(t);snapUndo();
   if(dl.at)tlSel.forEach(tk=>{delete dl.at[tk];});chainClean(t);chainRelink(t);
@@ -3990,7 +4027,8 @@ function ddSave(){const x=S.tasks.find(v=>v.id===_ddId);if(!x)return;
   const kind=$('#ddKind')?.value||'';
   snapUndo();
   x.status='done';x.doneAt=_ddDate;x.doneMin=hm?hm2min(hm):curMin();
-  if(mins>0)x.doneSec=mins*60; // 実際にかかった時間
+  if(mins>0){x.doneSec=mins*60; // 実際にかかった時間
+    pushWorkLog(_ddDate,x.id,x.title,x.doneMin-mins,mins);}
   if(kind==='rec'){ // 記録＝その日のぶんだけ済み
     if(x.repeat)advanceRepeatTask(x);else x.dayDone=true;}
   else{x.repeat='';delete x.dayDone;delete x.repeatPrev; // 完了＝もう出さない
@@ -4998,12 +5036,122 @@ function flowEdit(){const it=flowList[flowIdx];const r=it.obj;editLinks=(r.links
     <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
 function applyFlowEdit(){const r=flowList[flowIdx].obj;r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;r.links=collectLinks();save();dlgEnd();flowShow(true);}
+/* ===== タスクタイマー：▶開始→上部バーで経過→タップで中断・終了。同時に測れるのは1つ ===== */
+const TTKEY='homehub_tasktimer';
+let TT=null,_ttTimer=null; // {id,base(蓄積ms),since(計測中なら開始epoch),startedAt(開始の分),d(開始日)}
+function fmtWatchH(ms){const s=Math.floor(ms/1000);const h=Math.floor(s/3600);
+  return h?`${h}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`:`${pad(Math.floor(s/60))}:${pad(s%60)}`;}
+function ttElapsed(){return TT?TT.base+(TT.since?Date.now()-TT.since:0):0;}
+function ttPersist(){try{TT?localStorage.setItem(TTKEY,JSON.stringify(TT)):localStorage.removeItem(TTKEY);}catch(e){}}
+function ttBar(){const b=$('#ttbar');if(!b)return;
+  if(!TT){b.classList.remove('show');document.body.classList.remove('tton');
+    if(_ttTimer){clearInterval(_ttTimer);_ttTimer=null;}return;}
+  const x=S.tasks.find(v=>v.id===TT.id);
+  b.classList.toggle('paused',!TT.since);
+  $('#ttname').textContent=(TT.since?'▶ ':'⏸ ')+(x?x.title:'タスク');
+  $('#ttwatch').textContent=fmtWatchH(ttElapsed());
+  b.querySelector('.tthint').textContent=TT.since?'タップで中断・終了':'中断ちゅう・タップで再開';
+  b.classList.add('show');document.body.classList.add('tton');
+  if(!_ttTimer)_ttTimer=setInterval(()=>{if(TT&&$('#ttwatch'))$('#ttwatch').textContent=fmtWatchH(ttElapsed());},1000);}
+function ttRestore(){try{const v=JSON.parse(localStorage.getItem(TTKEY)||'null');
+  if(v&&v.d===todayStr()&&S.tasks.some(x=>x.id===v.id)){TT=v;ttBar();}
+  else localStorage.removeItem(TTKEY);}catch(e){}}
+function ttStart(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(TT&&TT.id===id){if(!TT.since){TT.since=Date.now();ttPersist();ttBar();toast('▶ 再開しました');}return;}
+  if(TT){const prev=ttRecord();if(prev)toast(`前の「${prev.title}」を${fmtMin(prev.min)}で記録しました`);}
+  TT={id,base:0,since:Date.now(),startedAt:curMin(),d:todayStr()};
+  ttPersist();ttBar();toast(`▶ 「${x.title}」をはじめました`);}
+/* 経過を⏱稼働ログに書いて計測を終える（タスクの完了は呼び出し側で） */
+function ttRecord(){if(!TT)return null;
+  if(TT.since){TT.base+=Date.now()-TT.since;TT.since=0;}
+  const x=S.tasks.find(v=>v.id===TT.id);
+  const min=Math.max(1,Math.round(TT.base/60000));
+  pushWorkLog(TT.d||todayStr(),TT.id,x?x.title:'',TT.startedAt,min);
+  const out={id:TT.id,min,title:x?x.title:''};
+  TT=null;ttPersist();ttBar();save();
+  return out;}
+function ttStop(ev){if(!TT)return;
+  if(!TT.since){ // 中断中にタップ＝メニュー（再開もここから）
+  }else{TT.base+=Date.now()-TT.since;TT.since=0;ttPersist();ttBar();} // いったん止めてから選ぶ
+  const x=S.tasks.find(v=>v.id===TT.id);
+  const min=Math.max(1,Math.round(ttElapsed()/60000));
+  const html=`<div class="cpmenu"><div class="cptitle">${esc(x?x.title:'')}・ここまで ${fmtMin(min)}</div>
+    <button class="hi" onclick="cpClose();ttFinish(1)"><span>✓</span>記録して完了にする</button>
+    <button onclick="cpClose();ttFinish(0)"><span>📝</span>記録だけ（タスクはつづく）</button>
+    <button onclick="cpClose();ttResume()"><span>▶</span>再開する</button>
+    <button onclick="cpClose();ttDiscard()" style="color:var(--danger);"><span>🗑</span>記録せずやめる</button></div>`;
+  cellpopAt($('#ttbar'),html,{forId:'ttstop'});}
+function ttResume(){if(!TT)return;TT.since=Date.now();ttPersist();ttBar();}
+function ttFinish(complete){const info=ttRecord();if(!info)return;
+  if(complete){const x=S.tasks.find(v=>v.id===info.id);
+    if(x&&x.status!=='done'){if(x.repeat){completeTodayOnly(info.id);return;}fullyCompleteTask(info.id);return;}}
+  render();flashUndo(`⏱ ${fmtMin(info.min)}を記録しました`);}
+async function ttDiscard(){if(!await uiConfirm('この計測を記録せずにやめますか？','記録せずやめる'))return;
+  TT=null;ttPersist();ttBar();toast('計測をやめました');}
+/* ===== 時間の記録：月ごとのタスク別合計（⏱稼働ログを集計）＋あとから統合 ===== */
+let _tsYM=null,_tsSel=null,_tsMerge=false,_tsMs=new Set();
+function tsMonthOf(){if(!_tsYM)_tsYM=todayStr().slice(0,7);return _tsYM;}
+function tsNav(k){const [y,m]=tsMonthOf().split('-').map(Number);
+  const d=new Date(y,m-1+k,1);_tsYM=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;_tsSel=null;render();}
+function tsAgg(ym){const out={};
+  const gOf=id=>(S.statGroups||[]).find(s=>s.ids&&s.ids.includes(id));
+  Object.entries(S.dayLog||{}).forEach(([d,dl])=>{
+    if(!d.startsWith(ym)||!dl||!Array.isArray(dl.logs))return;
+    dl.logs.forEach(l=>{if(l.kind!=='work'||!l.dur)return;
+      const g=l.taskId?gOf(l.taskId):null;
+      const key=g?('g_'+g.id):(l.taskId?('t_'+l.taskId):('x_'+(l.text||'')));
+      const name=g?g.name:((l.taskId&&S.tasks.find(x=>x.id===l.taskId)?.title)||l.text||'（名前なし）');
+      const o=out[key]=out[key]||{key,name,min:0,n:0,gid:g?g.id:null,taskId:l.taskId||null,days:{}};
+      o.min+=l.dur;o.n++;(o.days[d]=o.days[d]||[]).push({at:l.at,dur:l.dur});});});
+  return Object.values(out).sort((a,b)=>b.min-a.min);}
+function renderTStats(){const ym=tsMonthOf();const rows=tsAgg(ym);
+  const total=rows.reduce((s,r)=>s+r.min,0);const max=Math.max(1,...rows.map(r=>r.min));
+  const [y,m]=ym.split('-').map(Number);
+  return `<div class="vhead"><h1><button class="backbtn" onclick="switchView('today')">‹</button>時間の記録</h1>
+    <span class="sub">${total?`合計 ${fmtMin(total)}`:''}</span></div>
+  <div class="dpnav" style="padding:0 16px;"><button onclick="tsNav(-1)">‹</button><span>${y}年${m}月</span><button onclick="tsNav(1)">›</button></div>
+  <div style="display:flex;justify-content:flex-end;padding:4px 16px;">
+    ${_tsMerge?`<button class="act" onclick="tsMergeDo()" style="color:var(--accent);font-weight:700;">選んだ${_tsMs.size}件を統合する</button>
+      <button class="act" onclick="_tsMerge=false;_tsMs=new Set();render()" style="margin-left:10px;">やめる</button>`
+      :`<button class="act" onclick="_tsMerge=true;_tsMs=new Set();_tsSel=null;render()">🔗 統合</button>`}</div>
+  ${_tsMerge?`<div class="mini" style="padding:0 16px 6px;">同じ内容のタスク（別名で作ってしまったもの等）を選んで<b>1つにまとめて集計</b>できます。あとで解除もできます。</div>`:''}
+  ${rows.length?rows.map(r=>{
+    const canMerge=!!r.taskId||!!r.gid;
+    const sel=_tsSel===r.key;
+    const days=Object.keys(r.days).sort();
+    return `<div class="tsrow${sel?' sel':''}${_tsMs.has(r.key)?' msel':''}" onclick="${_tsMerge?(canMerge?`tsMsTgl('${r.key}')`:''):`tsRowTap('${r.key}')`}">
+      <div class="tsl"><span class="tsn">${_tsMerge?`<span class="tschk">${_tsMs.has(r.key)?'✓':''}</span>`:''}${esc(r.name)}${r.gid?'<span class="merged">統合</span>':''}</span>
+        <span class="tsv">${fmtMin(r.min)} <small>／${r.n}回</small></span></div>
+      <div class="gauge"><i style="width:${Math.round(r.min/max*100)}%"></i></div></div>
+    ${sel&&!_tsMerge?`<div class="tsdays">
+      ${days.map(d=>r.days[d].map(o=>`<div class="tsday"><b>${fmtDateJa(d)}</b><span>${min2hm(o.at)}〜</span><span>${fmtMin(o.dur)}</span></div>`).join('')).join('')}
+      ${r.gid?`<div class="btnrow" style="margin-top:6px;"><button onclick="event.stopPropagation();tsUnmerge('${r.gid}')">🔗 統合を解除する</button></div>`:''}
+    </div>`:''}`;}).join('')
+    :`<div class="mini" style="padding:16px;">この月の記録はまだありません。<br>タスクのメニューの<b>「▶ 開始（時間をはかる）」</b>で計測すると、ここに「いつ・どれだけやったか」がたまっていきます。完了時の<b>「📝 詳しく記録」</b>で入れた時間も集計されます。</div>`}
+  <div style="height:24px;"></div>`;}
+function tsRowTap(key){_tsSel=(_tsSel===key?null:key);render();}
+function tsMsTgl(key){_tsMs.has(key)?_tsMs.delete(key):_tsMs.add(key);render();}
+async function tsMergeDo(){if(_tsMs.size<2){toast('2件以上えらんでください');return;}
+  const rows=tsAgg(tsMonthOf()).filter(r=>_tsMs.has(r.key));
+  const top=rows.slice().sort((a,b)=>b.min-a.min)[0];
+  const name=await uiPrompt('まとめた後の名前',top?top.name:'');
+  if(name==null)return;
+  const ids=[];
+  rows.forEach(r=>{
+    if(r.gid){const g=S.statGroups.find(s=>s.id===r.gid);
+      if(g){ids.push(...g.ids);S.statGroups=S.statGroups.filter(s=>s.id!==r.gid);}}
+    else if(r.taskId)ids.push(r.taskId);});
+  S.statGroups.push({id:uid(),name:(name||'').trim()||(top?top.name:'まとめ'),ids:[...new Set(ids)]});
+  _tsMerge=false;_tsMs=new Set();save();render();flashUndo('統合しました（🔗マークの行にまとまります）');}
+async function tsUnmerge(gid){if(!await uiConfirm('この統合を解除しますか？\n（記録は元のタスクごとに戻ります）','解除'))return;
+  S.statGroups=S.statGroups.filter(s=>s.id!==gid);_tsSel=null;save();render();flashUndo('統合を解除しました');}
 function completeCurrentFlow(sec,dmin){
   const it=flowList[flowIdx];const r=it.obj;const tok=it.type+'_'+r.id;const dm=dmin!=null?dmin:curMin();
   if(it.type==='r'){const st=r.stats||{n:0,total:0};const prevAvg=st.n?st.total/st.n:null;
     dayLog(todayStr()).routines[r.id]={done:true,sec,doneMin:dm};r.stats={n:st.n+1,total:st.total+sec};
     if(prevAvg!==null&&sec>0){if(sec<=prevAvg*0.92)toast('⤴ 好調！平均より '+fmtMin((prevAvg-sec)/60)+' 速い');else if(sec>=prevAvg*1.15)toast('💪 次はもっといけるよ');}
-  }else{r.status='done';r.doneAt=todayStr();r.doneMin=dm;r.doneSec=sec;}
+  }else{r.status='done';r.doneAt=todayStr();r.doneMin=dm;r.doneSec=sec;
+    const mn=Math.round(sec/60);if(mn>0)pushWorkLog(todayStr(),r.id,r.title,dm-mn,mn);}
   sinkDoItem(tok);save();flowAdvance();}
 function flowDone(){completeCurrentFlow(Math.round(flowElapsed()/1000),curMin());}
 function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
@@ -5331,6 +5479,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v2.76（2026-08-05）タスクのタイマー計測と「時間の記録」</b><br>
+  ・タスクのメニューに<b>「▶ 開始（時間をはかる）」</b>を追加（今日の一覧・バーチカル・日カレンダー）。開始すると<b>画面上部にバー</b>が出て、どのタブにいても経過が見えます<br>
+  ・バーをタップすると<b>中断・再開・終了</b>。終了時は<b>「✓記録して完了」「📝記録だけ（つづく）」「🗑記録せずやめる」</b>から選べます。アプリを閉じても計測はつづきます（当日中）<br>
+  ・同時に測れるのは1つ。<b>別のタスクを開始すると、前のタスクは自動で記録</b>されてから切り替わります<br>
+  ・記録は<b>⏱稼働</b>としてバーチカルと日カレンダーの記録にも出ます（いつ・どれだけやったかが見える）<br>
+  ・今日タブに<b>「⏱ 記録」</b>ボタンを追加。<b>月ごとのタスク別合計時間</b>が棒グラフで見られ、行をタップすると<b>日別の内訳</b>が出ます<br>
+  ・<b>🔗 統合</b>：別名で作ってしまった同じ内容のタスクを選んで<b>1つにまとめて集計</b>できます（あとから解除も可能）<br>
+  ・完了時の<b>「📝 詳しく記録」やルーティン開始（フロー）で入れた実測時間</b>も、同じ集計に載るようにしました<br>
+  </div>
   <div class="mini"><b>v2.75（2026-08-05）テンプレートタブ／タスクを6色に／深夜0時の並び</b><br>
   ・<b>タスクからグループ分けをなくし、パステル6色に一本化</b>しました。追加画面で<b>色の丸を1タップ</b>で選べて、今日タブ・バーチカル・週・月・日カレンダー・タスク一覧のすべてに色が反映されます。一覧のしぼり込みも色チップになりました<br>
   ・タスク・予定の追加画面に<b>［テンプレート］タブ</b>を追加。テンプレが<b>中身の見えるカード</b>で並び、タップで使えます。カードの<b>✎でその場編集</b>、▲▼で並べ替え、「いまの入力内容を登録」もできます<br>
@@ -6155,6 +6312,7 @@ function closeBedPlan(day){S._bedPlanFor=day;save();closeModal();}
 load();save();
 switchView('today');
 flowRestore();
+ttRestore(); // タスクタイマー（当日のみ復元＝リロードしても計測がつづく）
 checkDayRollover().then(()=>checkBedtimePlan());
 if(syncReady())pullState();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkDayRollover().then(()=>checkBedtimePlan());});
