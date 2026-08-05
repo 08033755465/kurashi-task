@@ -133,7 +133,10 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .bprow .bpnum{width:70px;flex:0 0 70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;}
 .bprow .bpnum.neg{color:var(--danger);font-weight:700;}
 /* 縦タイムライン（#6・B案：左＝配置済み／右＝未配置プール） */
+/* バーチカルと右のタスク一覧は別々にスクロールする（ドラッグ中でも夕方まで運べるように） */
 .tlwrap{display:flex;gap:8px;margin:8px 12px 4px;align-items:flex-start;position:relative;}
+.tlscroll{flex:1;min-width:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  max-height:min(68vh,620px);min-height:340px;border:1px solid var(--line2);}
 /* 予定タップ→右側にピヨっと出る詳細ポップ */
 .evpop{position:absolute;right:0;width:60%;max-width:230px;background:var(--card,#fff);border:1px solid var(--line);border-radius:12px !important;box-shadow:0 8px 26px rgba(0,0,0,.22);z-index:45;overflow:hidden;transform-origin:right top;animation:evpopin .18s cubic-bezier(.34,1.56,.64,1);}
 @keyframes evpopin{from{opacity:0;transform:scale(.8) translateX(8px);}to{opacity:1;transform:scale(1) translateX(0);}}
@@ -188,7 +191,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 #fabmenu .fabi .fl{font-size:8.5px;color:var(--sub);letter-spacing:.02em;}
 #fabmenu .fabi:active{background:var(--line2);}
 .tlnowbtn{pointer-events:auto;background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px !important;font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.28);}
-.tl{position:relative;flex:1;min-width:0;}
+.tl{position:relative;width:100%;}
 .tl .tlhr{position:absolute;left:44px;right:0;border-top:1px solid #C7CCD3;}
 .tl .tlhr.m{border-top:1px dashed #D8DCE2;}
 .tl .tlhr.m5{border-top:1px dotted #EDEFF2;}
@@ -225,8 +228,12 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl .tltask.chained::before{content:'';position:absolute;left:-3px;top:-2px;width:3px;height:4px;background:var(--sub);opacity:.5;}
 /* タスクは予定に重ねてよい。右寄せ＋左上を窪ませ、背面の予定の時刻とタイトルを見せる */
 .tl .tltask{position:absolute;left:auto;right:4px;width:58%;background:#fff;border-left:3px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.10);font-size:11.5px;line-height:1.2;padding:0 8px;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:6px;z-index:2;border-radius:6px !important;}
-.tl .tltask.notch{clip-path:polygon(38px 0,100% 0,100% 100%,0 100%,0 14px);padding-top:12px;align-items:flex-start;}
+/* 左上を四角く切り欠いて、背面の予定の時刻とタイトルを見せる（斜めにしない） */
+.tl .tltask.notch{clip-path:polygon(44px 0,100% 0,100% 100%,0 100%,0 15px,44px 15px);padding-top:14px;align-items:flex-start;}
 .tl .tltask .tlsn{font-style:normal;font-size:9px;color:var(--sub);border:1px solid var(--line);padding:0 3px;margin-left:4px;border-radius:3px !important;}
+/* ドラッグ中だけ時刻を出す（ふだんは名前のみ＝幅で所要時間が分かる） */
+.tl .tltask .tldragt{flex:0 0 auto;font-size:10px;color:var(--sub);font-variant-numeric:tabular-nums;}
+.tl .tltask.over .tldragt{color:var(--danger);}
 .tl .tltask .tltt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
 .tl .tltask .tltm{font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums;}
 .tl .tltask.over{background:#FCECEA;border-left-color:var(--danger)!important;}
@@ -246,7 +253,8 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tl.placing{cursor:pointer;outline:2px dashed var(--accent);outline-offset:-2px;}
 .tl.placing .tltask,.tl.placing .tlev{pointer-events:none;opacity:.5;}
 /* 右：未配置プール */
-.tlaside{flex:0 0 148px;width:148px;display:flex;flex-direction:column;gap:8px;position:sticky;top:calc(env(safe-area-inset-top) + 6px);align-self:flex-start;}
+.tlaside{flex:0 0 148px;width:148px;display:flex;flex-direction:column;gap:8px;align-self:stretch;
+  max-height:min(68vh,620px);min-height:340px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .tlpool{width:100%;display:flex;flex-direction:column;gap:5px;}
 /* バーチカル横の「今日のタスク」＝コンパクト表示 */
 .tlaside .sec{margin:0;padding:0;}
@@ -278,7 +286,7 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .tgrip svg{width:12px;height:12px;}
 .tgrip:active{background:var(--accent);color:#fff;border-color:var(--accent);}
 /* バーチカル横「ほかのタスク」＝今日以外も見落とさないための一覧 */
-.tlother{border:1px solid var(--line2);background:var(--bg);max-height:46vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+.tlother{border:1px solid var(--line2);background:var(--bg);}
 .tlotitle{font-size:10.5px;font-weight:700;color:var(--sub);padding:4px 6px;border-bottom:1px solid var(--line2);position:sticky;top:0;background:var(--bg);z-index:1;}
 .tloth{font-size:9.5px;color:var(--sub);padding:4px 6px 2px;background:var(--bg2);}
 .tloth.ov{color:var(--danger);font-weight:700;}
@@ -400,6 +408,9 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .wkev.imp{font-weight:800;box-shadow:0 1px 5px rgba(0,0,0,.2);}
 /* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
 .cev.mkonly{background:none !important;border-left:none !important;box-shadow:none !important;padding:3px 8px 4px 2px;}
+/* 「色は文字だけ」＝塗らずに左の色線だけ。付箋カラーありとひと目で区別できるように */
+.cev.plain{background:none !important;box-shadow:none;padding-left:8px;}
+.cev.plain .cevt{font-weight:600;}
 .cev.mkonly .cevt{font-size:15px;}
 .cev.mkonly .cevt .evmk{width:17px;height:17px;vertical-align:-4px;margin-right:0;}
 .cev .cevt{font-size:11.5px;line-height:1.25;word-break:break-word;font-weight:600;padding-right:12px;}
@@ -1145,7 +1156,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.72';
+const APP_VERSION='v2.73';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1916,6 +1927,8 @@ let _tlPendingScroll=false,_reorderFollow=null,_focusSearch=false,_justDoneTok=n
 function markJustDone(tok){_justDoneTok=tok;try{navigator.vibrate&&navigator.vibrate(20);}catch(e){}}
 function render(){
   const el=$('#view');const sy=window.scrollY;
+  // バーチカルと右一覧は独立スクロール。再描画で先頭に戻らないよう位置を控える
+  const tlY=$('.tlscroll')?.scrollTop||0,asY=$('.tlaside')?.scrollTop||0;
   if(view==='today')el.innerHTML=renderToday();
   else if(view==='shop')el.innerHTML=renderShopping();
   else if(view==='tasks')el.innerHTML=renderTasks();
@@ -1924,9 +1937,10 @@ function render(){
   else if(view==='habit')el.innerHTML=renderHabits();
   else el.innerHTML=renderSettings();
   window.scrollTo(0,sy); // 再描画でスクロール位置を保つ（チェック操作で上に飛ばない）
+  if(tlY){const b=$('.tlscroll');if(b)b.scrollTop=tlY;}
+  if(asY){const a=$('.tlaside');if(a)a.scrollTop=asY;}
   updateFlowBar();attachCellPress();attachCalSwipe();wkRestoreSel();
-  if(_tlPendingScroll&&view==='today'){_tlPendingScroll=false;
-    const n=$('.tlnow')||$('.tl');if(n){const r=n.getBoundingClientRect();window.scrollBy(0,r.top-140);}}
+  if(_tlPendingScroll&&view==='today'){_tlPendingScroll=false;tlScrollNow();}
   if(_reorderFollow){const row=document.querySelector(_reorderFollow);_reorderFollow=null;
     if(row){const r=row.getBoundingClientRect();if(r.top<90||r.bottom>window.innerHeight-90)window.scrollBy(0,r.top-160);}}
   if(_focusSearch){_focusSearch=false;const el=$('#taskSearch');if(el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
@@ -2408,7 +2422,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     const cls=`tltask${bl.over?' over':''}${(bl.done||bl.sdone)?' done':''}${bl.pinned?' pinned':''}${tlSel.includes(tk)?' tlsel':''}${cp>0?' chained':''}${bl.h>=26?' notch':''}`;
     const tap=bl.sdone?`slotTap('${it.obj.id}','${sid}',event)`:`tlItemTap('${tk}',${bl.done?1:0},event,'${sid}')`;
     return `<div class="${cls}${bl.shifted?' shifted':''}" data-sid="${sid}" style="top:${y(bl.top)}px;height:${bl.h-3}px;border-left-color:${bc}" ${placing?'':`onclick="${tap}"${(bl.done||bl.sdone)?'':` onpointerdown="tlTaskDown(event,'${tk}','${sid}')"`}`}>
-      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${bl.sdone?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}${nSlot>1?`<i class="tlsn">${nSlot}コマ</i>`:''}</span><span class="tltm">${bl.done?'↩ ':''}${bl.shifted?'↓':''}${min2hm(bl.top)}・${fmtMin(bl.est)}</span></div>`;}).join('');
+      <span class="tltt">${tlSel.includes(tk)?'✓ ':''}${bl.sdone?'✓ ':''}${it.type==='r'?(it.obj.mark?`<span class="evmk">${icSvg(it.obj.mark)}</span> `:'🔁 '):''}${esc(it.obj.title)}${nSlot>1?`<i class="tlsn">${nSlot}コマ</i>`:''}</span><span class="tldragt"></span></div>`;}).join('');
   const goalH=goalsOf(t).slice().sort((a,b)=>A(a.at)-A(b.at)).map(g=>{const s=goalSlack(t,g);
     const bad=s.need>0&&(s.left<=0||s.slack<0);
     const tail=s.need>0?(s.left<=0?'・時間切れ':(s.slack>=0?'・余裕'+fmtMin(s.slack):'・不足'+fmtMin(-s.slack))):'';
@@ -2455,14 +2469,26 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
       </div></div>`;})():'';
   const tasksAside=todayTaskChecklist(t,true)+asideAllTasks(t);
   return `${hint}<div class="tlwrap">
-    <div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${blockH}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}${gutterH}</div>
+    <div class="tlscroll"><div class="tl${placing?' placing':''}" style="height:${H}px" onclick="${placing?'placeAtClick(event)':'tlEmptyTap(event)'}">${zoneH}${ticks}${blockH}${sleepLine}${evH}${logH}${taskH}${goalH}${nowLine}${gutterH}</div></div>
     <div class="tlaside">${poolHtml}${tasksAside}</div>${evPop}</div>${actionBar}
     ${t===todayStr()&&!flowList.length?`<div class="tlnowbtns"><button class="tlnowbtn" onclick="tlScrollTop()">↑ 先頭へ</button><button class="tlnowbtn" onclick="tlScrollNow()">🕐 今へ</button></div>`:''}
     ${overAny?`<div class="tlwarn">⚠ 終了（${min2hm(s)}）を過ぎる配置があります。時間をずらすか、いくつか明日へ回しましょう。</div>`
       :(tlEvSel?'':(pool.length?`<div class="mini" style="padding:2px 16px 8px;">右の一覧の<b>🕐を押したまま時間軸へ運ぶ</b>と、その時間に置けます。置いたタスクは<b>長押ししてから上下</b>で時刻を変更。タップで近くにメニュー。</div>`
         :'<div class="mini" style="padding:2px 16px 8px;">右の一覧の<b>🕐を押したまま時間軸へ運ぶ</b>と、その時間に置けます。置いたタスクは<b>長押ししてから上下</b>で時刻を変更。</div>'))}`;}
-function tlScrollNow(){const n=$('.tlnow');if(n){const r=n.getBoundingClientRect();window.scrollBy({top:r.top-160,behavior:'smooth'});}}
-function tlScrollTop(){const el=$('.tlwrap');if(el){const r=el.getBoundingClientRect();window.scrollBy({top:r.top-120,behavior:'smooth'});}}
+/* バーチカルは自前のスクロール枠（.tlscroll）を動かす */
+function tlBox(){return $('.tlscroll');}
+function tlScrollTo(px,smooth){const b=tlBox();if(!b)return;
+  const to=Math.max(0,Math.min(px,b.scrollHeight-b.clientHeight));
+  const from=b.scrollTop,d=to-from;if(!d)return;
+  if(!smooth||Math.abs(d)<40){b.scrollTop=to;return;}
+  // setTimeout で動かす（画面が裏にあると requestAnimationFrame が止まるため）
+  const t0=Date.now(),ms=240;
+  const step=()=>{const k=Math.min(1,(Date.now()-t0)/ms);b.scrollTop=from+d*(1-Math.pow(1-k,3));
+    if(k<1)setTimeout(step,16);};
+  step();}
+function tlScrollNow(){const b=tlBox(),n=$('.tlnow');if(!b||!n)return;
+  tlScrollTo(n.offsetTop-b.clientHeight*0.35,true);}
+function tlScrollTop(){tlScrollTo(0,true);}
 /* タイムラインの空き部分をタップ→その時刻に予定/記録を追加（選択中はまず解除） */
 function tlEmptyTap(ev){if(placeToks)return;
   if(ev.target.closest('.tltask,.tlev,.tllog,.evpop,.tlgoal'))return;
@@ -2563,10 +2589,17 @@ function slotBadge(d,x){if(x.status==='done')return '';
   const first=(sl.find(o=>!o.done)||sl[0]).s;
   return `<span class="tcat${left?'':' alldone'}">${CLOCKI}${min2hm(first)}${sl.length>1?`<i>+${sl.length-1}</i>`:''}</span>`;}
 function todayTaskChecklist(t,inTL){
-  const tasks=todayTasks(t).slice().sort(chkTaskSort);
+  // まだ時間を決めていないものを上に、決めたものは下へ時間順（何が未配置かひと目で分かる）
+  const tasks=todayTasks(t).slice().sort((a,b)=>{
+    const da=(a.status==='done')-(b.status==='done');if(da)return da;
+    const sa=taskSlots(t,a.id),sb=taskSlots(t,b.id);
+    const pa=sa.length?1:0,pb=sb.length?1:0;if(pa!==pb)return pa-pb;
+    if(pa)return sa[0].s-sb[0].s;
+    return chkTaskSort(a,b);});
   if(!tasks.length)return '';
   const openN=tasks.filter(x=>x.status!=='done').length;const at=(dayLog(t).at)||{};
-  return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}）<button class="act" onclick="switchView('tasks')">タスク一覧 ▸</button></div>
+  const unset=tasks.filter(x=>x.status!=='done'&&!taskSlots(t,x.id).length).length;
+  return `<div class="sec"><div class="sec-h">今日のタスク（残り${openN}${unset?`・未配置${unset}`:''}）<button class="act" onclick="switchView('tasks')">タスク一覧 ▸</button></div>
     <div class="tchk">${tasks.map(x=>`<div class="tchkr ${x.status==='done'?'done':''}" data-lp="t_${x.id}" style="${taskBg(x)?`background:${taskBg(x)};`:''}">
       <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?CHK:''}</div>
       <div class="tct ${x.repeat?'cont':''}" onclick="chkTaskMenu('${x.id}',event)">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}</div>
@@ -2649,6 +2682,17 @@ function tlDropSet(tok,ax,sid){const t=todayStr();
     else placeTaskAt(x,t,mn,0,true);}
   else{const dl=dayLog(t);dl.at=dl.at||{};dl.at[tok]=mn;}
   if(S.settings.chainFlow!==false)chainRelink(t,tok);}
+/* ドラッグ中、枠の上端／下端に近づいたら自動でスクロール（夕方など画面外へも置ける） */
+let _tlAuto=null;
+function tlAutoScroll(clientY){const b=tlBox();if(!b){tlAutoStop();return;}
+  const r=b.getBoundingClientRect(),M=56;
+  let v=0;
+  if(clientY<r.top+M)v=-Math.min(14,Math.ceil((r.top+M-clientY)/4));
+  else if(clientY>r.bottom-M)v=Math.min(14,Math.ceil((clientY-(r.bottom-M))/4));
+  if(!v){tlAutoStop();return;}
+  if(_tlAuto&&_tlAuto.v===v)return;
+  tlAutoStop();_tlAuto={v,id:setInterval(()=>{b.scrollTop+=v;},16)};}
+function tlAutoStop(){if(_tlAuto){clearInterval(_tlAuto.id);_tlAuto=null;}}
 function tlPlaceDown(ev,tok){
   if(ev.pointerType==='mouse'&&ev.button!==0)return;
   ev.stopPropagation();ev.preventDefault();
@@ -2658,9 +2702,13 @@ function tlPlaceDown(ev,tok){
   const ghost=document.createElement('div');ghost.className='tlghost';document.body.appendChild(ghost);
   document.body.classList.add('tldragging');
   let ax=null;
+  const box=tlBox();
   const mv=e=>{e.preventDefault();
+    tlAutoScroll(e.clientY); // 枠の端でとまったら自動でスクロール
+    const br=box?box.getBoundingClientRect():null;
     const r=tl.getBoundingClientRect();
-    const inside=e.clientX>=r.left-40&&e.clientY>=r.top-24&&e.clientY<=r.bottom+24;
+    const inBox=br?(e.clientY>=br.top-6&&e.clientY<=br.bottom+6):true;
+    const inside=inBox&&e.clientX>=r.left-40&&e.clientY>=r.top-24&&e.clientY<=r.bottom+24;
     if(!inside){ax=null;ghost.className='tlghost off';ghost.style.left=(e.clientX-40)+'px';ghost.style.top=(e.clientY-14)+'px';ghost.style.width='';ghost.textContent='時間軸まで運んでください';return;}
     let v=w+(e.clientY-r.top)/tlPx();v=Math.round(v/5)*5;v=Math.max(w,Math.min(v,w+1440-5));ax=v;
     ghost.className='tlghost';
@@ -2670,7 +2718,7 @@ function tlPlaceDown(ev,tok){
   const tm=e=>e.preventDefault();
   const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);
     document.removeEventListener('pointercancel',up);document.removeEventListener('touchmove',tm);
-    ghost.remove();document.body.classList.remove('tldragging');
+    tlAutoStop();ghost.remove();document.body.classList.remove('tldragging');
     if(ax==null){toast('時間軸の上ではなしてください');return;}
     snapUndo();tlDropSet(tok,ax);
     lpSuppress=true;setTimeout(()=>{lpSuppress=false;},400);
@@ -2685,7 +2733,7 @@ function tlTaskDown(ev,tok,sid){
   const t=todayStr(),w=hm2min(dayWake(t));
   const sx=ev.clientX,sy=ev.clientY;let armed=false,ax=null;
   const tm=e=>{if(armed)e.preventDefault();};
-  const off=()=>{clearTimeout(timer);document.removeEventListener('pointermove',mv);
+  const off=()=>{clearTimeout(timer);tlAutoStop();document.removeEventListener('pointermove',mv);
     document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);
     document.removeEventListener('touchmove',tm);};
   const timer=setTimeout(()=>{armed=true;el.classList.add('tldrag');
@@ -2693,10 +2741,11 @@ function tlTaskDown(ev,tok,sid){
   const mv=e=>{
     if(!armed){if(Math.abs(e.clientY-sy)>10||Math.abs(e.clientX-sx)>10)off();return;}
     e.preventDefault();
+    tlAutoScroll(e.clientY); // 枠の端でとまったら自動でスクロール
     const r=tl.getBoundingClientRect();
     let v=w+(e.clientY-r.top)/tlPx();v=Math.round(v/5)*5;v=Math.max(w,Math.min(v,w+1440-5));ax=v;
     el.style.top=((v-w)*tlPx())+'px';
-    const lab=el.querySelector('.tltm');if(lab)lab.textContent=min2hm(((v%1440)+1440)%1440);};
+    const lab=el.querySelector('.tldragt');if(lab)lab.textContent=min2hm(((v%1440)+1440)%1440);};
   const up=()=>{off();el.classList.remove('tldrag');
     if(!armed)return;                       // 長押し前に離した＝ふつうのタップ（近接ポップ）
     lpSuppress=true;setTimeout(()=>{lpSuppress=false;},400); // ドラッグ直後の click だけ止める（残って次のタップを食べないよう自動解除）
@@ -3317,13 +3366,13 @@ function scheduleListHtml(evs,wake,dstr){
   let cur=null,html='';
   sorted.forEach(e=>{const b=bandOf(e.start,wake);
     if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
-    const mo=!!e.markOnly;const bg=evColor(e),tc=mo?evLine(e):evTextColor(bg);
-    const st=mo?`color:${tc};`:`background:${bg};color:${tc};`;
-    html+=`<div class="cev dcev${e.important?' imp':''}${mo?' mkonly':''}" style="${st}" onclick="eventTap('${e.id}',${dstr?`'${dstr}'`:'null'},event)">
+    const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e),tc=(mo||nf)?evLine(e):evTextColor(bg);
+    const st=(mo||nf)?`color:${tc};${nf?`border-left:3px solid ${evLine(e)};`:''}`:`background:${bg};color:${tc};`;
+    html+=`<div class="cev dcev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}" style="${st}" onclick="eventTap('${e.id}',${dstr?`'${dstr}'`:'null'},event)">
       ${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}
       <div class="cevt">${evLabel(e)}</div>
-      <div class="cevm" style="color:${mo?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
-      ${e.memo?`<div class="cevmemo" style="color:${mo?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
+      <div class="cevm" style="color:${(mo||nf)?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
+      ${e.memo?`<div class="cevmemo" style="color:${(mo||nf)?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
   return html;}
 function setMonthFont(k){if(!MONTH_FONTS[k])return;S.settings.monthFont=k;save();render();}
 /* 週表示（Googleカレンダー方式）：重なる予定をレーンに割り振る */
@@ -5097,6 +5146,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v2.73（2026-08-05）バーチカルの使い勝手（実機フィードバック5件）</b><br>
+  ・<b>バーチカルと右のタスク一覧が別々にスクロール</b>するようになりました。ドラッグ中に<b>枠の端まで運ぶと自動でスクロール</b>するので、夕方など画面の外の時間にも置けます<br>
+  ・置いたタスクの<b>時刻・所要時間の表示をやめ、タスク名だけ</b>に（長さは幅で分かるため）。時刻は<b>ドラッグしている間だけ</b>出ます<br>
+  ・今日のタスク一覧を<b>「まだ時間を決めていないもの」が上・「決めたもの」は下に時間順</b>で並ぶようにしました。見出しに<b>未配置の数</b>も出ます<br>
+  ・タスクの左上の切り欠きが<b>斜めで不格好だったのを四角い段差</b>に直しました<br>
+  ・カレンダーの<b>日表示</b>で、<b>「色は文字だけ」の予定と付箋カラーありの予定が見分けられる</b>ように（今まで日表示だけ、どちらも色で塗られていました）<br>
+  </div>
   <div class="mini"><b>v2.72（2026-08-05）グループと色の設定を1か所にまとめました</b><br>
   ・グループの管理・カラーパレット・色の名前・タスクの色の並び順が<b>3か所に分かれていた</b>のを、<b>「グループ（カテゴリ）と色」1画面</b>に統合しました（［グループ］［色］の2タブ）<br>
   ・グループ一覧の<b>色チップをタップするだけで色を変えられる</b>ように（編集画面を開かなくてOK）。<b>▲▼で並べ替え</b>も同じ画面にあります<br>
