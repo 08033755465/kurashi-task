@@ -1195,7 +1195,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v2.76';
+const APP_VERSION='v2.77';
 /* 色系統パレット: 8系統×4階調（列＝系統、上から濃→淡） */
 const PALETTE=(()=>{const F=[
  ['#1E4FD8','#4A78E8','#84A7F0','#BDD0F7'],  /* 青 */
@@ -1210,7 +1210,8 @@ const PALETTE=(()=>{const F=[
 /* 繰り返しの表示（毎週 火・金／毎月25日 のように分かるように） */
 function repLabelT(x){if(!x||!x.repeat)return '';
   if(x.repeat==='weekly'&&x.repDays&&x.repDays.length)return '毎週'+x.repDays.slice().sort((a,b)=>a-b).map(d=>WD[d]).join('・');
-  if(x.repeat==='monthly'&&x.repDom)return '毎月'+x.repDom+'日';
+  if(x.repeat==='monthly'){const n=(+x.repMonthN>0)?+x.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    return x.repDom?base+x.repDom+'日':base;}
   return REPEAT_LABEL_T[x.repeat]||'';}
 const QUADS=[
  {t:'今すぐやる',s:'重要×緊急',c:'#C9403C'},
@@ -1661,12 +1662,18 @@ function eventOccursOn(e,dstr){
   // 毎月：日にちを選んでいればその日（月末より大きい指定は月末に寄せる）
   if(e.repeat==='monthly'){
     const t=parseDs(dstr);
+    // Nヶ月ごと：基準月からの月差がNの倍数の月だけ
+    const b=parseDs(e.date);const N=(+e.repMonthN>0)?+e.repMonthN:1;
+    if(((t.getFullYear()-b.getFullYear())*12+(t.getMonth()-b.getMonth()))%N)return false;
     if(e.repDom){const dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
       return t.getDate()===Math.min(e.repDom,dim);}
-    return parseDs(e.date).getDate()===t.getDate();}
+    return b.getDate()===t.getDate();}
   return e.date===dstr;}
 function evTitle(e){return e.title&&e.title.trim()?e.title:(e.start?e.start+'の予定':'予定');}
-function repTag(e){return e.repeat?`<span class="rep">🔁${REPEAT_LABEL[e.repeat]||''}</span>`:'';}
+function evRepText(e){if(!e||!e.repeat)return'';
+  if(e.repeat==='monthly'){const n=(+e.repMonthN>0)?+e.repMonthN:1;return n===1?'毎月':repNLabel(n);}
+  return REPEAT_LABEL[e.repeat]||'';}
+function repTag(e){return e.repeat?`<span class="rep">🔁${evRepText(e)}</span>`:'';}
 /* 予定・タスクのフォームからその場で新規カテゴリ追加 */
 /* 予定・タスクのフォームから、その場で新規カテゴリ（親・子どちらも）を作成 */
 let _giCb=null;
@@ -2506,7 +2513,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     return `<div class="evpop" style="top:${Math.max(0,top-6)}px;">
       <div class="evpoph" style="background:${bg};color:${tc};"><b>${evMk(e)}${esc(evTitle(e))}</b><button style="color:${tc};" onclick="tlEvSel=null;render()">✕</button></div>
       <div class="evpopb">
-        <div class="evpopt">${CLOCKI}${evTimeText(e)}${e.repeat?' ・'+(REPEAT_LABEL[e.repeat]||''):''}</div>
+        <div class="evpopt">${CLOCKI}${evTimeText(e)}${e.repeat?' ・'+evRepText(e):''}</div>
         <div class="evpopcat"><span class="dot" style="background:${bg}"></span>${esc(groupPath(e.groupId))}</div>
         ${e.memo?`<div class="evpopmemo">${linkify(e.memo)}</div>`:''}
         ${e.links&&e.links.length?linkChips(e.links):''}
@@ -3278,7 +3285,9 @@ function fabRun(k){const f=_fabFns[k];fabClose();if(f)f();}
 function quickAddPop(){taskModal(null,'',true);}
 function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
-let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
+let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
+/* Nヶ月ごとの言いかた（タスク・予定・テンプレで共通） */
+function repNLabel(n){n=+n||1;return n===1?'毎月':n===6?'半年ごと':n===12?'1年ごと':`${n}ヶ月ごと`;}
 let _tfPlace=null; // 週カレンダーで時間を決めてから作るとき {d,s,e}
 let _tfTab='form',_tfTmplEdit=null,_tfKeepEst=true,_tfHold=null; // テンプレタブ（v2.75）
 function taskModal(id,presetDue,presetToday,place){
@@ -3290,7 +3299,7 @@ function taskModal(id,presetDue,presetToday,place){
   _tfColor=x?(x.color??null):null; // タスクはグループではなくパステル6色（v2.75）
   _tfDue=x?.due||presetDue||'';
   _tfToday=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');
-  _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;
+  _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;_tfRepMonthN=(+x?.repMonthN>0)?+x.repMonthN:1;
   _tfDueOpen=false;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
   tfRender(true);}
 function tfTabsHtml(){return `<div class="tftabs">
@@ -3361,7 +3370,8 @@ function taskTmplSorted(){return (S.taskTemplates||[]).slice().sort((a,b)=>(a.or
 function tmplRepTextT(t){if(!t.repeat)return'';
   if(t.repeat==='daily')return'毎日';
   if(t.repeat==='weekly')return (t.repDays&&t.repDays.length)?'毎週'+t.repDays.slice().sort().map(d=>WD[d]).join('・'):'毎週';
-  if(t.repeat==='monthly')return t.repDom?`毎月${t.repDom}日`:'毎月';
+  if(t.repeat==='monthly'){const n=(+t.repMonthN>0)?+t.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    return t.repDom?`${base}${t.repDom}日`:base;}
   return'';}
 function tfTmplListHtml(){const list=taskTmplSorted();
   return `<div class="tmplbody">
@@ -3384,14 +3394,14 @@ function tfTmplListHtml(){const list=taskTmplSorted();
 function tfTmplEditOpen(id){const t=id?S.taskTemplates.find(v=>v.id===id):null;
   _tfTmplEdit=id||'';_tfTab='form';
   _tfColor=t?(t.color??null):null;
-  _tfRepeat=t?.repeat||'';_tfRepDays=(t?.repDays||[]).slice();_tfRepDom=t?.repDom??null;
+  _tfRepeat=t?.repeat||'';_tfRepDays=(t?.repDays||[]).slice();_tfRepDom=t?.repDom??null;_tfRepMonthN=(+t?.repMonthN>0)?+t.repMonthN:1;
   _tfKeepEst=t?t.keepEst!==false:true;
   editLinks=(t?.links||[]).map(l=>({...l}));editImages=[];
   tfRender(true);}
 function saveTaskTmpl(){
   const title=($('#tmTitle')?.value||'').trim();if(!title){uiAlert('テンプレの名前（タスク名）を入力してください');return;}
   const data={title,color:_tfColor,estMin:+($('#tmEst')?.value)||0,priority:+($('#tmPrio')?.value||2),
-    repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,
+    repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
     memo:$('#tmMemo')?.value||'',links:editLinks.map(l=>({...l})),keepEst:_tfKeepEst};
   if(_tfTmplEdit){const t=S.taskTemplates.find(v=>v.id===_tfTmplEdit);if(t)Object.assign(t,data);}
   else S.taskTemplates.push({id:uid(),...data,order:S.taskTemplates.length});
@@ -3401,12 +3411,12 @@ function saveTaskTmpl(){
 function tfTmplFromForm(){const h=_tfHold||{};const title=(h.title||'').trim();
   if(!title){uiAlert('先に「入力」タブでタスク名を入れてください');return;}
   S.taskTemplates.push({id:uid(),title,color:_tfColor,estMin:+h.est||0,priority:+(h.prio||2),
-    repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,memo:h.memo||'',
+    repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,memo:h.memo||'',
     links:editLinks.map(l=>({...l})),keepEst:true,order:S.taskTemplates.length});
   save();tfRender();toast(`「${title}」をテンプレに登録しました`);}
 function applyTaskTmpl(id){const t=S.taskTemplates.find(v=>v.id===id);if(!t)return;
   _tfColor=t.color??null;
-  _tfRepeat=t.repeat||'';_tfRepDays=(t.repDays||[]).slice();_tfRepDom=t.repDom??null;
+  _tfRepeat=t.repeat||'';_tfRepDays=(t.repDays||[]).slice();_tfRepDom=t.repDom??null;_tfRepMonthN=(+t.repMonthN>0)?+t.repMonthN:1;
   editLinks=(t.links||[]).map(l=>({...l}));
   _tfTab='form';_tfHold=null;tfRender();
   const el=$('#tmTitle');if(el)el.value=t.title||'';
@@ -3443,11 +3453,13 @@ function tfRepeatHtml(){
     detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
       return `<button type="button" class="${_tfRepDays.includes(d)?'on':''}" onclick="tfToggleRepDay(${d})">${WD[d]}</button>`;}).join('')}</div>
       <div class="mini">${_tfRepDays.length?`毎週 ${_tfRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:'曜日を選ばないと「完了した日の7日後」になります'}</div>`;}
-  if(_tfRepeat==='monthly'){ // カレンダーと同じ見た目の1〜31グリッド
-    detail=`<div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
-      <div class="mini">${_tfRepDom?`毎月 ${_tfRepDom}日にくり返します`:'日を選ばないと「完了した日の1か月後」になります'}</div>`;}
+  if(_tfRepeat==='monthly'){ // 間隔（Nヶ月ごと）＋カレンダーと同じ見た目の1〜31グリッド
+    detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_tfRepMonthN===n?'on':''}" onclick="tfPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>
+      <div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+      <div class="mini">${_tfRepDom?`${repNLabel(_tfRepMonthN)} ${_tfRepDom}日にくり返します（ない月は月末）`:`日を選ばないと「完了した日の${_tfRepMonthN===1?'1か月':repNLabel(_tfRepMonthN).replace('ごと','')}後」になります`}</div>`;}
   return `<div class="btnrow" id="tmRepRow">${tabs}</div>${detail}`;}
-function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly')_tfRepDom=null;tfRender();}
+function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly'){_tfRepDom=null;_tfRepMonthN=1;}tfRender();}
+function tfPickRepN(n){_tfRepMonthN=n;tfRender();}
 function tfToggleRepDay(d){const i=_tfRepDays.indexOf(d);i>=0?_tfRepDays.splice(i,1):_tfRepDays.push(d);tfRender();}
 function tfPickDom(n){_tfRepDom=(_tfRepDom===n?null:n);tfRender();}
 function pickBtn(rowId,hiddenId,val){const h=$('#'+hiddenId);if(h)h.value=val;
@@ -3458,7 +3470,7 @@ function saveTask(id){
   snapUndo();
   const today=_tfToday==='today'?todayStr():_tfToday==='tomorrow'?tomorrowStr():null;
   const data={title,estMin:+$('#tmEst').value||0,priority:+($('#tmPrio')?.value||2),
-    due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,
+    due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),};
   let savedId=id;
@@ -3951,12 +3963,13 @@ function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
       if(days.includes(c.getDay()))return dsOf(c);}}
     d.setDate(d.getDate()+7);}
   else if(repeat==='monthly'){
-    if(dom){ // その月に無い日（31日など）は月末に丸める。丸めた結果が今日以前なら翌月へ
-      const mk=(y,m)=>new Date(y,m,Math.min(dom,new Date(y,m+1,0).getDate()));
-      let c=mk(d.getFullYear(),d.getMonth());
-      if(c<=d)c=mk(d.getFullYear(),d.getMonth()+1);
-      return dsOf(c);}
-    d.setMonth(d.getMonth()+1);}
+    const N=(x&&+x.repMonthN>0)?+x.repMonthN:1; // Nヶ月ごと（既定＝毎月）
+    const dd0=dom||d.getDate();
+    // その月に無い日（31日など）は月末に丸める。丸めた結果が今日以前ならNヶ月先へ
+    const mk=(y,m)=>new Date(y,m,Math.min(dd0,new Date(y,m+1,0).getDate()));
+    let c=dom?mk(d.getFullYear(),d.getMonth()):null;
+    if(!c||c<=d)c=mk(d.getFullYear(),d.getMonth()+N);
+    return dsOf(c);}
   else return null;
   return dsOf(d);}
 /* 繰り返しタスク：今日は「完了」のまま残す（グレー・戻せる）。次回日付へ進め、日付が変わったら自動で未完了に復活 */
@@ -4301,6 +4314,7 @@ function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選�
 
 /* ===== event modal ===== */
 /* ===== 予定の入力（タスクと同じ中央ポップ／状態は変数に集約して毎回描き直す） ===== */
+let _emRepMonthN=1;
 let _emId=null,_emDate='',_emStart='',_emEnd='',_emGroup='',_emHue=-1,_emMark='',_emCat='イベント',
     _emRepeat='',_emRepDays=[],_emRepDom=null,_emUntil='',_emImp=false,_emMarkOnly=false,_emNoFill=false,
     _emCalOpen=false,_emCalY=0,_emCalX=0,_emStash=null;
@@ -4315,7 +4329,7 @@ function eventModal(id,presetDate,presetStart,occDate,presetEnd){
   _emStart=e?.start??presetStart??'';_emEnd=e?.end??presetEnd??'';
   _emGroup=e?.groupId||lastEvGroupId();
   _emHue=(e?.hue??-1);_emMark=e?.mark||'';_emCat=(e?.mark&&ICONS[e.mark]?ICONS[e.mark].c:'イベント');
-  _emRepeat=e?.repeat||'';_emRepDays=(e?.repDays||[]).slice();_emRepDom=e?.repDom??null;_emUntil=e?.until||'';
+  _emRepeat=e?.repeat||'';_emRepDays=(e?.repDays||[]).slice();_emRepDom=e?.repDom??null;_emRepMonthN=(+e?.repMonthN>0)?+e.repMonthN:1;_emUntil=e?.until||'';
   _emImp=!!e?.important;_emMarkOnly=!!e?.markOnly;_emNoFill=!!e?.noFill;
   _emCalOpen=false;const d0=parseDs(_emDate);_emCalY=d0.getFullYear();_emCalX=d0.getMonth();
   emRender(true);}
@@ -4440,13 +4454,15 @@ function emRepeatHtml(){
       return `<button type="button" class="${_emRepDays.includes(d)?'on':''}" onclick="emTglDay(${d})">${WD[d]}</button>`;}).join('')}</div>
       <div class="mini">${_emRepDays.length?`毎週 ${_emRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:`曜日を選ばないと「${WD[parseDs(_emDate).getDay()]}曜日」だけになります`}</div>`;}
   if(_emRepeat==='monthly'){
-    detail=`<div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_emRepDom===i+1?'on':''}" onclick="emPickDom(${i+1})">${i+1}</button>`).join('')}</div>
-      <div class="mini">${_emRepDom?`毎月 ${_emRepDom}日（ない月は月末）`:`日を選ばないと「${parseDs(_emDate).getDate()}日」になります`}</div>`;}
+    detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_emRepMonthN===n?'on':''}" onclick="emPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>
+      <div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_emRepDom===i+1?'on':''}" onclick="emPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+      <div class="mini">${_emRepDom?`${repNLabel(_emRepMonthN)} ${_emRepDom}日（ない月は月末）`:`日を選ばないと「${parseDs(_emDate).getDate()}日」になります`}</div>`;}
   const until=_emRepeat?`<div class="btnrow" style="margin-top:6px;">
     <button type="button" class="${_emUntil?'on':''}" onclick="emUntilPick()">${_emUntil?'～'+fmtDateJa(_emUntil)+' まで':'ずっと'}</button>
     ${_emUntil?`<button type="button" onclick="emUntilClear()">ずっとに戻す</button>`:''}</div>`:'';
   return `<div class="btnrow">${tabs}</div>${detail}${until}`;}
-function emPickRepeat(v){_emRepeat=v;if(v!=='weekly')_emRepDays=[];if(v!=='monthly')_emRepDom=null;if(!v)_emUntil='';emSyncTime();emRender();}
+function emPickRepeat(v){_emRepeat=v;if(v!=='weekly')_emRepDays=[];if(v!=='monthly'){_emRepDom=null;_emRepMonthN=1;}if(!v)_emUntil='';emSyncTime();emRender();}
+function emPickRepN(n){_emRepMonthN=n;emSyncTime();emRender();}
 function emTglDay(d){const i=_emRepDays.indexOf(d);i>=0?_emRepDays.splice(i,1):_emRepDays.push(d);emSyncTime();emRender();}
 function emPickDom(n){_emRepDom=(_emRepDom===n?null:n);emSyncTime();emRender();}
 function emUntilClear(){_emUntil='';emRender();}
@@ -4474,7 +4490,8 @@ function tmplSorted(){return (S.templates||[]).slice().sort((a,b)=>(a.order??1e9
 function tmplRepTextE(t){if(!t.repeat)return'';
   if(t.repeat==='weekly')return (t.repDays&&t.repDays.length)?'毎週'+t.repDays.slice().sort().map(d=>WD[d]).join('・'):'毎週';
   if(t.repeat==='biweekly')return'隔週';
-  if(t.repeat==='monthly')return t.repDom?`毎月${t.repDom}日`:'毎月';
+  if(t.repeat==='monthly'){const n=(+t.repMonthN>0)?+t.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    return t.repDom?`${base}${t.repDom}日`:base;}
   return'';}
 function emTmplListHtml(){const list=tmplSorted();
   return `<div class="tmplbody">
@@ -4517,7 +4534,7 @@ function emTmplPickHtml(){const t=S.templates.find(x=>x.id===_emTmplPick);if(!t)
 function emTmplTgl(ds){_emTmplDates.has(ds)?_emTmplDates.delete(ds):_emTmplDates.add(ds);emRender();}
 function emTmplCalNav(k){_emCalX+=k;if(_emCalX<0){_emCalX=11;_emCalY--;}if(_emCalX>11){_emCalX=0;_emCalY++;}emRender();}
 function evFromTmpl(t,date){return {id:uid(),title:t.title||'',date,groupId:t.groupId,
-  repeat:t.repeat||'',repDays:(t.repDays||[]).slice(),repDom:t.repDom??null,
+  repeat:t.repeat||'',repDays:(t.repDays||[]).slice(),repDom:t.repDom??null,repMonthN:(+t.repMonthN>0)?+t.repMonthN:1,
   start:t.keepTime!==false?(t.start||''):'',end:t.keepTime!==false?(t.end||''):'',
   memo:t.memo||'',important:!!t.important,mark:t.mark||'',markOnly:!!t.markOnly,noFill:!!t.noFill,
   hue:t.hue??null,links:(t.links||[]).map(l=>({...l})),images:[]};}
@@ -4535,7 +4552,7 @@ function applyTmpl(tid,date){const t=S.templates.find(x=>x.id===tid);if(!t)retur
   if(t.keepTime!==false){_emStart=t.start||'';_emEnd=t.end||'';}
   _emHue=(t.hue??-1);_emMark=t.mark||'';if(t.mark&&ICONS[t.mark])_emCat=ICONS[t.mark].c;
   _emImp=!!t.important;_emMarkOnly=!!t.markOnly;_emNoFill=!!t.noFill;
-  _emRepeat=t.repeat||'';_emRepDays=(t.repDays||[]).slice();_emRepDom=t.repDom??null;
+  _emRepeat=t.repeat||'';_emRepDays=(t.repDays||[]).slice();_emRepDom=t.repDom??null;_emRepMonthN=(+t.repMonthN>0)?+t.repMonthN:1;
   editLinks=(t.links||[]).map(l=>({...l}));
   if(date){_emDate=date;const d=parseDs(date);_emCalY=d.getFullYear();_emCalX=d.getMonth();}
   _emTab='form';_emTmplPick=null;_emHold=null;
@@ -4547,7 +4564,7 @@ function applyTmpl(tid,date){const t=S.templates.find(x=>x.id===tid);if(!t)retur
 function emCurrentTmplData(){return {title:($('#emTitle')?.value||'').trim(),groupId:_emGroup,
   start:$('#emStart')?.value||'',end:$('#emEnd')?.value||'',memo:$('#emMemo')?.value||'',links:editLinks.map(l=>({...l})),
   hue:_emHue>=0?_emHue:null,mark:_emMark,important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,
-  repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom};}
+  repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1};}
 /* カードの✎＝同じフォームでその場編集 */
 function emTmplEditOpen(id){const t=id?S.templates.find(v=>v.id===id):null;
   _emTmplEdit=id||'';_emTab='form';
@@ -4555,7 +4572,7 @@ function emTmplEditOpen(id){const t=id?S.templates.find(v=>v.id===id):null;
   _emStart=t?.start||'';_emEnd=t?.end||'';
   _emHue=(t?.hue??-1);_emMark=t?.mark||'';_emCat=(t?.mark&&ICONS[t.mark]?ICONS[t.mark].c:'イベント');
   _emImp=!!t?.important;_emMarkOnly=!!t?.markOnly;_emNoFill=!!t?.noFill;
-  _emRepeat=t?.repeat||'';_emRepDays=(t?.repDays||[]).slice();_emRepDom=t?.repDom??null;_emUntil='';
+  _emRepeat=t?.repeat||'';_emRepDays=(t?.repDays||[]).slice();_emRepDom=t?.repDom??null;_emRepMonthN=(+t?.repMonthN>0)?+t.repMonthN:1;_emUntil='';
   _emKeepTime=t?t.keepTime!==false:true;
   editLinks=(t?.links||[]).map(l=>({...l}));editImages=[];
   emRender(true);}
@@ -4573,7 +4590,7 @@ function emTmplFromForm(){const h=_emHold||{};const title=(h.title||'').trim();
   S.templates.push({id:uid(),title,groupId:_emGroup,start:h.start||'',end:h.end||'',memo:h.memo||'',
     links:editLinks.map(l=>({...l})),hue:_emHue>=0?_emHue:null,mark:_emMark,
     important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,
-    repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,
+    repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,
     keepTime:true,order:(S.templates||[]).length});
   save();emRender();toast(`「${title}」をテンプレに登録しました`);}
 function emTmplMove(id,dir){const list=tmplSorted();const i=list.findIndex(t=>t.id===id);const j=i+dir;
@@ -4589,7 +4606,7 @@ function saveEvent(id){
   const date=_emDate;if(!date){uiAlert('日付を選んでください');return;}
   if(_emStart&&_emEnd&&hm2min(_emEnd)<hm2min(_emStart)){uiAlert('終了が開始より前になっています');return;}
   const data={title:($('#emTitle')?.value||'').trim(),date,groupId:_emGroup,repeat:_emRepeat,
-    repDays:_emRepDays.slice(),repDom:_emRepDom,until:_emUntil||undefined,
+    repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,until:_emUntil||undefined,
     start:_emStart,end:_emEnd,memo:$('#emMemo')?.value||'',important:_emImp,
     mark:_emMark,markOnly:_emMarkOnly,noFill:_emNoFill,
     hue:_emHue>=0?_emHue:null,links:collectLinks(),images:editImages.slice()};
@@ -5479,6 +5496,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v2.77（2026-08-05）「2ヶ月ごと」など、数ヶ月おきの繰り返し</b><br>
+  ・タスク・予定の繰り返し「毎月」に<b>間隔</b>を追加：毎月／2ヶ月ごと／3ヶ月ごと／4ヶ月ごと／半年ごと／1年ごと<br>
+  ・31日など<b>ない月は月末</b>に寄せます。テンプレにも間隔が保存されます<br>
+  ・ついでに、日にちを選ばない「毎月」で月末をまたぐとき日付がずれることがあった不具合も直しました<br>
+  </div>
   <div class="mini"><b>v2.76（2026-08-05）タスクのタイマー計測と「時間の記録」</b><br>
   ・タスクのメニューに<b>「▶ 開始（時間をはかる）」</b>を追加（今日の一覧・バーチカル・日カレンダー）。開始すると<b>画面上部にバー</b>が出て、どのタブにいても経過が見えます<br>
   ・バーをタップすると<b>中断・再開・終了</b>。終了時は<b>「✓記録して完了」「📝記録だけ（つづく）」「🗑記録せずやめる」</b>から選べます。アプリを閉じても計測はつづきます（当日中）<br>
