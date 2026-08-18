@@ -515,7 +515,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;overflow:hidden;}
 .cell:nth-child(7n){border-right:none;}
 /* 前後の月：全体を薄くせず（日付・予定はそのままの濃さ）、うすい墨を敷くだけ。色付きセルでも消えない */
-.cell.out::before{content:'';position:absolute;inset:0;background:rgba(21,23,26,.07);pointer-events:none;z-index:0;}
+.cell.out::before{content:'';position:absolute;inset:0;background:var(--outTint,rgba(21,23,26,.07));pointer-events:none;z-index:0;}
 .cell.out .dn,.cell.out .rk,.cell.out .ich{color:var(--sub);}
 /* 今日＝赤(日祝)と喧嘩しないブルーの丸 */
 .cell.today .dn{background:#2F6FED;color:#fff;border-radius:50% !important;}
@@ -751,7 +751,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .wrow.wtoday{background:#EEF2FF;}
 .wtodaytag{font-size:9px;color:#2456E6;font-weight:700;margin-top:2px;}
 /* 網かけも重ねて描く（インラインの背景色に消されないよう ::before 側に） */
-.cell.shade::before{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(0,0,0,.05) 5px 6px);}
+.cell.shade::before{background-image:repeating-linear-gradient(45deg,transparent 0 5px,var(--outLine,rgba(0,0,0,.05)) 5px 6px);}
 /* 日ビュー 2カラム（左=予定 / 右=タスク） */
 .daycols{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink);}
 .daycol{border-right:1px solid var(--line2);min-width:0;}
@@ -1201,6 +1201,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--t3);box-shadow:0 0 0 
 .wkcol.today{box-shadow:inset 1px 0 0 var(--accent),inset -1px 0 0 var(--accent),inset 0 -1px 0 var(--accent);}
 .wkhcell.today,.wkad.today:not(.hascol),.wkcol.today{background:var(--ring);}
 .wksel{background:var(--ring);border-color:var(--accent);}
+/* 月セル＝余白はそのまま、四隅にほんの少しの丸み＋ごくわずかに浮いて見える質感 */
+.cell{border-radius:7px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 3px rgba(120,90,150,.05);}
+.cell.today{box-shadow:inset 0 0 0 2px var(--ring), inset 0 1px 0 rgba(255,255,255,.9);}
 /* 時間の記録・今日の残り作業＝グラデの棒 */
 .tsrow .gauge{border-radius:999px;overflow:hidden;}
 .tsrow .gauge i{background:var(--gradA);}
@@ -1215,6 +1219,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--t3);box-shadow:0 0 0 
 .calbar .mv button{border-radius:999px;background:#fff;}
 .minchips button{border-radius:var(--r-s);}
 .arrows button,.arrows.h button{border-radius:var(--r-s);}
+/* 習慣＝コース・草マップ・連続記録（v3.01） */
+.hcourse{margin:10px 12px 14px;background:#fff;border-radius:var(--r-l);box-shadow:var(--shadow-s);padding:10px 12px 12px;}
+.hcourse-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 2px 6px;}
+.hcourse-h b{font-size:14.5px;letter-spacing:.04em;}
+.hcourse-h span{font-size:11.5px;color:var(--sub);white-space:nowrap;}
+.hrank{padding:0 2px 6px;border-bottom:1px solid var(--line2);margin-bottom:6px;}
+.hrankrow{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;}
+.hrankrow .hrn{flex:0 0 auto;max-width:38%;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hrankrow .hrbar{flex:1;height:7px;background:var(--line2);border-radius:999px;overflow:hidden;}
+.hrankrow .hrbar i{display:block;height:100%;background:var(--gradA);animation:v3growx .5s cubic-bezier(.3,.7,.3,1);}
+.hrankrow .hrv{flex:0 0 auto;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;min-width:18px;text-align:right;}
+.hstreak{font-size:10.5px;color:#D9743B;background:#FFF3E6;border-radius:999px;padding:1px 8px;margin-left:6px;white-space:nowrap;font-weight:700;vertical-align:1px;}
+.hstreak.pale{color:var(--sub);background:var(--bg2);font-weight:400;}
+.hheat{display:flex;gap:3px;margin-top:7px;overflow-x:auto;scrollbar-width:none;direction:rtl;} /* 右端＝今週。あふれたら右起点でスクロール */
+.hheat::-webkit-scrollbar{display:none;}
+.hheat .hhcol{display:flex;flex-direction:column;gap:3px;direction:ltr;}
+.hheat i{width:10px;height:10px;flex:0 0 10px;border-radius:3px;background:var(--line2);}
+.hheat i.hh1{background:var(--t3);opacity:.45;}
+.hheat i.hh2{background:var(--t3);opacity:.8;}
+.hheat i.hh3{background:var(--accent);}
+.hheat i.hhf{background:transparent;border:1px dashed var(--line2);} /* 今週のこれからの日 */
+.hcard{border:1px solid var(--line2);}
+.hc-plus{background:var(--gradA) !important;color:#fff !important;border-radius:999px !important;}
+.hc-timer{background:#fff !important;color:var(--ink) !important;border:1px solid var(--line) !important;border-radius:999px !important;}
 /* テーマえらび（設定） */
 .thpick{display:flex;gap:10px;padding:6px 16px 4px;overflow-x:auto;scrollbar-width:none;}
 .thpick::-webkit-scrollbar{display:none;}
@@ -1314,7 +1342,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v3.00';
+const APP_VERSION='v3.01';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1326,6 +1354,7 @@ function applyUiTheme(){const th=UITHEMES[S?.settings?.uiTheme]||UITHEMES.peach;
   const r=document.documentElement.style;
   r.setProperty('--t1',th.t1);r.setProperty('--t2',th.t2);r.setProperty('--t3',th.t3);
   r.setProperty('--accent',th.acc);r.setProperty('--bgt',th.bgt);r.setProperty('--ring',th.t3+'66');
+  r.setProperty('--outTint',th.t3+'24');r.setProperty('--outLine',th.t3+'55'); // 前後月の網かけをテーマトーンに
   r.setProperty('--grad',`linear-gradient(135deg,${th.t1},${th.t2} 50%,${th.t3})`);
   r.setProperty('--gradA',`linear-gradient(135deg,${th.acc},${th.t3})`);
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=th.bgt;}
@@ -1353,7 +1382,8 @@ const QUADS=[
  {t:'サッと片付ける',s:'緊急×重要でない',c:'#D98324'},
  {t:'スキマにやる',s:'どちらでもない',c:'#7A7F8C'}];
 /* パステルカラー（カレンダー長押し色付けと共通・タスクも同じパレットを使う） */
-const PASTELS=[{c:'#FFE0E8',n:'もも'},{c:'#FFEDCF',n:'あんず'},{c:'#FFF7C4',n:'れもん'},{c:'#DFF7D4',n:'わかば'},{c:'#DAEEFF',n:'そら'},{c:'#EBE0FF',n:'ふじ'}];
+/* v3.01: ソフトUIに合わせて彩度・明度をそろえた6色（indexと名前は不変＝既存データそのまま） */
+const PASTELS=[{c:'#FFD9E3',n:'もも'},{c:'#FFE4C9',n:'あんず'},{c:'#FAF0BD',n:'れもん'},{c:'#D6F2DA',n:'わかば'},{c:'#D3E9FB',n:'そら'},{c:'#E2DBFA',n:'ふじ'}];
 /* 4つの部屋→パステル色の対応（今すぐ＝もも,計画＝あんず,サッと＝れもん,スキマ＝わかば） */
 const QUAD_TO_PASTEL=[0,1,2,3];
 /* タスクの色インデックス（0..PASTELS.length-1）。色は x.color のみ（旧「4つの部屋」は廃止・移行済み） */
@@ -5044,15 +5074,64 @@ function habitStats(h){const t=todayStr();
     week:h.logs.filter(l=>weekOnceRange(t).includes(l.d)).length,
     month:h.logs.filter(l=>l.d.slice(0,7)===t.slice(0,7)).length,
     total:h.logs.length,totalSec:h.logs.reduce((s,l)=>s+(l.sec||0),0)};}
+/* ===== 継続の見える化（v3.01）＝草マップ・連続記録・週ごとの積み上げ ===== */
+function habitCourse(h){return (h.course||'').trim()||'マイ習慣';}
+function habitCourses(){const set=[];S.habits.forEach(h=>{const c=habitCourse(h);if(!set.includes(c))set.push(c);});return set;}
+function habitDaysSet(h){const set=new Set();(h.logs||[]).forEach(l=>set.add(l.d));return set;}
+/* 連続記録：今日（まだなら昨日）を終端に何日つづいているか＋これまでの最長 */
+function habitStreak(h){const set=habitDaysSet(h);const t=todayStr();
+  let cur=0,d=set.has(t)?t:shiftDs(t,-1);
+  while(set.has(d)){cur++;d=shiftDs(d,-1);}
+  let best=0;[...set].sort().forEach(x=>{let n=1;if(!set.has(shiftDs(x,-1))){let y=shiftDs(x,1);while(set.has(y)){n++;y=shiftDs(y,1);}if(n>best)best=n;}});
+  return {cur,best,todayDone:set.has(t)};}
+/* 草マップ：直近weeks週×7日。回数で濃さが変わる（サボった日は空マスのまま見える） */
+function habitHeatHtml(h,weeks){weeks=weeks||12;
+  const cnt={};(h.logs||[]).forEach(l=>{cnt[l.d]=(cnt[l.d]||0)+1;});
+  const t=todayStr();const ws=S.settings.weekStart||0;
+  const dow=(parseDs(t).getDay()-ws+7)%7;               // 今日が週の何日目か
+  const end=shiftDs(t,6-dow);                            // 今週の最終日まで枠を出す
+  let cells='';
+  for(let w=weeks-1;w>=0;w--){cells+='<div class="hhcol">';
+    for(let i=0;i<7;i++){const d=shiftDs(end,-(w*7)-(6-i));
+      const n=cnt[d]||0;const future=d>t;
+      const lv=future?'f':n===0?'0':n===1?'1':n===2?'2':'3';
+      cells+=`<i class="hh${lv}"${n?` title="${d} ${n}回"`:''}></i>`;}
+    cells+='</div>';}
+  return `<div class="hheat">${cells}</div>`;}
+/* 週の回数（weekStart起点）。off=0が今週、1が先週 */
+function habitWeekCount(h,off){const t=todayStr();const ws=S.settings.weekStart||0;
+  const dow=(parseDs(t).getDay()-ws+7)%7;
+  const s=shiftDs(t,-dow-off*7),e=shiftDs(s,6);
+  return (h.logs||[]).filter(l=>l.d>=s&&l.d<=e).length;}
+function habitTrend(h){const a=habitWeekCount(h,0),b=habitWeekCount(h,1);const d=a-b;
+  return d>0?`<i class="up">↑+${d}</i>`:d<0?`<i class="dn">↓${d}</i>`:'<i class="fl">→</i>';}
 function renderHabits(){
+  const courses=habitCourses();
   return `<div class="vhead"><h1>習慣</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
-  <div class="mini">スキマ時間にこまめに積み上げる習慣（ストレッチ等）。やるたびに「＋1回」。<b>多いほど◎</b>。回数・時間を記録。リンクからすぐ動画へ飛べます。</div>
-  ${S.habits.length?S.habits.map(h=>habitCard(h)).join(''):'<div class="mini" style="padding:16px;">「＋追加」で、こまめにやりたいことを登録しましょう（例：ストレッチ、スクワット、水を飲む、深呼吸…）</div>'}`;}
-function habitCard(h){const s=habitStats(h);
+  <div class="mini">こまめに積み上げる習慣。やるたびに「＋1回」。<b>マスの濃さ＝その日の回数</b>、空きマス＝おやすみ。🔥は連続日数です。</div>
+  ${S.habits.length?courses.map(c=>{
+    const hs=S.habits.filter(h=>habitCourse(h)===c);
+    const wk=hs.reduce((s,h)=>s+habitWeekCount(h,0),0);
+    const lw=hs.reduce((s,h)=>s+habitWeekCount(h,1),0);const d=wk-lw;
+    const mon=hs.map(h=>({h,n:habitStats(h).month})).sort((a,b)=>b.n-a.n);
+    const maxM=Math.max(1,...mon.map(o=>o.n));
+    return `<div class="hcourse">
+      <div class="hcourse-h"><b>${esc(c)}</b><span>今週 ${wk}回${d>0?`（先週+${d}）`:d<0?`（先週${d}）`:lw?'（先週と同じ）':''}</span></div>
+      ${mon.length>1?`<div class="hrank">${mon.map(o=>`<div class="hrankrow" onclick="habitDetail('${o.h.id}')">
+        <span class="hrn">${esc(o.h.title)}</span>
+        <span class="hrbar"><i style="width:${Math.round(o.n/maxM*100)}%"></i></span>
+        <span class="hrv">${o.n}</span></div>`).join('')}
+        <div class="mini" style="padding:2px 0 4px;font-size:10px;">今月の回数。どの項目がのびているかが分かります</div></div>`:''}
+      ${hs.map(h=>habitCard(h)).join('')}
+    </div>`;}).join('')
+  :'<div class="mini" style="padding:16px;">「＋追加」で、こまめにやりたいことを登録しましょう（例：ストレッチ、スクワット、水を飲む、深呼吸…）。<b>コース</b>（運動コース・勉強コースなど）で分けると、コースの中でどれがのびているかも見えます。</div>'}`;}
+function habitCard(h){const s=habitStats(h);const st=habitStreak(h);
   return `<div class="hcard" style="${h.color!=null?`background:${PASTELS[h.color].c}`:''}">
     <div class="hc-top" onclick="habitDetail('${h.id}')">
-      <div class="hc-title">${esc(h.title)}</div>
-      <div class="hc-stat">今日 <b>${s.today}</b> ・ 週 ${s.week} ・ 月 ${s.month}${s.totalSec?` ・ 累計${fmtMin(s.totalSec/60)}`:''}</div></div>
+      <div class="hc-title">${esc(h.title)}
+        ${st.cur?`<span class="hstreak">🔥${st.cur}日連続</span>`:(st.best?`<span class="hstreak pale">今日やれば🔥再開</span>`:'')}</div>
+      <div class="hc-stat">今日 <b>${s.today}</b> ・ 今週 ${habitWeekCount(h,0)}回 ${habitTrend(h)}${st.best>1?` ・ 最長${st.best}日`:''}${s.totalSec?` ・ 累計${fmtMin(s.totalSec/60)}`:''}</div>
+      ${habitHeatHtml(h,12)}</div>
     ${linkChips(h.links)}
     <div class="hc-btns">
       <button class="hc-plus" onclick="habitLog('${h.id}',0)">＋ 1回</button>
@@ -5070,10 +5149,18 @@ function habitTimerStop(){const sec=Math.round((Date.now()-habitTStart)/1000);cl
 function habitTimerCancel(){clearInterval(habitTInt);dlgEnd();}
 function habitDetail(id){const h=S.habits.find(x=>x.id===id);if(!h)return;const s=habitStats(h);
   const byWd=[0,0,0,0,0,0,0];h.logs.forEach(l=>byWd[parseDs(l.d).getDay()]++);const maxWd=Math.max(1,...byWd);
+  const st=habitStreak(h);
+  const wks=[...Array(8)].map((_,i)=>habitWeekCount(h,7-i)); // 8週前→今週
+  const maxWk=Math.max(1,...wks);
   openModal(`<div class="mh"><b>${esc(h.title)}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="hstats"><div><b>${s.today}</b><span>今日</span></div><div><b>${s.week}</b><span>今週</span></div><div><b>${s.month}</b><span>今月</span></div><div><b>${s.total}</b><span>累計</span></div></div>
-    ${s.totalSec?`<div class="mini" style="padding:8px 0;">累計時間 ${fmtMin(s.totalSec/60)}${s.total?`（平均 ${fmtMin(s.totalSec/60/s.total)}／回）`:''}</div>`:''}
+    <div class="mini" style="padding:6px 0 2px;">${st.cur?`🔥 <b>${st.cur}日連続</b>`:(st.todayDone?'':'今日やると連続がつながります')}${st.best>1?`　これまでの最長 <b>${st.best}日</b>`:''}</div>
+    ${s.totalSec?`<div class="mini" style="padding:2px 0;">累計時間 ${fmtMin(s.totalSec/60)}${s.total?`（平均 ${fmtMin(s.totalSec/60/s.total)}／回）`:''}</div>`:''}
+    <label style="margin-top:8px;">これまでのあゆみ（直近12週・濃いほど回数が多い日）</label>
+    ${habitHeatHtml(h,12)}
+    <label style="margin-top:10px;">週ごとの積み上げ（直近8週）</label>
+    <div class="wdbars">${wks.map((c,i)=>`<div class="wdbar"><small>${c||''}</small><div class="wdb" style="height:${Math.round(c/maxWk*56)+2}px"></div><span>${i===7?'今週':''}</span></div>`).join('')}</div>
     <label style="margin-top:6px;">曜日ごとの回数</label>
     <div class="wdbars">${byWd.map((c,i)=>`<div class="wdbar"><small>${c}</small><div class="wdb" style="height:${Math.round(c/maxWd*56)+2}px"></div><span style="color:${i===0?'var(--sun)':i===6?'var(--sat)':''}">${WD[i]}</span></div>`).join('')}</div>
     ${h.links&&h.links.length?`<div style="margin-top:8px;">${linkChips(h.links)}</div>`:''}
@@ -5089,6 +5176,9 @@ function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
   openModal(`<div class="mh"><b>${h?'習慣を編集':'習慣を追加'}</b><button onclick="closeModal()">✕</button></div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="hmName" value="${esc(h?.title||'')}" placeholder="例）ストレッチ"></div>
+    <div class="frow"><label>コース（例：運動コース・勉強コース。同じコースでまとまって表示されます）</label>
+      <input id="hmCourse" list="hmCourseList" value="${esc(h?.course||'')}" placeholder="なし＝マイ習慣">
+      <datalist id="hmCourseList">${habitCourses().map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
     <div class="frow"><label>色</label><div class="colorsel c6" id="hmColor">
       ${PASTELS.map((p,i)=>`<button data-c="${i}" class="${h?.color===i?'on':''}" style="background:${p.c}" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')"></button>`).join('')}
       <button data-c="" class="none ${h?.color==null?'on':''}" style="grid-column:auto;" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">なし</button></div></div>
@@ -5097,8 +5187,9 @@ function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
   <div class="mbtns">${h?`<button class="del" onclick="delHabit('${h.id}')">削除</button>`:''}<button class="save" onclick="saveHabit('${h?.id||''}')">保存</button></div>`);}
 function saveHabit(id){const name=$('#hmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
   const csel=$('#hmColor button.on');const color=(csel&&csel.dataset.c!=='')?+csel.dataset.c:null;
-  if(id){const h=S.habits.find(x=>x.id===id);h.title=name;h.color=color;h.links=collectLinks();}
-  else S.habits.push({id:uid(),title:name,color,logs:[],links:collectLinks()});
+  const course=($('#hmCourse')?.value||'').trim();
+  if(id){const h=S.habits.find(x=>x.id===id);h.title=name;h.color=color;h.course=course;h.links=collectLinks();}
+  else S.habits.push({id:uid(),title:name,color,course,logs:[],links:collectLinks()});
   save();closeModal();render();}
 async function delHabit(id){if(!await uiConfirm('この習慣を削除しますか？（記録も消えます）','削除'))return;
   S.habits=S.habits.filter(h=>h.id!==id);save();closeModal();render();}
@@ -5639,6 +5730,14 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v3.01（2026-08-05）色トーンの調和と、習慣の「つづいてる」が見える化</b><br>
+  ・タスクなどの<b>色分け6色</b>を、新しいデザインになじむトーンに調整しました（付けた色はそのまま・色あいだけ変わります）<br>
+  ・月カレンダーの日付セルに<b>ほんの少しの丸みと浮き上がる質感</b>を加えました。<b>前後月の網かけもテーマの色あい</b>に変わります<br>
+  ・<b>習慣タブを刷新</b>：「運動コース」「勉強コース」など<b>コース</b>で分けられるようになりました（編集画面のコース欄）<br>
+  ・コースの中で<b>どの項目がのびているか</b>がランキングの棒で見え、ヘッダには今週の合計と先週比が出ます<br>
+  ・各習慣に<b>草マップ</b>（直近12週間・マスの濃さ＝その日の回数・空きマス＝おやすみ）と<b>🔥連続日数</b>を表示。さぼりも続きもひと目です<br>
+  ・詳細画面に<b>週ごとの積み上げ棒（直近8週）</b>と最長連続記録を追加。「今日やれば🔥再開」の後押しつき<br>
+  </div>
   <div class="mini"><b>v3.00（2026-08-05）デザインを全面リニューアル🎨</b><br>
   ・<b>やわらかい色あいのソフトUI</b>に一新しました：白い丸カード・ふんわりした影・グラデーションのボタンとタブ<br>
   ・<b>アプリのテーマカラーを設定から選べます</b>（設定→表示設定）：ピーチ／さくら／そら／ゆうぐれ／ミント の5色。ボタン・タブ・ヘッダーなど全体の色あいが変わります（タスクや予定の色分けはそのまま）<br>
