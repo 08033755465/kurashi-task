@@ -295,9 +295,13 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 .otsec{padding-bottom:58px;}/* 最後の行が＋ボタンに隠れないように */
 .otg{border-top:1px solid var(--line2);}
 .otg:last-child{border-bottom:1px solid var(--line2);}
-.oth{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;background:var(--bg);}
-.oth:active{background:var(--bg2);}
-.oth .dot{width:13px;height:13px;flex:0 0 13px;border-radius:50% !important;border:1px solid var(--line);}
+.oth{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;background:var(--bg2);}
+.oth:active{filter:brightness(.97);}
+.oth .cswb{flex:0 0 24px;}
+/* 色の見本バー（色名を出さない代わりの目印） */
+.cswb{display:inline-block;width:24px;height:12px;border-radius:4px !important;border:1px solid rgba(0,0,0,.10);vertical-align:-1px;}
+.chip.cchip{padding:6px 10px;}
+.chip.cchip .cswb{width:26px;height:13px;vertical-align:-2px;}
 .oth .nm{font-size:13.5px;font-weight:600;}
 .oth .cnt{font-size:11.5px;color:var(--sub);}
 .oth .ar{margin-left:auto;font-size:11px;color:var(--sub);transition:transform .18s ease;}
@@ -1376,7 +1380,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v3.04';
+const APP_VERSION='v3.05';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1417,14 +1421,19 @@ const QUADS=[
  {t:'スキマにやる',s:'どちらでもない',c:'#7A7F8C'}];
 /* パステルカラー（カレンダー長押し色付けと共通・タスクも同じパレットを使う） */
 /* v3.01: ソフトUIに合わせて彩度・明度をそろえた6色（indexと名前は不変＝既存データそのまま） */
-const PASTELS=[{c:'#FFD9E3',n:'もも'},{c:'#FFE4C9',n:'あんず'},{c:'#FAF0BD',n:'れもん'},{c:'#D6F2DA',n:'わかば'},{c:'#D3E9FB',n:'そら'},{c:'#E2DBFA',n:'ふじ'}];
+/* タスク・日の色。c＝実際に敷く塗り（主張を抑えた薄さ）／s＝丸や線・見本に使うしっかりトーン。
+   色名（もも・あんず等）は表示しない方針なので持たない */
+const PASTELS=[{c:'#FFE6ED',s:'#FBBFD0'},{c:'#FFEDDC',s:'#FCCF9E'},{c:'#FCF5D4',s:'#EFDE8C'},
+               {c:'#E4F7E7',s:'#AEE0B9'},{c:'#E2F1FC',s:'#A9D2F0'},{c:'#ECE8FC',s:'#C3B7EF'}];
+/* 色の見本（スウォッチ・丸・線）はしっかりトーンで出す＝薄い塗りでも見分けられる */
+function pastelSw(i){return (PASTELS[i]||{}).s||'';}
 /* 4つの部屋→パステル色の対応（今すぐ＝もも,計画＝あんず,サッと＝れもん,スキマ＝わかば） */
 const QUAD_TO_PASTEL=[0,1,2,3];
 /* タスクの色インデックス（0..PASTELS.length-1）。色は x.color のみ（旧「4つの部屋」は廃止・移行済み） */
 function taskPastelIdx(x){if(!x)return -1;
   return (x.color!=null&&PASTELS[x.color])?x.color:-1;}
 function taskBg(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
-function taskLineC(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
+function taskLineC(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].s:'';}
 /* G設定で並べ替え可能な色の並び順（既定＝PASTELS順） */
 function pastelOrder(){const o=S.settings.pastelOrder;
   if(Array.isArray(o)&&o.length===PASTELS.length)return o;
@@ -1692,6 +1701,10 @@ function doneLabel(x,forDate){if(x.status!=='done'||!x.doneAt)return '';
   if(!sameDay){const d=parseDs(x.doneAt);s=(d.getMonth()+1)+'/'+d.getDate()+' ';}
   return s+(x.doneMin!=null?min2hm(x.doneMin)+' ':'')+'完了';}
 const byToday=(a,b)=>(a.tOrder??1e9)-(b.tOrder??1e9)||(a.priority||2)-(b.priority||2);
+/* 全角で打っても半角として受け取る（IMEが全角のままでも入力できるように） */
+const zen2han=v=>(v||'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[：︓]/g,':');
+/* 時刻は 0:00〜26:59 まで（24:00〜26:00＝日付をまたぐ深夜も「その日」の予定として入れられる） */
+const HMAX=26;
 /* ===== テンキー対応タイムピッカー（数字タップ→テンキー、▲▼で微調整・分は15分刻み） ===== */
 function timeInput(id,val,opts={}){
   const p=(val||'').split(':');
@@ -1714,14 +1727,14 @@ function tpCommit(id,h,m){const v=pad(h)+':'+pad(m);const el=$('#'+id);el.value=
   if(el.onchange)el.onchange();}
 function tpAdj(id,part,dir){const cur=$('#'+id).value||'00:00';
   let[h,m]=cur.split(':').map(Number);
-  if(part==='h'){h=(h+dir+24)%24;}
+  if(part==='h'){h=(h+dir+HMAX+1)%(HMAX+1);}
   else{m=Math.round(m/15)*15+dir*15;if(m>=60){m=0;}if(m<0){m=45;}}
   tpCommit(id,h,m);}
 function tpType(id){
-  const hv=$('#'+id+'_h').value.replace(/\D/g,''),mv=$('#'+id+'_m').value.replace(/\D/g,'');
+  const hv=zen2han($('#'+id+'_h').value).replace(/\D/g,''),mv=zen2han($('#'+id+'_m').value).replace(/\D/g,'');
   $('#'+id+'_h').value=hv;$('#'+id+'_m').value=mv;
   if(hv===''&&mv==='')return;
-  const h=Math.min(23,+hv||0),m=Math.min(59,+mv||0);
+  const h=Math.min(HMAX,+hv||0),m=Math.min(59,+mv||0);
   const el=$('#'+id);el.value=pad(h)+':'+pad(m);
   if(el.onchange)el.onchange();}
 function tpClear(id){const el=$('#'+id);el.value='';
@@ -1730,7 +1743,7 @@ function tpClear(id){const el=$('#'+id);el.value='';
 function tpSet(id,v){const[h,m]=(v||'').split(':');$('#'+id).value=v;if($('#'+id+'_h')){$('#'+id+'_h').value=h||'';$('#'+id+'_m').value=m||'';}}
 /* ===== 連続4桁タイム入力（開始→終了を続けてテンキー入力） ===== */
 /* 分の選択＋手動入力（2/4/6/8/10…分チップ＋数値入力） */
-function minPicker(id,val){return `<div class="minpick"><input id="${id}" class="minfield" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${val??''}" placeholder="分" onfocus="this.select()">
+function minPicker(id,val){return `<div class="minpick"><input id="${id}" class="minfield" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${val??''}" placeholder="分" onfocus="this.select()" oninput="this.value=zen2han(this.value).replace(/[^0-9]/g,'')">
   <div class="minchips">${[5,10,15,20,30,45,60,90,120].map(n=>{const w=n<=10?'s':n<=20?'m':n<=45?'l':'x';
     return `<button type="button" data-w="${w}" onclick="$('#${id}').value=${n}">${n>=60?(n/60)+'時間':n+'分'}</button>`;}).join('')}</div></div>`;}
 function timeField(id,val,opts={}){
@@ -1741,16 +1754,16 @@ function timeField(id,val,opts={}){
     ${opts.clear?`<button type="button" class="tf-clear" onclick="tfClear('${id}')">終日</button>`:''}
   </span>`;}
 function tfType(id,next){
-  let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'').slice(0,4);
+  let raw=zen2han($('#'+id+'_v').value).replace(/[^0-9]/g,'').slice(0,4);
   $('#'+id+'_v').value=raw.length>2?raw.slice(0,2)+':'+raw.slice(2):raw;
-  if(raw.length===4){const h=Math.min(23,+raw.slice(0,2)),m=Math.min(59,+raw.slice(2));
+  if(raw.length===4){const h=Math.min(HMAX,+raw.slice(0,2)),m=Math.min(59,+raw.slice(2));
     const v=pad(h)+':'+pad(m);$('#'+id).value=v;$('#'+id+'_v').value=v;
     const el=$('#'+id);if(el.onchange)el.onchange();
     if(next){const nx=$('#'+next+'_v');if(nx){nx.focus();nx.select();}}}
   else{$('#'+id).value='';}}
-function tfNorm(id){let raw=$('#'+id+'_v').value.replace(/[^0-9]/g,'');
+function tfNorm(id){let raw=zen2han($('#'+id+'_v').value).replace(/[^0-9]/g,'');
   if(!raw){$('#'+id).value='';$('#'+id+'_v').value='';const e=$('#'+id);if(e.onchange)e.onchange();return;}
-  let h,m;if(raw.length<=2){h=Math.min(23,+raw);m=0;}else{raw=raw.slice(0,4).padStart(4,'0');h=Math.min(23,+raw.slice(0,2));m=Math.min(59,+raw.slice(2));}
+  let h,m;if(raw.length<=2){h=Math.min(HMAX,+raw);m=0;}else{raw=raw.slice(0,4).padStart(4,'0');h=Math.min(HMAX,+raw.slice(0,2));m=Math.min(59,+raw.slice(2));}
   const v=pad(h)+':'+pad(m);$('#'+id).value=v;$('#'+id+'_v').value=v;const el=$('#'+id);if(el.onchange)el.onchange();}
 function tfClear(id){$('#'+id).value='';$('#'+id+'_v').value='';const el=$('#'+id);if(el.onchange)el.onchange();}
 function setTf(id,val){const el=$('#'+id);if(!el)return;el.value=val||'';$('#'+id+'_v').value=val||'';}
@@ -1863,13 +1876,24 @@ function eventOccursOn(e,dstr){
     // Nヶ月ごと：基準月からの月差がNの倍数の月だけ
     const b=parseDs(e.date);const N=(+e.repMonthN>0)?+e.repMonthN:1;
     if(((t.getFullYear()-b.getFullYear())*12+(t.getMonth()-b.getMonth()))%N)return false;
+    // 第N週◯曜日（第2水曜、最終金曜 など）。日にち指定より優先
+    if(e.repNth&&e.repNth.d!=null){
+      if(t.getDay()!==+e.repNth.d)return false;
+      const nth=Math.floor((t.getDate()-1)/7)+1;
+      const isLast=t.getDate()+7>new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
+      return +e.repNth.n===-1?isLast:nth===+e.repNth.n;}
     if(e.repDom){const dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
       return t.getDate()===Math.min(e.repDom,dim);}
     return b.getDate()===t.getDate();}
   return e.date===dstr;}
 function evTitle(e){return e.title&&e.title.trim()?e.title:(e.start?e.start+'の予定':'予定');}
+/* 「第2水曜日」「最終金曜日」の文言（ルーティンの nthLabel とは別物なので名前を分ける） */
+function evNthLabel(o){if(!o||o.d==null)return'';
+  return (+o.n===-1?'最終':'第'+o.n)+WD[+o.d]+'曜日';}
+function emNthOf(e){return (e&&e.repNth&&e.repNth.d!=null)?{n:+e.repNth.n,d:+e.repNth.d}:null;}
 function evRepText(e){if(!e||!e.repeat)return'';
-  if(e.repeat==='monthly'){const n=(+e.repMonthN>0)?+e.repMonthN:1;return n===1?'毎月':repNLabel(n);}
+  if(e.repeat==='monthly'){const n=(+e.repMonthN>0)?+e.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    return e.repNth&&e.repNth.d!=null?base+evNthLabel(e.repNth):base;}
   return REPEAT_LABEL[e.repeat]||'';}
 function repTag(e){return e.repeat?`<span class="rep">🔁${evRepText(e)}</span>`:'';}
 /* 繰り返しタスクの印（どの画面でも同じ見た目。short=狭い所は🔁だけ） */
@@ -2881,18 +2905,17 @@ function todayTaskChecklist(t,inTL){
 /* 今日タブの下に「ほかのタスク」を全幅で常設。色ごとにまとめ、中は期限・日づけ順。
    （以前はバーチカル横の幅148pxに縦積みで、スマホではほぼ見えていなかった） */
 function otOpenKey(ci){return ci<0?'n':'c'+ci;}
-function otIsOpen(ci,i){const m=S.settings.otOpen||{};const k=otOpenKey(ci);
-  if(m[k]!=null)return !!m[k];
-  return ci>=0&&i<3;} // 既定＝並び順の先頭3色だけ開いておく
-function otToggle(ci,i){const m=S.settings.otOpen=S.settings.otOpen||{};
-  m[otOpenKey(ci)]=!otIsOpen(ci,i);save();render();}
+function otIsOpen(ci){const m=S.settings.otOpen||{};const k=otOpenKey(ci);
+  return m[k]!=null?!!m[k]:true;} // 既定＝ぜんぶ開く（色ごとに全部見えるように）
+function otToggle(ci){const m=S.settings.otOpen=S.settings.otOpen||{};
+  m[otOpenKey(ci)]=!otIsOpen(ci);save();render();}
 function otherTasksHtml(t){
   const inToday=new Set(todayTasks(t).map(x=>x.id));
   const rest=S.tasks.filter(x=>x.status!=='done'&&!inToday.has(x.id));
   const ord=pastelOrder();
-  const groups=ord.map((ci,i)=>({ci,i,name:PASTELS[ci].n,c:PASTELS[ci].c,
+  const groups=ord.map((ci,i)=>({ci,i,name:'',c:PASTELS[ci].c,sw:pastelSw(ci),
       list:rest.filter(x=>taskPastelIdx(x)===ci)}))
-    .concat([{ci:-1,i:ord.length,name:'色なし',c:'',list:rest.filter(x=>taskPastelIdx(x)<0)}]);
+    .concat([{ci:-1,i:ord.length,name:'色なし',c:'',sw:'',list:rest.filter(x=>taskPastelIdx(x)<0)}]);
   const key=x=>(x.today||x.due||'');
   const sortIn=arr=>{const over=[],dated=[],none=[];
     arr.forEach(x=>{const d=key(x);
@@ -2910,11 +2933,11 @@ function otherTasksHtml(t){
         <div class="otd${ov?' ov':''}">${ov?'⚠ 期限ぎれ ':''}${d?fmtDateJa(d):'日づけなし'}${a!=null?' '+fmtAxisHM(d,a)+(nsl>1?`+${nsl-1}`:''):''}${x.estMin?'・'+fmtMin(x.estMin):''}</div></div>
       <button class="todayBtn" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>
       ${S.settings.timeline?`<button class="tgrip" onpointerdown="tlPlaceDown(event,'t_${x.id}')" title="押したまま時間軸へ運ぶ">${GRIPI}</button>`:''}</div>`;};
-  const body=groups.filter(g=>g.list.length).map(g=>{const op=otIsOpen(g.ci,g.i);
-    return `<div class="otg"><div class="oth${op?' open':''}" onclick="otToggle(${g.ci},${g.i})">
-      <span class="dot" style="background:${g.c||'var(--bg2)'}"></span><span class="nm">${g.name}</span>
+  const body=groups.filter(g=>g.list.length).map(g=>{const op=otIsOpen(g.ci);const line=g.sw;
+    return `<div class="otg"><div class="oth${op?' open':''}" onclick="otToggle(${g.ci})">
+      <span class="cswb" style="background:${g.sw||'var(--line2)'}"></span><span class="nm">${g.name}</span>
       <span class="cnt">${g.list.length}</span><span class="ar">▾</span></div>
-      ${op?sortIn(g.list).map(x=>row(x,g.c)).join(''):''}</div>`;}).join('');
+      ${op?sortIn(g.list).map(x=>row(x,line)).join(''):''}</div>`;}).join('');
   return `<div class="sec otsec"><div class="sec-h"><span class="secttl">ほかのタスク（${rest.length}）</span>
     <span class="secacts"><button class="act" onclick="switchView('tasks')">タスク一覧 ▸</button></span></div>
     ${body||'<div class="otempty">今日ぶん以外の、まだ終わっていないタスクはありません。</div>'}</div>`;}
@@ -3349,8 +3372,8 @@ function groupChipsHtml(sel,fn){
 let taskColorSel=new Set();
 function colorChipsHtml(){
   return `<div class="chips"><button class="chip ${!taskColorSel.size?'on':''}" onclick="tglTaskColor(-2)">全体</button>
-    ${pastelOrder().map(i=>`<button class="chip ${taskColorSel.has(i)?'on':''}" onclick="tglTaskColor(${i})">
-      <span class="dot" style="background:${PASTELS[i].c}"></span>${PASTELS[i].n}</button>`).join('')}
+    ${pastelOrder().map(i=>`<button class="chip cchip ${taskColorSel.has(i)?'on':''}" onclick="tglTaskColor(${i})" aria-label="${i+1}番目の色">
+      <span class="cswb" style="background:${pastelSw(i)}"></span></button>`).join('')}
     <button class="chip ${taskColorSel.has(-1)?'on':''}" onclick="tglTaskColor(-1)">色なし</button></div>`;}
 function tglTaskColor(i){if(i===-2)taskColorSel.clear();else taskColorSel.has(i)?taskColorSel.delete(i):taskColorSel.add(i);render();}
 function tglTaskSel(id){if(!id)taskSel.clear();else taskSel.has(id)?taskSel.delete(id):taskSel.add(id);render();}
@@ -3373,7 +3396,7 @@ function renderTasks(){
   if(taskSort==='pr'){body=open.sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join('');}
   else if(taskSort==='grp'){ // 色ごとに区切って表示
     body=[...pastelOrder(),-1].map(ci=>{const ts=open.filter(x=>taskPastelIdx(x)===ci).sort(sortFn);
-      return ts.length?`<div class="sec-h"><span class="gmark" style="background:${ci>=0?PASTELS[ci].c:'var(--line2)'}"></span>　${ci>=0?PASTELS[ci].n:'色なし'}（${ts.length}）</div>${ts.map(x=>taskRow(x,{tabAction:true})).join('')}`:'';}).join('');}
+      return ts.length?`<div class="sec-h"><span class="cswb" style="background:${ci>=0?pastelSw(ci):'var(--line2)'}"></span>　${ci>=0?'':'色なし'}（${ts.length}）</div>${ts.map(x=>taskRow(x,{tabAction:true})).join('')}`:'';}).join('');}
   else if(taskSort==='manual'){
     const mlist=manualTaskIds().map(id=>S.tasks.find(t=>t.id===id));
     body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>');}
@@ -3571,7 +3594,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??src?.title??'')}" placeholder="やること"></div>
     <div class="frow"><label>色</label><div class="cpsw emsw tfsw">
       <button type="button" class="${_tfColor==null?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px)" onclick="tfPickColor(null)" title="色なし"></button>
-      ${pastelOrder().map(i=>`<button type="button" class="${_tfColor===i?'on':''}" style="background:${PASTELS[i].c}" onclick="tfPickColor(${i})" title="${PASTELS[i].n}"></button>`).join('')}</div></div>
+      ${pastelOrder().map(i=>`<button type="button" class="${_tfColor===i?'on':''}" style="background:${pastelSw(i)}" onclick="tfPickColor(${i})"></button>`).join('')}</div></div>
     ${tmpl?'':`<div class="frow"><label>いつやる（つけなければ、ためておくタスク）</label>
       <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}</div></div>`}
     <div class="frow f2"><div><label>優先度</label>
@@ -3605,6 +3628,7 @@ function tmplRepTextT(t){if(!t.repeat)return'';
   if(t.repeat==='daily')return'毎日';
   if(t.repeat==='weekly')return (t.repDays&&t.repDays.length)?'毎週'+t.repDays.slice().sort().map(d=>WD[d]).join('・'):'毎週';
   if(t.repeat==='monthly'){const n=(+t.repMonthN>0)?+t.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    if(t.repNth&&t.repNth.d!=null)return base+evNthLabel(t.repNth);
     return t.repDom?`${base}${t.repDom}日`:base;}
   return'';}
 function tfTmplListHtml(){const list=taskTmplSorted();
@@ -3967,7 +3991,7 @@ function wkUnplaceTask(id,d,sid){snapUndo();
   save();render();flashUndo('時間を消しました（タスクは残ります）');}
 function wkColorPop(d,s,e){
   const sel=document.querySelector('.wksel');
-  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="wkSetBand('${d}',${s},${e},${i})" title="${p.n}"></button>`).join('')}
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.s}" onclick="wkSetBand('${d}',${s},${e},${i})"></button>`).join('')}
     <button class="clear" onclick="cpClose();wkClearSel()">やめる</button></div>`;
   cellpopAt(sel,html,{wide:true,forId:'wkcolor'});}
 function wkSetBand(d,s,e,c){snapUndo();
@@ -3981,7 +4005,7 @@ function wkBandTap(el,ev){
   const d=el.dataset.d,bid=el.dataset.bid;
   if(_cpForId==='wkband_'+bid){cpClose();return;}
   const b=((S.dayBands||{})[d]||[]).find(x=>x.id===bid);if(!b)return;
-  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button class="${b.c===i?'on':''}" style="background:${p.c}" onclick="wkBandColor('${d}','${bid}',${i})" title="${p.n}"></button>`).join('')}
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button class="${b.c===i?'on':''}" style="background:${p.s}" onclick="wkBandColor('${d}','${bid}',${i})"></button>`).join('')}
     <button class="clear" onclick="wkBandDel('${d}','${bid}')">消す</button></div>`;
   cellpopAt(el,html,{wide:true,forId:'wkband_'+bid});}
 function wkBandColor(d,bid,c){const b=((S.dayBands||{})[d]||[]).find(x=>x.id===bid);if(!b)return;
@@ -4132,10 +4156,10 @@ function renderCal(){
     let minMin=7*60,maxMin=21*60;
     dayData.forEach(dd=>dd.timed.forEach(e=>{const s=hm2min(e.start);const en=e.end?hm2min(e.end):s+60;minMin=Math.min(minMin,s);maxMin=Math.max(maxMin,en);}));
     dayData.forEach(dd=>dd.tt.forEach(o=>{minMin=Math.min(minMin,o.s);maxMin=Math.max(maxMin,o.e);}));
-    minMin=Math.max(0,Math.floor(minMin/60)*60);maxMin=Math.min(1440,Math.ceil(maxMin/60)*60);
-    if(maxMin-minMin<360)maxMin=Math.min(1440,minMin+360);
+    minMin=Math.max(0,Math.floor(minMin/60)*60);maxMin=Math.min((HMAX+1)*60,Math.ceil(maxMin/60)*60);
+    if(maxMin-minMin<360)maxMin=Math.min((HMAX+1)*60,minMin+360);
     const PXM=0.95,H=(maxMin-minMin)*PXM,nowM=curMin();
-    let hlab='',hline='';for(let h=minMin;h<=maxMin;h+=60){const top=(h-minMin)*PXM;hlab+=`<div class="wkhrlab" style="top:${top}px">${pad(Math.floor(h/60)%24)}</div>`;hline+=`<div class="wkhr" style="top:${top}px"></div>`;}
+    let hlab='',hline='';for(let h=minMin;h<=maxMin;h+=60){const top=(h-minMin)*PXM;hlab+=`<div class="wkhrlab" style="top:${top}px">${pad(Math.floor(h/60))}</div>`;hline+=`<div class="wkhr" style="top:${top}px"></div>`;}
     const header=`<div class="wkrow wkhead"><div class="wkcorner"></div>${dayData.map((dd,ci)=>{const isT=dd.dstr===todayS;
       return `<div class="wkhcell ${dd.hol||dd.dow===0?'sun':''} ${dd.dow===6?'sat':''} ${isT?'today':''} ${ci%2?'alt':''}" onclick="calGoto('${dd.dstr}')"><div class="wkdw">${WD[dd.dow]}</div><div class="wkdn">${dd.d}</div></div>`;}).join('')}</div>`;
     const alldayRow=`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
@@ -4185,7 +4209,8 @@ function renderCal(){
     <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
-function taskModalWithDue(d){taskModal(null,d);}
+/* カレンダーの日から「＋タスク」＝その日を期限に“しない”（期限は自分で選ぶもの・v3.05） */
+function taskModalWithDue(d){taskModal(null);}
 /* タスクの繰り返し：完了したら次回の日付へ送る（今日の記録に完了を残す） */
 /* 次回日付：毎週は指定の曜日、毎月は指定の日。指定が無ければ今まで通り7日後／1か月後 */
 function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
@@ -4466,7 +4491,7 @@ function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const html=`<div class="cptitle">${esc(obj.title)}</div>
     ${type==='t'?`<div class="cprow"><span class="cplab">優先度</span>${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="cpprio ${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>`:''}
     <div class="cprow"><div class="cpsw">
-      ${PASTELS.map((p,i)=>`<button class="${obj.color===i?'on':''}" style="background:${p.c}" onclick="setItemColor('${tok}',${i})" title="${p.n}"></button>`).join('')}
+      ${PASTELS.map((p,i)=>`<button class="${obj.color===i?'on':''}" style="background:${p.s}" onclick="setItemColor('${tok}',${i})"></button>`).join('')}
       <button class="clear ${obj.color==null?'on':''}" onclick="setItemColor('${tok}',null)">なし</button></div></div>`;
   cellpopAt(anchor,html,{wide:true,forId:tok+'_lp'});}
 function setItemPrio(id,p){const x=S.tasks.find(v=>v.id===id);if(!x)return;
@@ -4525,7 +4550,7 @@ async function swipeComplete(tok){const type=tok.slice(0,1),id=tok.slice(2);cons
 /* (a) 単日の色分け＝押したセルの下に小さくポップ表示 */
 function openCellColorPop(dstr,el){
   const cur=S.dayColors[dstr];
-  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button class="${cur===i?'on':''}" style="background:${p.c}" onclick="setDayColor('${dstr}',${i})" title="${p.n}"></button>`).join('')}
+  const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button class="${cur===i?'on':''}" style="background:${p.s}" onclick="setDayColor('${dstr}',${i})"></button>`).join('')}
     <button class="clear ${cur===undefined?'on':''}" onclick="setDayColor('${dstr}',null)">なし</button></div>
     <button class="cpmore" onclick="enterCellSel('${dstr}')">▤ 他の日もまとめて色分け</button>`;
   cellpopAt(el,html,{wide:true,forId:'daycol_'+dstr});}
@@ -4538,7 +4563,7 @@ function toggleCellSel(d){cellSel.has(d)?cellSel.delete(d):cellSel.add(d);render
 /* 複数セル色分け＝画面上部の固定バー（下部を覆わない） */
 function openMultiColorSheet(){const bar=$('#multibar');
   bar.innerHTML=`<div class="mbcount">${cellSel.size}日を選択中（セルをタップで追加／解除）</div>
-    <div class="mbsw">${PASTELS.map((p,i)=>`<button style="background:${p.c}" onclick="setMultiColor(${i})" title="${p.n}"></button>`).join('')}
+    <div class="mbsw">${PASTELS.map((p,i)=>`<button style="background:${p.s}" onclick="setMultiColor(${i})"></button>`).join('')}
       <button class="clear" onclick="setMultiColor(null)">なし</button>
       <button class="mbdone" onclick="exitCellSel()">✓ 完了</button></div>`;
   bar.classList.add('show');}
@@ -4548,7 +4573,7 @@ function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選�
 
 /* ===== event modal ===== */
 /* ===== 予定の入力（タスクと同じ中央ポップ／状態は変数に集約して毎回描き直す） ===== */
-let _emRepMonthN=1;
+let _emRepMonthN=1,_emRepNth=null;/* {n:1..5|-1(最終), d:0..6} = 第N週◯曜日 */
 let _emId=null,_emDate='',_emStart='',_emEnd='',_emGroup='',_emHue=-1,_emMark='',_emCat='イベント',
     _emRepeat='',_emRepDays=[],_emRepDom=null,_emUntil='',_emImp=false,_emMarkOnly=false,_emNoFill=false,
     _emCalOpen=false,_emCalY=0,_emCalX=0,_emStash=null;
@@ -4563,7 +4588,7 @@ function eventModal(id,presetDate,presetStart,occDate,presetEnd){
   _emStart=e?.start??presetStart??'';_emEnd=e?.end??presetEnd??'';
   _emGroup=e?.groupId||lastEvGroupId();
   _emHue=(e?.hue??-1);_emMark=e?.mark||'';_emCat=(e?.mark&&ICONS[e.mark]?ICONS[e.mark].c:'イベント');
-  _emRepeat=e?.repeat||'';_emRepDays=(e?.repDays||[]).slice();_emRepDom=e?.repDom??null;_emRepMonthN=(+e?.repMonthN>0)?+e.repMonthN:1;_emUntil=e?.until||'';
+  _emRepeat=e?.repeat||'';_emRepDays=(e?.repDays||[]).slice();_emRepDom=e?.repDom??null;_emRepMonthN=(+e?.repMonthN>0)?+e.repMonthN:1;_emRepNth=emNthOf(e);_emUntil=e?.until||'';
   _emImp=!!e?.important;_emMarkOnly=!!e?.markOnly;_emNoFill=!!e?.noFill;
   _emCalOpen=false;const d0=parseDs(_emDate);_emCalY=d0.getFullYear();_emCalX=d0.getMonth();
   emRender(true);}
@@ -4687,18 +4712,31 @@ function emRepeatHtml(){
     detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
       return `<button type="button" class="${_emRepDays.includes(d)?'on':''}" onclick="emTglDay(${d})">${WD[d]}</button>`;}).join('')}</div>
       <div class="mini">${_emRepDays.length?`毎週 ${_emRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:`曜日を選ばないと「${WD[parseDs(_emDate).getDay()]}曜日」だけになります`}</div>`;}
-  if(_emRepeat==='monthly'){
-    detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_emRepMonthN===n?'on':''}" onclick="emPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>
-      <div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_emRepDom===i+1?'on':''}" onclick="emPickDom(${i+1})">${i+1}</button>`).join('')}</div>
-      <div class="mini">${_emRepDom?`${repNLabel(_emRepMonthN)} ${_emRepDom}日（ない月は月末）`:`日を選ばないと「${parseDs(_emDate).getDate()}日」になります`}</div>`;}
+  if(_emRepeat==='monthly'){const nth=!!_emRepNth;
+    const ws=S.settings.weekStart||0;
+    const modes=`<div class="seg" style="margin:0 0 6px;"><button type="button" style="flex:1;" class="${nth?'':'on'}" onclick="emRepMode('dom')">日にちで</button><button type="button" style="flex:1;" class="${nth?'on':''}" onclick="emRepMode('nth')">第◯週の曜日で</button></div>`;
+    const body=nth
+      ? `<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,5,-1].map(n=>`<button type="button" class="${_emRepNth.n===n?'on':''}" onclick="emPickNthN(${n})">${n===-1?'最終':'第'+n}</button>`).join('')}</div>
+         <div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
+           return `<button type="button" class="${_emRepNth.d===d?'on':''}" onclick="emPickNthD(${d})">${WD[d]}</button>`;}).join('')}</div>
+         <div class="mini">${repNLabel(_emRepMonthN)} ${evNthLabel(_emRepNth)}${_emRepNth.n===5?'（第5週がない月はとびます）':''}</div>`
+      : `<div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_emRepDom===i+1?'on':''}" onclick="emPickDom(${i+1})">${i+1}</button>`).join('')}</div>
+         <div class="mini">${_emRepDom?`${repNLabel(_emRepMonthN)} ${_emRepDom}日（ない月は月末）`:`日を選ばないと「${parseDs(_emDate).getDate()}日」になります`}</div>`;
+    detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_emRepMonthN===n?'on':''}" onclick="emPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>${modes}${body}`;}
   const until=_emRepeat?`<div class="btnrow" style="margin-top:6px;">
     <button type="button" class="${_emUntil?'on':''}" onclick="emUntilPick()">${_emUntil?'～'+fmtDateJa(_emUntil)+' まで':'ずっと'}</button>
     ${_emUntil?`<button type="button" onclick="emUntilClear()">ずっとに戻す</button>`:''}</div>`:'';
   return `<div class="btnrow">${tabs}</div>${detail}${until}`;}
-function emPickRepeat(v){_emRepeat=v;if(v!=='weekly')_emRepDays=[];if(v!=='monthly'){_emRepDom=null;_emRepMonthN=1;}if(!v)_emUntil='';emSyncTime();emRender();}
+function emPickRepeat(v){_emRepeat=v;if(v!=='weekly')_emRepDays=[];if(v!=='monthly'){_emRepDom=null;_emRepMonthN=1;_emRepNth=null;}if(!v)_emUntil='';emSyncTime();emRender();}
+/* 毎月の指定のしかた＝日にち／第◯週の曜日 */
+function emRepMode(m){if(m==='nth'){const d=parseDs(_emDate);
+    _emRepNth={n:Math.floor((d.getDate()-1)/7)+1,d:d.getDay()};_emRepDom=null;}
+  else{_emRepNth=null;}emSyncTime();emRender();}
+function emPickNthN(n){if(!_emRepNth)return;_emRepNth={..._emRepNth,n};emSyncTime();emRender();}
+function emPickNthD(d){if(!_emRepNth)return;_emRepNth={..._emRepNth,d};emSyncTime();emRender();}
 function emPickRepN(n){_emRepMonthN=n;emSyncTime();emRender();}
 function emTglDay(d){const i=_emRepDays.indexOf(d);i>=0?_emRepDays.splice(i,1):_emRepDays.push(d);emSyncTime();emRender();}
-function emPickDom(n){_emRepDom=(_emRepDom===n?null:n);emSyncTime();emRender();}
+function emPickDom(n){_emRepDom=(_emRepDom===n?null:n);_emRepNth=null;emSyncTime();emRender();}
 function emUntilClear(){_emUntil='';emRender();}
 function emUntilPick(){emSyncTime();emStashOpen();
   let y=parseDs(_emUntil||_emDate).getFullYear(),m=parseDs(_emUntil||_emDate).getMonth();
@@ -4768,7 +4806,7 @@ function emTmplPickHtml(){const t=S.templates.find(x=>x.id===_emTmplPick);if(!t)
 function emTmplTgl(ds){_emTmplDates.has(ds)?_emTmplDates.delete(ds):_emTmplDates.add(ds);emRender();}
 function emTmplCalNav(k){_emCalX+=k;if(_emCalX<0){_emCalX=11;_emCalY--;}if(_emCalX>11){_emCalX=0;_emCalY++;}emRender();}
 function evFromTmpl(t,date){return {id:uid(),title:t.title||'',date,groupId:t.groupId,
-  repeat:t.repeat||'',repDays:(t.repDays||[]).slice(),repDom:t.repDom??null,repMonthN:(+t.repMonthN>0)?+t.repMonthN:1,
+  repeat:t.repeat||'',repDays:(t.repDays||[]).slice(),repDom:t.repDom??null,repMonthN:(+t.repMonthN>0)?+t.repMonthN:1,repNth:emNthOf(t),
   start:t.keepTime!==false?(t.start||''):'',end:t.keepTime!==false?(t.end||''):'',
   memo:t.memo||'',important:!!t.important,mark:t.mark||'',markOnly:!!t.markOnly,noFill:!!t.noFill,
   hue:t.hue??null,links:(t.links||[]).map(l=>({...l})),images:[]};}
@@ -4786,7 +4824,7 @@ function applyTmpl(tid,date){const t=S.templates.find(x=>x.id===tid);if(!t)retur
   if(t.keepTime!==false){_emStart=t.start||'';_emEnd=t.end||'';}
   _emHue=(t.hue??-1);_emMark=t.mark||'';if(t.mark&&ICONS[t.mark])_emCat=ICONS[t.mark].c;
   _emImp=!!t.important;_emMarkOnly=!!t.markOnly;_emNoFill=!!t.noFill;
-  _emRepeat=t.repeat||'';_emRepDays=(t.repDays||[]).slice();_emRepDom=t.repDom??null;_emRepMonthN=(+t.repMonthN>0)?+t.repMonthN:1;
+  _emRepeat=t.repeat||'';_emRepDays=(t.repDays||[]).slice();_emRepDom=t.repDom??null;_emRepMonthN=(+t.repMonthN>0)?+t.repMonthN:1;_emRepNth=emNthOf(t);
   editLinks=(t.links||[]).map(l=>({...l}));
   if(date){_emDate=date;const d=parseDs(date);_emCalY=d.getFullYear();_emCalX=d.getMonth();}
   _emTab='form';_emTmplPick=null;_emHold=null;
@@ -4798,7 +4836,7 @@ function applyTmpl(tid,date){const t=S.templates.find(x=>x.id===tid);if(!t)retur
 function emCurrentTmplData(){return {title:($('#emTitle')?.value||'').trim(),groupId:_emGroup,
   start:$('#emStart')?.value||'',end:$('#emEnd')?.value||'',memo:$('#emMemo')?.value||'',links:editLinks.map(l=>({...l})),
   hue:_emHue>=0?_emHue:null,mark:_emMark,important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,
-  repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1};}
+  repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,repNth:_emRepNth?{n:_emRepNth.n,d:_emRepNth.d}:null};}
 /* カードの✎＝同じフォームでその場編集 */
 function emTmplEditOpen(id){const t=id?S.templates.find(v=>v.id===id):null;
   _emTmplEdit=id||'';_emTab='form';
@@ -4806,7 +4844,7 @@ function emTmplEditOpen(id){const t=id?S.templates.find(v=>v.id===id):null;
   _emStart=t?.start||'';_emEnd=t?.end||'';
   _emHue=(t?.hue??-1);_emMark=t?.mark||'';_emCat=(t?.mark&&ICONS[t.mark]?ICONS[t.mark].c:'イベント');
   _emImp=!!t?.important;_emMarkOnly=!!t?.markOnly;_emNoFill=!!t?.noFill;
-  _emRepeat=t?.repeat||'';_emRepDays=(t?.repDays||[]).slice();_emRepDom=t?.repDom??null;_emRepMonthN=(+t?.repMonthN>0)?+t.repMonthN:1;_emUntil='';
+  _emRepeat=t?.repeat||'';_emRepDays=(t?.repDays||[]).slice();_emRepDom=t?.repDom??null;_emRepMonthN=(+t?.repMonthN>0)?+t.repMonthN:1;_emRepNth=emNthOf(t);_emUntil='';
   _emKeepTime=t?t.keepTime!==false:true;
   editLinks=(t?.links||[]).map(l=>({...l}));editImages=[];
   emRender(true);}
@@ -4824,7 +4862,7 @@ function emTmplFromForm(){const h=_emHold||{};const title=(h.title||'').trim();
   S.templates.push({id:uid(),title,groupId:_emGroup,start:h.start||'',end:h.end||'',memo:h.memo||'',
     links:editLinks.map(l=>({...l})),hue:_emHue>=0?_emHue:null,mark:_emMark,
     important:_emImp,markOnly:_emMarkOnly,noFill:_emNoFill,
-    repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,
+    repeat:_emRepeat,repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,repNth:_emRepNth?{n:_emRepNth.n,d:_emRepNth.d}:null,
     keepTime:true,order:(S.templates||[]).length});
   save();emRender();toast(`「${title}」をテンプレに登録しました`);}
 function emTmplMove(id,dir){const list=tmplSorted();const i=list.findIndex(t=>t.id===id);const j=i+dir;
@@ -4840,7 +4878,7 @@ function saveEvent(id){
   const date=_emDate;if(!date){uiAlert('日付を選んでください');return;}
   if(_emStart&&_emEnd&&hm2min(_emEnd)<hm2min(_emStart)){uiAlert('終了が開始より前になっています');return;}
   const data={title:($('#emTitle')?.value||'').trim(),date,groupId:_emGroup,repeat:_emRepeat,
-    repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,until:_emUntil||undefined,
+    repDays:_emRepDays.slice(),repDom:_emRepDom,repMonthN:_emRepMonthN||1,repNth:_emRepNth?{n:_emRepNth.n,d:_emRepNth.d}:null,until:_emUntil||undefined,
     start:_emStart,end:_emEnd,memo:$('#emMemo')?.value||'',important:_emImp,
     mark:_emMark,markOnly:_emMarkOnly,noFill:_emNoFill,
     hue:_emHue>=0?_emHue:null,links:collectLinks(),images:editImages.slice()};
@@ -5297,7 +5335,7 @@ function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
       <input id="hmCourse" list="hmCourseList" value="${esc(h?.course||'')}" placeholder="なし＝マイ習慣">
       <datalist id="hmCourseList">${habitCourses().map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
     <div class="frow"><label>色</label><div class="colorsel c6" id="hmColor">
-      ${PASTELS.map((p,i)=>`<button data-c="${i}" class="${h?.color===i?'on':''}" style="background:${p.c}" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')"></button>`).join('')}
+      ${PASTELS.map((p,i)=>`<button data-c="${i}" class="${h?.color===i?'on':''}" style="background:${p.s}" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')"></button>`).join('')}
       <button data-c="" class="none ${h?.color==null?'on':''}" style="grid-column:auto;" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">なし</button></div></div>
     <div class="frow"><label>リンク（動画・サイトなど。カードからすぐ開けます）</label>${linksEditorHtml()}</div>
   </div>
@@ -5847,6 +5885,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v3.05（2026-08-21）色は「見た目」で選ぶように／深夜の予定・第◯週の曜日</b><br>
+  ・<b>「ほかのタスク」は色ごとに全部ひらいた状態</b>になりました（前は先頭の3色だけ開いていました）<br>
+  ・色の<b>名前の表示をやめました</b>。どの画面でも<b>色そのもの（見本のバー）</b>で選び・見分けます<br>
+  ・日づけや行につく<b>背景の色を薄くしました</b>（色みはそのままで主張だけ控えめに）。丸や線・色の見本は、見分けやすいように<b>しっかりめの色</b>で出します<br>
+  ・カレンダーの日から「＋タスク」を押しても、<b>期限が勝手に入らなく</b>なりました（期限は自分で選ぶときだけ入ります）<br>
+  ・予定の繰り返しに <b>「第◯週の◯曜日」</b> を追加しました（第1〜第5・<b>最終</b>／例：毎月 第2水曜日、3ヶ月ごと 最終金曜日）<br>
+  ・時間の入力が <b>全角のままでも半角の数字として</b>入るようになりました（「２５００」→ 25:00）<br>
+  ・時間を <b>24:00〜26:00</b> まで入れられるようになりました。日付をまたぐ深夜の予定を<b>その日の予定</b>として置けます（週カレンダーもその時間まで伸びます）<br>
+  </div>
   <div class="mini"><b>v3.04（2026-08-19）今日タブで「ぜんぶのタスク」が一目で分かるように</b><br>
   ・今日タブの下に <b>「ほかのタスク」</b> を常に出すようにしました。今日ぶん以外の、まだ終わっていないタスクが<b>全部ここに並びます</b><br>
   ・<b>色ごとにまとまって</b>出ます（もも・あんず・れもん…の順）。それぞれの中は <b>⚠期限ぎれ → 日づけのある順 → 日づけなし</b> の並びです<br>
@@ -6509,8 +6556,8 @@ function glColorHtml(){
     <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
     <div class="sec-h">タスクの色（6色）の並び順</div>
     <div class="poList">${pastelOrder().map((i,pos)=>`<div class="poRow" data-i="${i}">
-      <span class="poSw" style="background:${PASTELS[i].c}"></span><span class="poName">${PASTELS[i].n}</span>
-      <span class="poNo">${pos+1}</span>
+      <span class="poSw" style="background:${pastelSw(i)}"></span><span class="poName"></span>
+      <span class="poNo">${pos+1}番目</span>
       <div class="arrows h"><button onclick="movePastelOrder(${i},-1);glRender();">▲</button><button onclick="movePastelOrder(${i},1);glRender();">▼</button></div></div>`).join('')}</div>
     <div class="mini" style="padding:6px 0 0;">今日タブのタスクはこの順で並びます（優先度「高」だけ最上部・完了は下）。タスクの色は<b>行を長押し</b>して選びます。</div>`;}
 function bdayModal(id){
