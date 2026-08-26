@@ -291,6 +291,15 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   border:1px solid var(--line);background:var(--bg);color:var(--sub);cursor:grab;touch-action:none;border-radius:5px !important;}
 .tgrip svg{width:12px;height:12px;}
 .tgrip:active{background:var(--accent);color:#fff;border-color:var(--accent);}
+/* タスク一覧のグループ絞り込み（予定入力と同じ階層ボタン） */
+.tgfil{padding:2px 16px 0;}
+.tgfil .gtabs{margin-bottom:5px;}
+.tgfil .gtabs button{padding:6px 10px;font-size:12.5px;}
+.gtabs .gn{font-style:normal;font-size:10px;color:var(--sub);margin-left:5px;font-variant-numeric:tabular-nums;}
+.gtabs button.on .gn{color:inherit;opacity:.75;}
+/* タスク行のグループ表示 */
+.titem .meta .gtag{display:inline-flex;align-items:center;gap:4px;min-width:0;}
+.titem .meta .gtag i{width:8px;height:8px;flex:0 0 8px;border-radius:50% !important;}
 /* 今日タブの下「ほかのタスク」＝今日ぶん以外も色ごとにまとめて全幅で見せる */
 .otsec{padding-bottom:58px;}/* 最後の行が＋ボタンに隠れないように */
 .otg{border-top:1px solid var(--line2);}
@@ -1380,7 +1389,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v3.05';
+const APP_VERSION='v3.06';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -2225,7 +2234,7 @@ function render(){
   if(_justDoneTok){const tok=_justDoneTok;_justDoneTok=null;
     document.querySelectorAll(`[data-lp="${tok}"]`).forEach(row=>{row.classList.add('justdone');
       setTimeout(()=>row.classList.remove('justdone'),450);});}
-  syncTlNowBtns();
+  syncTlNowBtns();gtabsSync($('#view'));
 }
 /* バーチカルの外まで下スクロールしたら「先頭へ／今へ」は引っこめる（下の「ほかのタスク」にかぶるため） */
 function syncTlNowBtns(){const b=$('.tlnowbtns');if(!b)return;
@@ -2411,7 +2420,7 @@ let anchorTok=null;
 function setAnchor(tok){anchorTok=tok;}
 function quickAddToday(){const inp=$('#qaToday');const v=inp.value.trim();if(!v)return;
   const id=uid();const tok='t_'+id;const t=todayStr();
-  S.tasks.push({id,title:v,groupId:S.groups[0].id,estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',snooze:null,order:Date.now(),createdAt:t});
+  S.tasks.push({id,title:v,groupId:lastTaskGroupId(),estMin:15,priority:2,status:'todo',links:[],due:'',today:t,memo:'',snooze:null,order:Date.now(),createdAt:t});
   // 挿入位置：直前に触れた行の下、なければ末尾
   let toks=doItems(t).map(it=>it.type+'_'+it.obj.id).filter(x=>x!==tok);
   const ai=anchorTok?toks.indexOf(anchorTok):-1;
@@ -3340,7 +3349,7 @@ function taskRow(x,o={}){
       <div class="meta">
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
         ${x.due?`<span>期限 ${fmtDateJa(x.due)}</span>`:''}
-        
+        ${x.groupId&&S.groups.some(g=>g.id===x.groupId)?`<span class="gtag"><i style="${markCss(x.groupId)}"></i>${esc(groupPath(x.groupId))}</span>`:''}
         ${x.status==='wait'&&x.waitNote?`<span style="color:var(--wait);">${esc(x.waitNote)}</span>`:''}</div>
       ${linkChips(x.links)}${x.memo?`<div class="memoline">${linkify(x.memo)}</div>`:''}${rowImgs(x.images)}
     </div>
@@ -3368,7 +3377,34 @@ function groupChipsHtml(sel,fn){
   return `<div class="chips"><button class="chip ${!sel.size?'on':''}" onclick="${fn}('')">全体</button>
     ${flat.map(({g,dep})=>`<button class="chip ${sel.has(g.id)?'on':''}" onclick="${fn}('${g.id}')">
       <span class="dot" style="${markCss(g.id)}"></span>${'▸'.repeat(dep)}${esc(g.name)}</button>`).join('')}</div>`;}
-/* タスク一覧のしぼり込み＝6色チップ（タスクにグループは無い） */
+/* タスク一覧のしぼり込み＝グループ（階層ボタン）×6色チップ */
+let taskGroupSel=''; // ''=全体／'__none'=グループなしのみ／それ以外＝そのグループ＋子孫
+/* 予定入力・タスク入力と同じ階層ボタン。親を選ぶと下に子の行が出る */
+function taskGroupFilterHtml(){
+  const openT=S.tasks.filter(x=>x.status!=='done');
+  const cnt=id=>{const ids=visibleGroups(new Set([id]));return openT.filter(x=>x.groupId&&ids.has(x.groupId)).length;};
+  const noneN=openT.filter(x=>!x.groupId).length;
+  const chain=[];let cur=S.groups.find(g=>g.id===taskGroupSel);
+  while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
+  const rows=[];let parentId=null,level=0;
+  while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
+    if(!opts.length)break;
+    const sel=chain[level]||null;
+    rows.push(`<div class="gtabs gfil">${level===0?`<button type="button" class="${taskGroupSel?'':'on'}" onclick="tglTaskGroup('')">全体</button>`:''}${opts.map(g=>{const n=cnt(g.id);
+      return `<button type="button" class="${sel===g.id?'on':''}" onclick="tglTaskGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}<i class="gn">${n}</i></button>`;}).join('')}${level===0&&noneN?`<button type="button" class="${taskGroupSel==='__none'?'on':''}" onclick="tglTaskGroup('__none')">グループなし<i class="gn">${noneN}</i></button>`:''}</div>`);
+    if(!sel)break;
+    parentId=sel;level++;}
+  return rows.join('');}
+/* 同じものを再タップ＝1つ上の階層に戻す */
+function tglTaskGroup(id){
+  if(id&&id!=='__none'&&id===taskGroupSel){const g=S.groups.find(x=>x.id===id);taskGroupSel=g&&g.parentId?g.parentId:'';}
+  else taskGroupSel=(id===taskGroupSel?'':id);
+  taskActiveRow=null;render();}
+function taskGroupMatch(x){
+  if(!taskGroupSel)return true;
+  if(taskGroupSel==='__none')return !x.groupId;
+  const ids=visibleGroups(new Set([taskGroupSel]));
+  return !!(x.groupId&&ids&&ids.has(x.groupId));}
 let taskColorSel=new Set();
 function colorChipsHtml(){
   return `<div class="chips"><button class="chip ${!taskColorSel.size?'on':''}" onclick="tglTaskColor(-2)">全体</button>
@@ -3387,7 +3423,7 @@ function addTaskAfter(id){taskActiveRow=null;taskAddAfter=id;taskModal(null);}
 let taskQuery='';
 function onTaskSearch(v){taskQuery=v;_focusSearch=true;render();}
 function renderTasks(){
-  let list=S.tasks.filter(x=>!taskColorSel.size||taskColorSel.has(taskPastelIdx(x)));
+  let list=S.tasks.filter(x=>taskGroupMatch(x)&&(!taskColorSel.size||taskColorSel.has(taskPastelIdx(x))));
   if(taskQuery.trim()){const q=taskQuery.trim().toLowerCase();
     list=list.filter(x=>(x.title||'').toLowerCase().includes(q)||(x.memo||'').toLowerCase().includes(q));}
   const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
@@ -3405,6 +3441,7 @@ function renderTasks(){
   return `
   <div class="vhead"><h1><button class="backbtn" onclick="switchView('today')">‹</button>タスク一覧</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
+  <div class="tgfil">${taskGroupFilterHtml()}</div>
   ${colorChipsHtml()}
   <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
     <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先</button>
@@ -3424,7 +3461,7 @@ function renderTasks(){
 let taskAnchorId=null;
 function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
   const id=uid();
-  S.tasks.push({id,title:v,estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr()});
+  S.tasks.push({id,title:v,groupId:lastTaskGroupId(),estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr()});
   if(taskSort==='manual'){let ids=manualTaskIds().filter(i=>i!==id);
     const ai=taskAnchorId?ids.indexOf(taskAnchorId):-1;
     if(ai>=0)ids.splice(ai+1,0,id);else ids.push(id);
@@ -3547,13 +3584,21 @@ let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_t
 function repNLabel(n){n=+n||1;return n===1?'毎月':n===6?'半年ごと':n===12?'1年ごと':`${n}ヶ月ごと`;}
 let _tfPlace=null; // 週カレンダーで時間を決めてから作るとき {d,s,e}
 let _tfTab='form',_tfTmplEdit=null,_tfKeepEst=true,_tfHold=null; // テンプレタブ（v2.75）
+let _tfGroup='',_tfStash=null; // グループ（カテゴリ）＝''はなし・v3.06。_tfStash＝カテゴリ作成ポップへ寄り道する間の入力退避
+/* 新しいタスクの既定グループ＝タスク一覧で絞り込み中ならそれ、なければ最後に選んだもの */
+function lastTaskGroupId(){
+  if(view==='tasks'&&taskGroupSel&&taskGroupSel!=='__none'&&S.groups.some(g=>g.id===taskGroupSel))return taskGroupSel;
+  const g=S.settings.lastTaskGroup;
+  return (g&&S.groups.some(x=>x.id===g))?g:'';}
 function taskModal(id,presetDue,presetToday,place){
   _tfPlace=place||null;_tfTab='form';_tfTmplEdit=null;_tfHold=null;
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
   editLinks=(x?.links||[]).map(l=>({...l}));editImages=(x?.images||[]).slice();
   _tfId=id||null;
-  _tfColor=x?(x.color??null):null; // タスクはグループではなくパステル6色（v2.75）
+  _tfColor=x?(x.color??null):null; // 色＝ぱっと見の目印（v2.75）／グループ＝分類（v3.06）
+  _tfGroup=x?(x.groupId||''):lastTaskGroupId();
+  _tfStash=null;
   _tfDue=x?.due||presetDue||'';
   _tfToday=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');
   _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;_tfRepMonthN=(+x?.repMonthN>0)?+x.repMonthN:1;
@@ -3584,7 +3629,10 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
       ${tfTabsHtml()}${tfTmplListHtml()}</div>`;
     $('#dlgWrap').classList.add('show');return;}
   // 入力中の値は再描画でも保つ（別の項目を触ると消える、を防ぐ）
-  const keep=fresh?{}:{title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
+  // 入力中の値はDOMから拾う。カテゴリ作成ポップで #dlg ごと差し替わった時だけ _tfStash から戻す
+  const dom={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
+  const keep=fresh?{}:(_tfStash?Object.assign({},_tfStash,Object.fromEntries(Object.entries(dom).filter(([,v])=>v!=null))):dom);
+  _tfStash=null;
   const st=keep.st??(src?.status||'todo');
   const prio=+(keep.prio??src?.priority??2);
   const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0); // ボタンを押すたび上に戻らないように
@@ -3595,6 +3643,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     <div class="frow"><label>色</label><div class="cpsw emsw tfsw">
       <button type="button" class="${_tfColor==null?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px)" onclick="tfPickColor(null)" title="色なし"></button>
       ${pastelOrder().map(i=>`<button type="button" class="${_tfColor===i?'on':''}" style="background:${pastelSw(i)}" onclick="tfPickColor(${i})"></button>`).join('')}</div></div>
+    <div class="frow"><label>グループ（カテゴリ）</label>${tfGroupHtml()}</div>
     ${tmpl?'':`<div class="frow"><label>いつやる（つけなければ、ためておくタスク）</label>
       <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}</div></div>`}
     <div class="frow f2"><div><label>優先度</label>
@@ -3618,9 +3667,37 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     :`<div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`}`;
   $('#dlgWrap').classList.add('show');
   const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;
+  gtabsSync($('#dlg'));
   if(focus&&!_tfId&&!tmpl){const el=$('#tmTitle');if(el)el.focus();}} // ＋を押した流れのままフォーカス＝すぐ入力できる
-/* 色＝1タップで決定（タスクにグループは無い。長押しの色シートと同じ6色） */
+/* 色＝1タップで決定（長押しの色シートと同じ6色） */
 function tfPickColor(i){_tfColor=i;tfRender();}
+/* 階層ボタンは横スクロールなので、選んでいるものが画面外にならないよう寄せる */
+function gtabsSync(root){(root||document).querySelectorAll('.gtabs').forEach(box=>{
+  const on=box.querySelector('button.on');if(!on)return;
+  const l=on.offsetLeft,r=l+on.offsetWidth;
+  if(l<box.scrollLeft||r>box.scrollLeft+box.clientWidth)box.scrollLeft=Math.max(0,l-12);});}
+/* グループ＝予定の入力と同じ階層ボタン。親を選ぶと下に子の行が出る（最大4階層） */
+function tfGroupHtml(){
+  const chain=[];let cur=S.groups.find(g=>g.id===_tfGroup);
+  while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
+  const rows=[];let parentId=null,level=0;
+  while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
+    if(!opts.length)break;
+    const sel=chain[level]||null;
+    rows.push(`<div class="gtabs">${level===0?`<button type="button" class="${_tfGroup?'':'on'}" onclick="tfPickGroup('')">なし</button>`:''}${opts.map(g=>{const lb=hueLabel(groupHue(g.id));
+      return `<button type="button" class="${sel===g.id?'on':''}" onclick="tfPickGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}${lb?`<i class="gtl">${esc(lb)}</i>`:''}</button>`;}).join('')}${level===0?`<button type="button" class="gadd" onclick="tfAddGroup()">＋</button>`:''}</div>`);
+    if(!sel)break;
+    parentId=sel;level++;}
+  return rows.join('');}
+/* 同じものを再タップ＝1つ上の階層に戻す（子まで絞ったのをやめられる） */
+function tfPickGroup(id){
+  if(id&&id===_tfGroup){const g=S.groups.find(x=>x.id===id);_tfGroup=g&&g.parentId?g.parentId:'';}
+  else _tfGroup=id;
+  tfRender();}
+function tfAddGroup(){
+  _tfStash={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
+  groupInlinePop(null,gid=>{if(gid)_tfGroup=gid;tfRender();}); // やめる＝gid null。その時はグループを消さない
+}
 function tfPickToday(v){_tfToday=(_tfToday===v?'':v);tfRender();}
 /* ===== タスクのテンプレ（カード一覧・タップで適用・✎でその場編集） ===== */
 function taskTmplSorted(){return (S.taskTemplates||[]).slice().sort((a,b)=>(a.order??1e9)-(b.order??1e9));}
@@ -3637,7 +3714,8 @@ function tfTmplListHtml(){const list=taskTmplSorted();
       <button type="button" onclick="tfTmplEditOpen('')">＋ 新しいテンプレを作る</button>
       <button type="button" onclick="tfTmplFromForm()">⭐ いまの入力内容を登録</button></div>
     ${list.length?list.map(t=>{const c=(t.color!=null&&PASTELS[t.color])?PASTELS[t.color].c:'';
-      const meta=[t.estMin?fmtMin(t.estMin):'',t.priority===1?'優先高':(t.priority===3?'優先低':''),tmplRepTextT(t),t.keepEst===false?'時間は入れない':''].filter(Boolean).join('・');
+      const gn=(t.groupId&&S.groups.some(g=>g.id===t.groupId))?groupPath(t.groupId):'';
+      const meta=[t.estMin?fmtMin(t.estMin):'',t.priority===1?'優先高':(t.priority===3?'優先低':''),tmplRepTextT(t),gn,t.keepEst===false?'時間は入れない':''].filter(Boolean).join('・');
       return `<div class="tmplcard" style="${c?`background:${c};`:''}" onclick="applyTaskTmpl('${t.id}')">
         <div class="tmpcb"><div class="tmpct">${esc(t.title||'（名前なし）')}</div>
           <div class="tmpcm">${meta||'タップで入力欄に入ります'}</div>
@@ -3652,13 +3730,14 @@ function tfTmplListHtml(){const list=taskTmplSorted();
 function tfTmplEditOpen(id){const t=id?S.taskTemplates.find(v=>v.id===id):null;
   _tfTmplEdit=id||'';_tfTab='form';
   _tfColor=t?(t.color??null):null;
+  _tfGroup=t?(t.groupId||''):lastTaskGroupId();_tfStash=null;
   _tfRepeat=t?.repeat||'';_tfRepDays=(t?.repDays||[]).slice();_tfRepDom=t?.repDom??null;_tfRepMonthN=(+t?.repMonthN>0)?+t.repMonthN:1;
   _tfKeepEst=t?t.keepEst!==false:true;
   editLinks=(t?.links||[]).map(l=>({...l}));editImages=[];
   tfRender(true);}
 function saveTaskTmpl(){
   const title=($('#tmTitle')?.value||'').trim();if(!title){uiAlert('テンプレの名前（タスク名）を入力してください');return;}
-  const data={title,color:_tfColor,estMin:+($('#tmEst')?.value)||0,priority:+($('#tmPrio')?.value||2),
+  const data={title,color:_tfColor,groupId:_tfGroup||'',estMin:+($('#tmEst')?.value)||0,priority:+($('#tmPrio')?.value||2),
     repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
     memo:$('#tmMemo')?.value||'',links:editLinks.map(l=>({...l})),keepEst:_tfKeepEst};
   if(_tfTmplEdit){const t=S.taskTemplates.find(v=>v.id===_tfTmplEdit);if(t)Object.assign(t,data);}
@@ -3668,12 +3747,12 @@ function saveTaskTmpl(){
   toast(upd?'テンプレを更新しました':'テンプレを登録しました');}
 function tfTmplFromForm(){const h=_tfHold||{};const title=(h.title||'').trim();
   if(!title){uiAlert('先に「入力」タブでタスク名を入れてください');return;}
-  S.taskTemplates.push({id:uid(),title,color:_tfColor,estMin:+h.est||0,priority:+(h.prio||2),
+  S.taskTemplates.push({id:uid(),title,color:_tfColor,groupId:_tfGroup||'',estMin:+h.est||0,priority:+(h.prio||2),
     repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,memo:h.memo||'',
     links:editLinks.map(l=>({...l})),keepEst:true,order:S.taskTemplates.length});
   save();tfRender();toast(`「${title}」をテンプレに登録しました`);}
 function applyTaskTmpl(id){const t=S.taskTemplates.find(v=>v.id===id);if(!t)return;
-  _tfColor=t.color??null;
+  _tfColor=t.color??null;_tfGroup=t.groupId||'';
   _tfRepeat=t.repeat||'';_tfRepDays=(t.repDays||[]).slice();_tfRepDom=t.repDom??null;_tfRepMonthN=(+t.repMonthN>0)?+t.repMonthN:1;
   editLinks=(t.links||[]).map(l=>({...l}));
   _tfTab='form';_tfHold=null;tfRender();
@@ -3728,7 +3807,7 @@ function saveTask(id){
   snapUndo();
   const today=_tfToday==='today'?todayStr():_tfToday==='tomorrow'?tomorrowStr():null;
   const data={title,estMin:+$('#tmEst').value||0,priority:+($('#tmPrio')?.value||2),
-    due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
+    groupId:_tfGroup||'',due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),};
   let savedId=id;
@@ -3744,6 +3823,7 @@ function saveTask(id){
   if(_tfPlace){const o=S.tasks.find(t=>t.id===savedId);
     if(o)placeTaskAt(o,_tfPlace.d,_tfPlace.s,Math.max(5,_tfPlace.e-_tfPlace.s),true);
     _tfPlace=null;}
+  S.settings.lastTaskGroup=_tfGroup||''; // 次に作るタスクの既定にする（「なし」も覚える）
   chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
   save();dlgEnd();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
@@ -4645,7 +4725,8 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
   const box=document.querySelector('#dlg .tform');
   // フォーカスが画面を引っぱらないように（先に当ててから位置を戻す）
   if(fresh&&!_emId&&!tmplEd){const el=$('#emTitle');if(el){try{el.focus({preventScroll:true});}catch(_){el.focus();}}}
-  if(box)box.scrollTop=prevScroll;}
+  if(box)box.scrollTop=prevScroll;
+  gtabsSync($('#dlg'));}
 /* 時刻：入力したら状態に取り込む */
 function emSyncTime(){_emStart=$('#emStart')?.value||'';_emEnd=$('#emEnd')?.value||'';
   const b=document.querySelector('.emallday');if(b)b.classList.toggle('on',!_emStart&&!_emEnd);}
@@ -5885,6 +5966,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v3.06（2026-08-21）タスクをグループ（カテゴリ）で絞り込めるように</b><br>
+  ・タスクの入力に <b>グループ（カテゴリ）</b> がもどりました。<b>予定の入力と同じボタン</b>で、親を押すと下に子のボタンが出て、さらに細かく選べます（同じボタンをもう一度押すと1つ上に戻ります）<br>
+  ・<b>「なし」も選べます</b>。分類したくないタスクはそのままでOKです。「＋」からその場で新しいカテゴリも作れます（入力中のタスク名やメモは消えません）<br>
+  ・<b>タスク一覧に、同じかたちの絞り込みボタン</b>を付けました。親を選ぶと<b>その下のタスクもまとめて</b>出ます。ボタンには件数が出ます<br>
+  ・<b>色のしぼり込みや検索と組み合わせて</b>使えます（例：仕事 × ピンク）<br>
+  ・タスクの行に<b>どのグループか</b>が出るようになりました（例：仕事 ▸ クライアントA）<br>
+  ・新しいタスクは<b>最後に選んだグループ</b>が最初から入ります。絞り込み中に追加すると、そのグループに入ります（クイック追加も同じ）<br>
+  ・テンプレートもグループを覚えます<br>
+  </div>
   <div class="mini"><b>v3.05（2026-08-21）色は「見た目」で選ぶように／深夜の予定・第◯週の曜日</b><br>
   ・<b>「ほかのタスク」は色ごとに全部ひらいた状態</b>になりました（前は先頭の3色だけ開いていました）<br>
   ・色の<b>名前の表示をやめました</b>。どの画面でも<b>色そのもの（見本のバー）</b>で選び・見分けます<br>
