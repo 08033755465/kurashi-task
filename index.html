@@ -291,6 +291,44 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   border:1px solid var(--line);background:var(--bg);color:var(--sub);cursor:grab;touch-action:none;border-radius:5px !important;}
 .tgrip svg{width:12px;height:12px;}
 .tgrip:active{background:var(--accent);color:#fff;border-color:var(--accent);}
+/* 見出しの検索ボタン（どのタブからでも同じ場所） */
+.sqbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin-left:8px;
+  border:1px solid var(--line);border-radius:50% !important;color:var(--accent);background:var(--bg);vertical-align:middle;}
+.sqbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+.sqrow{padding:9px 16px;border-bottom:1px solid var(--line2);cursor:pointer;}
+.sqrow:active{background:var(--bg2);}
+.sqm{font-size:14px;line-height:1.35;word-break:break-word;}
+.sqs{font-size:11.5px;color:var(--sub);line-height:1.4;margin-top:2px;word-break:break-word;}
+.sqs b,.sqm b{color:var(--accent);font-weight:700;}
+/* 日記・ふりかえり */
+.rvhint{display:flex;align-items:center;gap:8px;margin:2px 16px 8px;padding:9px 12px;border-radius:12px !important;
+  background:var(--ring);color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;}
+.rvhint span{flex:1;}
+.rvhint button{color:var(--sub);font-size:13px;padding:0 4px;}
+.rvbtn{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px !important;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--bg);}
+.rvrow{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--line2);font-size:13.5px;}
+.rvrow:last-child{border-bottom:none;}
+.rvrow .rvt{flex:1;min-width:0;word-break:break-word;}
+.rvrow.done .rvt{color:var(--sub);text-decoration:line-through;}
+.rvrow .rvchk{color:#2E9E5B;display:flex;}
+.rvrow .rvchk svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.6;}
+.rvrow button{flex:0 0 auto;border:1px solid var(--line);padding:4px 9px;font-size:11.5px;border-radius:999px !important;color:var(--ink);}
+/* 日記カレンダー */
+.dwd{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px;font-size:10.5px;color:var(--sub);text-align:center;}
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:4px 8px;}
+.dcell{position:relative;aspect-ratio:1;border:1px solid var(--line2);border-radius:8px !important;overflow:hidden;background:var(--bg);cursor:pointer;}
+.dcell.empty{border:none;background:none;}
+.dcell.td{box-shadow:0 0 0 2px var(--accent) inset;}
+.dcell img{width:100%;height:100%;object-fit:cover;display:block;}
+.dcell .dn{position:absolute;left:3px;top:2px;font-size:10.5px;color:var(--sub);font-variant-numeric:tabular-nums;}
+.dcell .dn.on{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-weight:700;}
+.dcell .dtxt{position:absolute;right:3px;bottom:2px;font-size:11px;}
+.dallh{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 5px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer;}
+.dallh span{font-weight:400;font-size:11px;}
+.dallg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:0 8px;}
+.dallg img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px !important;display:block;cursor:pointer;}
+.dtextbox{padding:10px 16px;font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.dlist{padding:0 16px 6px;font-size:13px;color:var(--ink);line-height:1.9;}
 /* タスク管理タブ：区分ごとのセクション */
 .tsec{margin-top:2px;}
 .tsech{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;font-size:12.5px;font-weight:700;color:var(--sub);letter-spacing:.08em;}
@@ -1412,7 +1450,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.00';
+const APP_VERSION='v4.10';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1657,6 +1695,8 @@ function migrate(){const st=S.settings;
   if(!S.habits)S.habits=[];
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(!S.dayBands)S.dayBands={}; // 週カレンダーの色帯（その日だけ）
+  if(!S.diary)S.diary={};       // 日記（v4.10）：{'YYYY-MM-DD':{text,images:[{id,url,path,local}],done:[],next:[],at}}
+  st.reviewAt=st.reviewAt||'21:00'; // この時刻以降に開いたら「今日をふりかえる」を1回だけ案内
   // よく使う予定（テンプレ）：並び順と「時刻も覚える」を補完
   (S.templates||[]).forEach((t,i)=>{if(t.order===undefined)t.order=i;if(t.keepTime===undefined)t.keepTime=true;});
   // タスクのテンプレ（v2.75）
@@ -2028,7 +2068,7 @@ function setBase(st){try{if(st===null){_base=null;localStorage.removeItem(BASEKE
   if(j.length>1_000_000){localStorage.removeItem(BASEKEY);return;}
   localStorage.setItem(BASEKEY,j);}catch(e){}}
 const ID_LISTS=['tasks','routines','events','templates','taskTemplates','statGroups','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
-const MAP_KEYS=['dayLog','dayColors','dayBands','periodNotes','lastNotify'];
+const MAP_KEYS=['dayLog','dayColors','dayBands','periodNotes','lastNotify','diary'];
 const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
 /* id付きの配列：この端末での「追加・変更・削除」だけをクラウド側に反映する */
 function mergeList(base,local,remote){
@@ -2071,6 +2111,37 @@ function mergeStates(base,local,remote){
 function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
 function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
 function syncBase(){return SYNC.url.replace(/\/+$/,'')+'/rest/v1/kurashi_state';}
+/* ===== 写真の置き場（Supabase Storage）。本体JSONに写真を入れないので容量オーバーしない ===== */
+const IMG_BUCKET='kurashi-images';
+function imgBase(){return SYNC.url.replace(/\/+$/,'')+'/storage/v1/object/';}
+function imgReady(){return syncReady();}
+function imgPublicUrl(path){return imgBase()+'public/'+IMG_BUCKET+'/'+path;}
+async function imgUpload(blob,ext){
+  const room=(SYNC.room||'room').replace(/[^A-Za-z0-9_-]/g,'_');
+  const path=`${room}/${todayStr().slice(0,7)}/${uid()}.${ext||'jpg'}`;
+  const res=await fetch(imgBase()+IMG_BUCKET+'/'+path,{method:'POST',
+    headers:{'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':blob.type||'image/jpeg','x-upsert':'true'},
+    body:blob});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  return {path,url:imgPublicUrl(path)};}
+async function imgDelete(path){if(!path||!imgReady())return;
+  try{await fetch(imgBase()+IMG_BUCKET+'/'+path,{method:'DELETE',headers:{'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key}});}catch(e){}}
+/* 接続確認（設定→同期・データ） */
+async function imgCheck(){
+  if(!imgReady()){uiAlert('先にクラウド同期（URL・キー・同期キー）を設定してください');return;}
+  try{const c=document.createElement('canvas');c.width=c.height=8;c.getContext('2d').fillRect(0,0,8,8);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.5));
+    const o=await imgUpload(blob,'jpg');await imgDelete(o.path);
+    uiAlert('写真の保存先につながりました。日記に写真を入れられます');
+  }catch(e){uiAlert('つながりませんでした。\nsupabase_setup.sql の「日記の写真の置き場」の部分をSQL Editorで実行してください。\n\n'+syncErrHint(e));}}
+/* ファイル→（縮小）→アップロード。同期未設定のときは端末内に小さく保存 */
+function fileToJpegBlob(file,maxDim,q){return new Promise(res=>{
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=()=>{URL.revokeObjectURL(url);let w=img.width,h=img.height;
+    if(w>maxDim||h>maxDim){if(w>=h){h=Math.round(h*maxDim/w);w=maxDim;}else{w=Math.round(w*maxDim/h);h=maxDim;}}
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+    c.toBlob(b=>res(b),'image/jpeg',q);};
+  img.onerror=()=>{URL.revokeObjectURL(url);res(null);};img.src=url;});}
 function scheduleSync(){if(!syncReady())return;clearTimeout(syncTimer);syncTimer=setTimeout(pushState,1200);}
 async function pushState(){if(!syncReady())return;
   try{
@@ -2281,7 +2352,8 @@ function render(){
   const el=$('#view');const sy=window.scrollY;
   // バーチカルと右一覧は独立スクロール。再描画で先頭に戻らないよう位置を控える
   const tlY=$('.tlscroll')?.scrollTop||0,asY=$('.tlaside')?.scrollTop||0;
-  if(view==='diary')el.innerHTML=renderDiary();
+  if(view==='search')el.innerHTML=renderSearch();
+  else if(view==='diary')el.innerHTML=renderDiary();
   else if(view==='shop')el.innerHTML=renderShopping();
   else if(view==='tasks'||view==='today')el.innerHTML=renderTasks();/* today は廃止＝タスクへ寄せる */
   else if(view==='tstats')el.innerHTML=renderTStats();
@@ -2297,6 +2369,7 @@ function render(){
   if(_reorderFollow){const row=document.querySelector(_reorderFollow);_reorderFollow=null;
     if(row){const r=row.getBoundingClientRect();if(r.top<90||r.bottom>window.innerHeight-90)window.scrollBy(0,r.top-160);}}
   if(_focusSearch){_focusSearch=false;const el=$('#taskSearch');if(el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
+  if(view==='search'){const el=$('#sqInput');if(el&&document.activeElement!==el){const v=el.value;el.focus();try{el.setSelectionRange(v.length,v.length);}catch(e){}}}
   if(_justDoneTok){const tok=_justDoneTok;_justDoneTok=null;
     document.querySelectorAll(`[data-lp="${tok}"]`).forEach(row=>{row.classList.add('justdone');
       setTimeout(()=>row.classList.remove('justdone'),450);});}
@@ -3613,9 +3686,241 @@ function enterTaskReorderWith(id){taskActiveRow=null;taskSort='manual';taskReord
 function addTaskAfter(id){taskActiveRow=null;taskAddAfter=id;taskModal(null);}
 let taskQuery='';
 function onTaskSearch(v){taskQuery=v;_focusSearch=true;render();}
-function renderDiary(){ /* v4.10 で作りこむ。いまは入口だけ */
-  return `<div class="vhead"><h1>日記</h1><span class="sub">じゅんび中</span></div>
-  <div class="mini" style="padding:16px;">1日のふりかえり（今日の完了・明日のタスク）と、日記（文章＋写真）をここに置きます。<br>次の更新でお使いいただけるようになります。</div>`;}
+/* ================= アプリ全体のテキスト検索（v4.20） ================= */
+let _sqQuery='',_sqDone=false,_sqBack='tasks';
+function openSearch(){_sqBack=(view==='search'?_sqBack:view);switchView('search');}
+function sqInput(v){_sqQuery=v;render();}
+function sqToggleDone(){_sqDone=!_sqDone;render();}
+/* 見出しの🔍ボタン（どのタブからでも同じ場所に置く） */
+function searchBtn(){return `<button class="sqbtn" onclick="openSearch()" title="ぜんぶから探す"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>`;}
+function sqHit(text,q){const t=String(text||'');const i=t.toLowerCase().indexOf(q);
+  if(i<0)return esc(t.slice(0,60));
+  const a=Math.max(0,i-18),b=Math.min(t.length,i+q.length+34);
+  return (a>0?'…':'')+esc(t.slice(a,i))+'<b>'+esc(t.slice(i,i+q.length))+'</b>'+esc(t.slice(i+q.length,b))+(b<t.length?'…':'');}
+function renderSearch(){
+  const q=_sqQuery.trim().toLowerCase();
+  const has=(...vals)=>q&&vals.some(v=>String(v||'').toLowerCase().includes(q));
+  const groups=[];
+  if(q){
+    // タスク
+    const tk=S.tasks.filter(x=>(_sqDone||x.status!=='done')&&has(x.title,x.memo,x.waitNote,(x.links||[]).map(l=>l.label+' '+l.url).join(' ')));
+    if(tk.length)groups.push({t:'タスク',n:tk.length,rows:tk.map(x=>({
+      main:esc(x.title),sub:sqHit(x.memo||x.waitNote||WHEN_LABEL[taskWhen(x)],q)+(x.status==='done'?'・完了':''),go:`taskModal('${x.id}')`}))});
+    // 予定
+    const ev=S.events.filter(e=>has(e.title,e.memo));
+    if(ev.length)groups.push({t:'予定',n:ev.length,rows:ev.map(e=>({
+      main:esc(evTitle(e)),sub:fmtDateJa(e.date)+'　'+sqHit(e.memo||evTimeText(e),q),go:`sqGoDay('${e.date}')`}))});
+    // ルーティン
+    const rt=(S.routines||[]).filter(r=>has(r.title,r.memo,r.folder));
+    if(rt.length)groups.push({t:'ルーティン',n:rt.length,rows:rt.map(r=>({
+      main:esc(r.title),sub:sqHit(r.memo||r.folder||'',q),go:`routineModal('${r.id}')`}))});
+    // 習慣
+    const hb=(S.habits||[]).filter(h=>has(h.title,h.course,h.memo));
+    if(hb.length)groups.push({t:'習慣',n:hb.length,rows:hb.map(h=>({
+      main:esc(h.title),sub:sqHit(h.course||h.memo||'',q),go:`switchView('habit');habitDetail('${h.id}')`}))});
+    // 買い物
+    const sh=(S.shopping||[]).filter(x=>has(x.name,x.memo));
+    if(sh.length)groups.push({t:'買い物',n:sh.length,rows:sh.map(x=>({
+      main:esc(x.name||''),sub:sqHit(x.memo||'',q)+(x.boughtAt?'・買った（'+fmtDateJa(x.boughtAt)+'）':''),go:`switchView('shop')`}))});
+    // 日記
+    const dy=Object.keys(S.diary||{}).filter(d=>has((S.diary[d]||{}).text));
+    if(dy.length)groups.push({t:'日記',n:dy.length,rows:dy.sort((a,b)=>b.localeCompare(a)).map(d=>({
+      main:fmtDateJa(d),sub:sqHit(S.diary[d].text,q),go:`sqGoDiary('${d}')`}))});
+    // 週・月のメモ
+    const pn=Object.keys(S.periodNotes||{}).filter(k=>has(S.periodNotes[k]));
+    if(pn.length)groups.push({t:'週・月のメモ',n:pn.length,rows:pn.map(k=>({
+      main:k,sub:sqHit(S.periodNotes[k],q),go:`switchView('cal')`}))});
+    // その日の記録
+    const lg=[];Object.keys(S.dayLog||{}).forEach(d=>{(S.dayLog[d].logs||[]).forEach(l=>{if(has(l.text))lg.push({d,l});});});
+    if(lg.length)groups.push({t:'記録',n:lg.length,rows:lg.sort((a,b)=>b.d.localeCompare(a.d)).map(o=>({
+      main:esc(o.l.text),sub:fmtDateJa(o.d)+(o.l.at!=null?'　'+min2hm(o.l.at):''),go:`sqGoDay('${o.d}')`}))});
+  }
+  const total=groups.reduce((n,g)=>n+g.n,0);
+  return `<div class="vhead"><h1><button class="backbtn" onclick="switchView('${_sqBack}')">‹</button>さがす</h1>${q?`<span class="sub">${total}件</span>`:''}</div>
+  <div class="tasksearch"><input id="sqInput" value="${esc(_sqQuery)}" placeholder="🔍 アプリの中をぜんぶ検索" oninput="if(!event.isComposing)sqInput(this.value)" onchange="sqInput(this.value)">${_sqQuery?`<button onclick="sqInput('')">✕</button>`:''}</div>
+  <div style="padding:0 16px 6px;"><button class="chip ${_sqDone?'on':''}" onclick="sqToggleDone()">完了したタスクも入れる</button></div>
+  ${!q?'<div class="mini" style="padding:12px 16px;">タスク・予定・ルーティン・習慣・買い物・日記・メモ・記録 の中から、まとめて探します。</div>'
+    :(total?groups.map(g=>`<div class="sec-h">${g.t}（${g.n}）</div>
+      ${g.rows.map(r=>`<div class="sqrow" onclick="${r.go}"><div class="sqm">${r.main}</div><div class="sqs">${r.sub}</div></div>`).join('')}`).join('')
+      :`<div class="mini" style="padding:12px 16px;">「${esc(_sqQuery)}」は見つかりませんでした</div>`)}
+  <div style="height:60px;"></div>`;}
+function sqGoDay(d){calDate=d;calMode='day';const dd=parseDs(d);calY=dd.getFullYear();calX=dd.getMonth();switchView('cal');calMode='day';render();toTop();}
+function sqGoDiary(d){diaryInit();const dd=parseDs(d);diaryY=dd.getFullYear();diaryX=dd.getMonth();diaryDay=d;switchView('diary');}
+/* ================= 日記・1日のふりかえり（v4.10） ================= */
+const DIARY_IMG_MAX=10;
+function diaryOf(d){if(!S.diary)S.diary={};
+  if(!S.diary[d])S.diary[d]={text:'',images:[],done:[],next:[],at:0};
+  const o=S.diary[d];if(!Array.isArray(o.images))o.images=[];
+  if(!Array.isArray(o.done))o.done=[];if(!Array.isArray(o.next))o.next=[];return o;}
+function diaryHas(d){const o=(S.diary||{})[d];return !!(o&&((o.text||'').trim()||(o.images||[]).length));}
+function diaryFirstImg(d){const o=(S.diary||{})[d];return (o&&o.images&&o.images[0])?(o.images[0].url||o.images[0].local):'';}
+function diaryImgSrc(im){return im.url||im.local||'';}
+
+/* ---- ふりかえり（今日の完了・明日のぶん・日記） ---- */
+let _rvDay='',_rvTab='today';
+function reviewOpen(d){_rvDay=d||todayStr();_rvTab='today';_rvHintSeen();rvRender(true);}
+function rvTab(v){rvSave(true);_rvTab=v;rvRender();}
+function rvRender(fresh){
+  const d=_rvDay,o=diaryOf(d),t=todayStr();
+  const dd=parseDs(d);const md=`${dd.getMonth()+1}/${dd.getDate()}（${WD[dd.getDay()]}）`;
+  const doneList=S.tasks.filter(x=>x.status==='done'&&x.doneAt===d);
+  const leftList=S.tasks.filter(x=>x.status!=='done'&&x.today&&x.today<=d);
+  const nextDay=shiftDs(d,1);
+  const nextList=S.tasks.filter(x=>x.status!=='done'&&x.today===nextDay);
+  const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0);
+  const keepText=fresh?null:$('#rvText')?.value;
+  if(keepText!=null)o.text=keepText;
+  const body=_rvTab==='today'?`
+    <div class="frow"><label>${md} に終えたこと（${doneList.length}）</label>
+      ${doneList.length?doneList.map(x=>`<div class="rvrow done"><span class="rvchk">${CHK}</span><span class="rvt">${esc(x.title)}</span>
+        <button type="button" onclick="rvUndone('${x.id}')">もどす</button></div>`).join('')
+        :'<div class="mini" style="padding:2px 0;">まだありません</div>'}</div>
+    <div class="frow"><label>まだ残っていること（${leftList.length}）</label>
+      ${leftList.length?leftList.map(x=>`<div class="rvrow"><span class="rvt">${esc(x.title)}</span>
+        <button type="button" onclick="rvDone('${x.id}')">✓ 終えた</button>
+        <button type="button" onclick="rvTo('${x.id}','tomorrow')">➡ 明日</button>
+        <button type="button" onclick="rvTo('${x.id}','priority')">★ 優先</button></div>`).join('')
+        :'<div class="mini" style="padding:2px 0;">ぜんぶ終わりました🎉</div>'}</div>`
+  :_rvTab==='next'?`
+    <div class="frow"><label>${fmtDateJa(nextDay)} にやること（${nextList.length}）</label>
+      ${nextList.length?nextList.map(x=>`<div class="rvrow"><span class="rvt">${esc(x.title)}</span>
+        <button type="button" onclick="rvTo('${x.id}','priority')">★ 優先へ戻す</button></div>`).join('')
+        :'<div class="mini" style="padding:2px 0;">まだありません</div>'}</div>
+    <div class="frow"><label>足しておく</label>
+      <div class="qadd" style="padding:0;"><input id="rvAdd" placeholder="明日のタスクを追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)rvAddNext()">
+        <button type="button" onclick="rvAddNext()">追加</button></div></div>`
+  :`
+    <div class="frow"><label>今日のこと</label>
+      <textarea id="rvText" rows="6" placeholder="うれしかったこと・気づいたこと・memo">${esc(o.text||'')}</textarea></div>
+    <div class="frow"><label>写真（${o.images.length}/${DIARY_IMG_MAX}）</label>${dImagesHtml(d)}</div>
+    ${!imgReady()?'<div class="mini" style="color:var(--danger);">クラウド同期が未設定のため、写真はこの端末の中に小さく保存します（3枚まで）。設定 → 同期・データ から設定すると、たくさん入れられて他の端末でも見られます。</div>':''}`;
+  $('#dlg').innerHTML=`<div class="dm tform">
+    <div class="tfh"><b>${md} のふりかえり</b><button type="button" onclick="rvClose()">✕</button></div>
+    <div class="tftabs">
+      <button type="button" class="${_rvTab==='today'?'on':''}" onclick="rvTab('today')">今日</button>
+      <button type="button" class="${_rvTab==='next'?'on':''}" onclick="rvTab('next')">明日</button>
+      <button type="button" class="${_rvTab==='diary'?'on':''}" onclick="rvTab('diary')">日記</button></div>
+    ${body}</div>
+    <div class="db"><button onclick="rvClose()">とじる</button><button class="ok" onclick="rvSaveClose()">保存</button></div>`;
+  $('#dlgWrap').classList.add('show');
+  const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;}
+function rvSave(quiet){const o=diaryOf(_rvDay);
+  const el=$('#rvText');if(el)o.text=el.value;
+  o.done=S.tasks.filter(x=>x.status==='done'&&x.doneAt===_rvDay).map(x=>x.id);
+  o.next=S.tasks.filter(x=>x.status!=='done'&&x.today===shiftDs(_rvDay,1)).map(x=>x.id);
+  o.at=Date.now();
+  if(!(o.text||'').trim()&&!o.images.length&&!o.done.length&&!o.next.length)delete S.diary[_rvDay];
+  save();if(!quiet)render();}
+function rvSaveClose(){rvSave(true);dlgEnd();render();toast('記録しました');}
+function rvClose(){rvSave(true);dlgEnd();render();}
+function rvUndone(id){undoneTask(id);rvRender();}
+function rvDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  snapUndo();x.status='done';x.doneAt=_rvDay;x.doneMin=curMin();advanceRepeatTask(x);save();rvRender();}
+function rvTo(id,w){moveTaskWhenQuiet(id,w);rvRender();}
+function moveTaskWhenQuiet(id,w){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  snapUndo();setTaskWhen(x,w);if(w==='tomorrow')x.today=shiftDs(_rvDay||todayStr(),1);save();}
+function rvAddNext(){const el=$('#rvAdd');const v=(el?.value||'').trim();if(!v)return;
+  S.tasks.push({id:uid(),title:v,groupId:lastTaskGroupId(),estMin:15,priority:2,status:'todo',links:[],due:'',
+    today:shiftDs(_rvDay,1),memo:'',snooze:null,order:Date.now(),createdAt:todayStr(),pickedAt:Date.now()});
+  save();rvRender();}
+
+/* ---- 日記の写真 ---- */
+function dImagesHtml(d){const o=diaryOf(d);
+  return `<div id="dImgEd" class="imged">${o.images.map((im,i)=>`
+    <div class="imgthumb"><img src="${diaryImgSrc(im)}" loading="lazy" onclick="openLightbox(this.src)">
+      <button type="button" onclick="dImgDel('${d}',${i})">✕</button></div>`).join('')}
+    <label class="imgadd">＋<input type="file" accept="image/*" multiple style="display:none;" onchange="dImgAdd('${d}',this)"></label>
+    <span id="dImgMsg" class="mini" style="align-self:center;"></span></div>`;}
+function dImgRefresh(d){const el=$('#dImgEd');if(el)el.outerHTML=dImagesHtml(d);}
+async function dImgAdd(d,inp){const files=[...inp.files];inp.value='';
+  const o=diaryOf(d);const cap=imgReady()?DIARY_IMG_MAX:3;
+  const msg=m=>{const e=$('#dImgMsg');if(e)e.textContent=m;};
+  for(const f of files){
+    if(!f.type.startsWith('image/'))continue;
+    if(o.images.length>=cap){toast(`写真は${cap}枚までです`);break;}
+    msg('入れています…');
+    try{
+      if(imgReady()){
+        const blob=await fileToJpegBlob(f,1200,0.72);if(!blob)throw new Error('画像を読めません');
+        const up=await imgUpload(blob,'jpg');
+        o.images.push({id:uid(),url:up.url,path:up.path,at:Date.now()});
+      }else{
+        const blob=await fileToJpegBlob(f,800,0.6);if(!blob)throw new Error('画像を読めません');
+        const dataUrl=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(blob);});
+        o.images.push({id:uid(),local:dataUrl,at:Date.now()});
+      }
+      save();
+    }catch(e){msg('⚠ 入れられませんでした（'+syncErrHint(e)+'）');dImgRefreshKeep(d);return;}
+  }
+  msg('');dImgRefresh(d);}
+function dImgRefreshKeep(d){const el=$('#dImgMsg');const m=el?el.textContent:'';dImgRefresh(d);const e2=$('#dImgMsg');if(e2)e2.textContent=m;}
+async function dImgDel(d,i){const o=diaryOf(d);const im=o.images[i];if(!im)return;
+  o.images.splice(i,1);save();dImgRefresh(d);
+  if(im.path)imgDelete(im.path);}
+
+/* ---- 「今日をふりかえる」の案内（決めた時刻以降に1日1回だけ） ---- */
+function rvHintDue(){const t=todayStr();
+  if(S._reviewHintFor===t)return false;
+  return curMin()>=hm2min(S.settings.reviewAt||'21:00');}
+function _rvHintSeen(){S._reviewHintFor=todayStr();save();}
+function rvHintClose(){_rvHintSeen();render();}
+function rvHintHtml(){return rvHintDue()
+  ?`<div class="rvhint"><span onclick="reviewOpen()">今日をふりかえる ▸</span><button onclick="rvHintClose()">✕</button></div>`:'';}
+
+/* ---- 日記タブ ---- */
+let diaryY=0,diaryX=0,diaryMode='cal',diaryDay='';
+function diaryInit(){if(!diaryY){const n=new Date();diaryY=n.getFullYear();diaryX=n.getMonth();}}
+function diaryNav(k){diaryX+=k;if(diaryX<0){diaryX=11;diaryY--;}if(diaryX>11){diaryX=0;diaryY++;}render();}
+function diarySetMode(m){diaryMode=m;diaryDay='';render();}
+function diaryOpenDay(d){diaryDay=d;render();toTop();}
+function renderDiary(){
+  diaryInit();
+  if(diaryDay)return diaryDayPage(diaryDay);
+  const head=`<div class="vhead"><h1>日記</h1><span class="sub">${diaryCount()}日ぶん${searchBtn()}</span></div>
+    <div class="calbar"><div class="mv"><button onclick="diaryNav(-1)">‹</button><button onclick="diaryToday()">今月</button><button onclick="diaryNav(1)">›</button></div>
+      <div class="ym">${diaryY}年${diaryX+1}月</div></div>
+    <div style="padding:0 16px 8px;"><div class="seg" style="width:100%;">
+      <button style="flex:1;" class="${diaryMode==='cal'?'on':''}" onclick="diarySetMode('cal')">カレンダー</button>
+      <button style="flex:1;" class="${diaryMode==='all'?'on':''}" onclick="diarySetMode('all')">写真をぜんぶ</button></div></div>`;
+  const add=`<div style="padding:0 16px 8px;"><button class="rvbtn" onclick="reviewOpen()">＋ 今日をふりかえる・日記を書く</button></div>`;
+  return head+add+(diaryMode==='cal'?diaryCalHtml():diaryAllHtml());
+}
+function diaryToday(){const n=new Date();diaryY=n.getFullYear();diaryX=n.getMonth();diaryDay='';render();}
+function diaryCount(){return Object.keys(S.diary||{}).filter(diaryHas).length;}
+function diaryCalHtml(){
+  const ws=S.settings.weekStart||0;
+  const start=(new Date(diaryY,diaryX,1).getDay()-ws+7)%7,dim=new Date(diaryY,diaryX+1,0).getDate();
+  const wd=[...Array(7)].map((_,i)=>`<span>${WD[(i+ws)%7]}</span>`).join('');
+  let cells='';for(let i=0;i<start;i++)cells+='<div class="dcell empty"></div>';
+  for(let n=1;n<=dim;n++){const ds=`${diaryY}-${pad(diaryX+1)}-${pad(n)}`;
+    const img=diaryFirstImg(ds);const has=diaryHas(ds);
+    cells+=`<div class="dcell${ds===todayStr()?' td':''}" onclick="diaryOpenDay('${ds}')">
+      ${img?`<img src="${img}" loading="lazy">`:''}
+      <span class="dn${img?' on':''}">${n}</span>
+      ${!img&&has?'<span class="dtxt">📝</span>':''}</div>`;}
+  return `<div class="dwd">${wd}</div><div class="dgrid">${cells}</div>
+    <div class="mini" style="padding:10px 16px 60px;">日づけをタップすると、その日の日記を見たり書いたりできます。写真を入れた日は、いちばん最初の1枚が出ます。</div>`;}
+function diaryAllHtml(){
+  const days=Object.keys(S.diary||{}).filter(d=>d.slice(0,7)===`${diaryY}-${pad(diaryX+1)}`&&(S.diary[d].images||[]).length)
+    .sort((a,b)=>b.localeCompare(a));
+  if(!days.length)return '<div class="mini" style="padding:16px;">この月の写真はまだありません</div>';
+  return days.map(d=>`<div class="dallh" onclick="diaryOpenDay('${d}')">${fmtDateJa(d)}<span>${S.diary[d].images.length}枚</span></div>
+    <div class="dallg">${S.diary[d].images.map(im=>`<img src="${diaryImgSrc(im)}" loading="lazy" onclick="event.stopPropagation();openLightbox(this.src)">`).join('')}</div>`).join('')
+    +'<div style="height:60px;"></div>';}
+function diaryDayPage(d){
+  const o=(S.diary||{})[d]||{text:'',images:[],done:[],next:[]};
+  const dd=parseDs(d);
+  const title=`${dd.getFullYear()}年${dd.getMonth()+1}月${dd.getDate()}日（${WD[dd.getDay()]}）`;
+  const nm=id=>{const x=S.tasks.find(t=>t.id===id);return x?esc(x.title):'';};
+  const done=(o.done||[]).map(nm).filter(Boolean);
+  const next=(o.next||[]).map(nm).filter(Boolean);
+  return `<div class="vhead"><h1><button class="backbtn" onclick="diaryDay='';render()">‹</button>${title}</h1></div>
+    <div style="padding:0 16px 8px;"><button class="rvbtn" onclick="reviewOpen('${d}')">✎ この日を書く・直す</button></div>
+    ${(o.images||[]).length?`<div class="dallg">${o.images.map(im=>`<img src="${diaryImgSrc(im)}" loading="lazy" onclick="openLightbox(this.src)">`).join('')}</div>`:''}
+    ${(o.text||'').trim()?`<div class="dtextbox">${linkify(o.text)}</div>`:'<div class="mini" style="padding:8px 16px;">まだ書かれていません</div>'}
+    ${done.length?`<div class="sec-h">終えたこと（${done.length}）</div><div class="dlist">${done.map(t=>`<div>✓ ${t}</div>`).join('')}</div>`:''}
+    ${next.length?`<div class="sec-h">次の日にまわしたこと（${next.length}）</div><div class="dlist">${next.map(t=>`<div>➡ ${t}</div>`).join('')}</div>`:''}
+    <div style="height:60px;"></div>`;}
 function renderTasks(){
   let list=S.tasks.filter(x=>taskGroupMatch(x));
   if(taskQuery.trim()){const q=taskQuery.trim().toLowerCase();
@@ -3634,10 +3939,12 @@ function renderTasks(){
         :'<div class="tsecempty">なし</div>'}</div></div>`;}).join('');
   const total=open.reduce((s,x)=>s+(+x.estMin||0),0);
   return `
-  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件${total?' ・ 合計'+fmtMin(total):''}</span></div>
+  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件${total?' ・ 合計'+fmtMin(total):''}${searchBtn()}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   <div class="tgfil">${taskGroupFilterHtml()}</div>
+  ${rvHintHtml()}
   <div style="display:flex;justify-content:flex-end;align-items:center;padding:0 16px 2px;gap:10px;">
+    <button class="act" onclick="reviewOpen()">🌙 ふりかえる</button>
     <button class="act" onclick="switchView('tstats')">⏱ 記録</button>
     <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ 詳しく追加</button>
   </div>
@@ -4472,7 +4779,7 @@ function renderCal(){
     ${periodNoteHtml(weekKeyOf(calDate),'この週のメモ')}
     ${periodNoteHtml(monthKeyOf(calDate),'この月のメモ')}`;
   }
-  return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替できます</span></div>
+  return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替${searchBtn()}</span></div>
   ${groupChipsHtml(calSel,'tglCalSel')}
   <div class="calbar"><div class="mv"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calNav(1)">›</button></div>
     <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>`;
@@ -5321,7 +5628,7 @@ function renderRoutines(){
   const seg=`<div class="seg" style="margin:6px 16px 4px;">
     <button class="${routineView==='folder'?'on':''}" onclick="setRoutineView('folder')">${routineView==='folder'?(allClosed?'📁 名前一覧':'📂 全開'):'📁 フォルダ'}</button>
     <button class="${routineView==='week'?'on':''}" onclick="setRoutineView('week')">📅 曜日一覧</button></div>`;
-  const head=`<div class="vhead"><h1>ルーティン</h1><span>
+  const head=`<div class="vhead"><h1>ルーティン</h1><span>${searchBtn()}
     <button class="act" onclick="enterReorder()">並び替え</button>　<button class="act" style="color:var(--accent);" onclick="routineModal(null)">＋追加</button></span></div>${seg}`;
   if(routineView==='week'){const ws=S.settings.weekStart||0;const wd=[...Array(7)].map((_,i)=>(i+ws)%7);
     const wbar=`<div class="rfilter"><button class="${rWeekSel==null?'on':''}" onclick="setRWeek(null)">全曜日</button>
@@ -5528,7 +5835,7 @@ function habitTrend(h){const a=habitWeekCount(h,0),b=habitWeekCount(h,1);const d
   return d>0?`<i class="up">↑+${d}</i>`:d<0?`<i class="dn">↓${d}</i>`:'<i class="fl">→</i>';}
 function renderHabits(){ /* navから外し、設定→習慣 で開く内部ビュー（v4.00） */
   const courses=habitCourses();
-  return `<div class="vhead"><h1>習慣</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
+  return `<div class="vhead"><h1>習慣</h1><span class="sub"><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button>${searchBtn()}</span></div>
   <div class="mini">こまめに積み上げる習慣。やるたびに「＋1回」。<b>マスの濃さ＝その日の回数</b>、空きマス＝おやすみ。🔥は連続日数です。</div>
   ${S.habits.length?courses.map(c=>{
     const hs=S.habits.filter(h=>habitCourse(h)===c);
@@ -5916,7 +6223,7 @@ function renderShopping(){
         <div class="shn">${esc(x.name)}${(+x.qty||1)>1?`<span class="shq">×${+x.qty}</span>`:''}</div>
         <div class="shm">${fmtDateJa(x.boughtAt)}${x.shopId?' ・'+esc(shopName(x.shopId)):''}${x.paid?' ・'+yen((+x.paid)*(+x.qty||1)):''}</div>
       </div></div>`).join('')||'<div class="mini" style="padding:10px 16px;">まだありません</div>'}</div>`:'';
-  return `<div class="vhead"><h1>買い物</h1><span class="sub">${open.length}件 ・ 予定 ${yen(planSum)}</span></div>
+  return `<div class="vhead"><h1>買い物</h1><span class="sub">${open.length}件 ・ 予定 ${yen(planSum)}${searchBtn()}</span></div>
   ${chips}
   <div class="shsum"><div><span>買うもの（予定）</span><b>${yen(planSum)}</b></div>
     <div><span>今月 買った分</span><b>${yen(paidSum)}</b></div></div>
@@ -6038,7 +6345,7 @@ function renderSettings(){
     release:'<path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 15.5h6"/>',
     help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01"/>',
     habitpage:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'};
-  if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ</span></div><div class="setmenu">
+  if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ${searchBtn()}</span></div><div class="setmenu">
     ${[['event','予定・カテゴリ・色設定','グループと色・誕生日・マーク・テンプレ・カラーパレット'],
        ['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
        ['time','時間関連設定','活動の開始/終了・夜の開始・通知時刻'],
@@ -6114,6 +6421,8 @@ function renderSettings(){
       ${timeInput('setPm',s.pmStart,{onchange:"S.settings.pmStart=this.value;save();"})}</div>
     <div class="setrow"><div><div class="sl">夜の開始時刻</div><div class="sd">これ以降を「夜」に。夜は翌朝の起床まで</div></div>
       ${timeInput('setNs',s.nightStart,{onchange:"S.settings.nightStart=this.value;save();"})}</div>
+    <div class="setrow"><div><div class="sl">ふりかえりの案内</div><div class="sd">この時刻を過ぎて開いたら、1日に1回だけ「今日をふりかえる」をお知らせします</div></div>
+      ${timeInput('setRv',s.reviewAt||'21:00',{onchange:"S.settings.reviewAt=this.value;save();"})}</div>
     <div class="setrow"><div><div class="sl">通知を使う</div><div class="sd">アプリを開いている間に通知します</div></div>
       <div class="tgl ${s.notifyOn?'on':''}" onclick="toggleNotify(this)"><i></i></div></div>
     <div class="setrow"><div><div class="sl">朝の通知</div><div class="sd">今日の計画を立てる合図</div></div>
@@ -6148,7 +6457,8 @@ function renderSettings(){
         ${_storageFull?'<div class="mini" style="padding:4px 0 0;color:var(--danger);">⚠ いっぱいです。保存できていない可能性があります。写真を減らすか、下のボタンで空きをつくってください</div>':''}
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
           <button style="border:1px solid var(--ink);padding:7px 14px;font-size:13px;" onclick="freeStorage()">空きをつくる（土台と自動バックアップを消す）</button>
-          <button style="border:1px solid var(--line);padding:7px 14px;font-size:13px;" onclick="dedupeEvents()">重複した予定を整理</button></div>
+          <button style="border:1px solid var(--line);padding:7px 14px;font-size:13px;" onclick="dedupeEvents()">重複した予定を整理</button>
+          <button style="border:1px solid var(--line);padding:7px 14px;font-size:13px;" onclick="imgCheck()">日記の写真の保存先を確認</button></div>
         <div class="mini" style="padding:6px 0 0;">写真（画像メモ）は1項目4枚まで・自動で小さくして保存します。同期の土台と自動バックアップは消しても本体には影響しません。</div></div>`;})()}
     <div class="sec-h">自動バックアップ</div>
     <div class="mini" style="padding:2px 16px 8px;">クラウドから取り込む直前などに、この端末の中へ自動で控えを残しています（最大3件）</div>
@@ -6171,6 +6481,17 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.10（2026-09-07）日記タブ／1日のふりかえり／ぜんぶから検索</b><br>
+  ・<b>日記タブ</b>ができました。<b>カレンダー</b>で見ると、写真を入れた日は<b>いちばん最初の1枚</b>が出ます。日づけをタップするとその日の日記が開きます<br>
+  ・<b>「写真をぜんぶ」</b>に切り替えると、その月の写真がずらっと並びます<br>
+  ・<b>1日のふりかえり</b>を追加。〔今日〕で<b>終えたこと</b>を確かめ、<b>残ったものを明日や優先へ</b>まわせます。〔明日〕で明日のぶんを見て足せます。〔日記〕に<b>文章と写真</b>を残せます<br>
+  ・入口は タスクタブの<b>「🌙 ふりかえる」</b>、日記タブの<b>「＋ 今日をふりかえる」</b>、日記カレンダーの日づけ（過去の日も書けます）<br>
+  ・決めた時刻（はじめは21時）を過ぎて開くと、タスクタブに<b>1日1回だけ</b>おしらせが出ます。時刻は 設定 → 表示設定 で変えられます<br>
+  ・写真は<b>クラウドに保存</b>します（端末の容量を使いません・スマホとPCで同じ写真が見えます）。1日10枚まで。<br>
+  　※はじめに1回だけ準備が必要です：Supabase の SQL Editor で <b>supabase_setup.sql</b> の「日記の写真の置き場」の部分を実行 → 設定 → 同期・データ →「日記の写真の保存先を確認」<br>
+  　※同期を設定していないときは、この端末の中に小さくして3枚まで保存します<br>
+  ・<b>アプリの中をぜんぶ検索</b>できるようになりました。各タブの見出しの<b>🔍</b>から、タスク・予定・ルーティン・習慣・買い物・日記・メモ・記録 をまとめて探せます。結果をタップするとその場所へ移動します<br>
+  </div>
   <div class="mini"><b>v4.00（2026-09-07）「タスク」タブに一新／長押しドラッグで並べ替え</b><br>
   ・いちばん左のタブが <b>「今日」から「タスク」</b> になりました。<b>ぜんぶのタスクが1画面</b>に並びます（バーチカルの時間軸は一旦しまいました）<br>
   ・タスクは <b>今日・明日・優先・通常</b> の4つに分かれて並びます。新しいタスクは<b>「優先」</b>から始まります<br>
