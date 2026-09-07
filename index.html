@@ -291,6 +291,24 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
   border:1px solid var(--line);background:var(--bg);color:var(--sub);cursor:grab;touch-action:none;border-radius:5px !important;}
 .tgrip svg{width:12px;height:12px;}
 .tgrip:active{background:var(--accent);color:#fff;border-color:var(--accent);}
+/* タスク管理タブ：区分ごとのセクション */
+.tsec{margin-top:2px;}
+.tsech{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;font-size:12.5px;font-weight:700;color:var(--sub);letter-spacing:.08em;}
+.tsech .n{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+.tsecb{min-height:8px;}
+.tsecempty{padding:10px 16px;font-size:11.5px;color:var(--sub);border:1px dashed var(--line2);margin:0 12px 4px;border-radius:10px !important;}
+body.tdragging .tsecempty{color:var(--accent);border-color:var(--accent);}
+body.tdragging .tsecempty::after{content:'　ここに置けます';}
+.tsec.tdover .tsech{color:var(--accent);}
+.tsec.tdover .tsecb{background:var(--ring);}
+/* 長押し→ドラッグ */
+.tdhandle{color:var(--line);font-size:13px;letter-spacing:-2px;padding:0 2px;}
+.titem.tdsrc{display:none;}
+.titem.tdghost{position:fixed;z-index:400;pointer-events:none;opacity:.96;background:var(--card,#fff);
+  box-shadow:0 10px 28px rgba(120,90,150,.28);transform:scale(1.02);border-radius:12px !important;border-bottom:none;}
+#tdplace{border:2px dashed var(--accent);background:var(--ring);border-radius:10px !important;margin:2px 12px;box-sizing:border-box;}
+body.tdragging{user-select:none;-webkit-user-select:none;}
+body.tdragging .titem{transition:none;}
 /* タスク一覧のグループ絞り込み（予定入力と同じ階層ボタン） */
 .tgfil{padding:2px 16px 0;}
 .tgfil .gtabs{margin-bottom:5px;}
@@ -1347,11 +1365,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--t3);box-shadow:0 0 0 
 </div>
 
 <nav id="nav">
-  <button data-v="today" onclick="switchView('today')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>今日</button>
+  <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 12l4 4 12-12"/><path d="M4 20h16"/></svg>タスク</button>
   <button data-v="shop" onclick="switchView('shop')"><svg viewBox="0 0 24 24"><path d="M3 5h2l2.2 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>買い物</button>
   <button data-v="cal" onclick="switchView('cal')" onpointerdown="calTabDown(event)" onpointerup="calTabUp()" onpointercancel="calTabUp()" onpointermove="calTabMove(event)" oncontextmenu="event.preventDefault()"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
-  <button data-v="habit" onclick="switchView('habit')"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>習慣</button>
+  <button data-v="diary" onclick="switchView('diary')"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>日記</button>
   <button data-v="set" onclick="switchView('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>設定</button>
 </nav>
 
@@ -1394,7 +1412,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v3.07';
+const APP_VERSION='v4.00';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1444,8 +1462,9 @@ function pastelSw(i){return (PASTELS[i]||{}).s||'';}
 /* 4つの部屋→パステル色の対応（今すぐ＝もも,計画＝あんず,サッと＝れもん,スキマ＝わかば） */
 const QUAD_TO_PASTEL=[0,1,2,3];
 /* タスクの色インデックス（0..PASTELS.length-1）。色は x.color のみ（旧「4つの部屋」は廃止・移行済み） */
-function taskPastelIdx(x){if(!x)return -1;
-  return (x.color!=null&&PASTELS[x.color])?x.color:-1;}
+/* タスクの色分けは廃止（v4.00）。既存の x.color は残すが読まない＝どの画面にも色が出ない。
+   日づけの色・週の色帯・習慣の色は今までどおり */
+function taskPastelIdx(x){return -1;}
 function taskBg(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].c:'';}
 function taskLineC(x){const i=taskPastelIdx(x);return i>=0?PASTELS[i].s:'';}
 /* G設定で並べ替え可能な色の並び順（既定＝PASTELS順） */
@@ -2232,6 +2251,7 @@ function calTabDown(ev){clearTimeout(_calLongT);_calLongFired=false;_calLongY=ev
 function calTabUp(){clearTimeout(_calLongT);_calLongT=null;}
 function calTabMove(ev){if(_calLongT&&Math.abs(ev.clientY-_calLongY)>10)calTabUp();}
 function switchView(v){
+  if(v==='today')v='tasks'; // 「今日」タブは廃止（v4.00）。バーチカルは一旦しまってある
   if(v==='cal'&&view==='cal'){ // 押すたびに 月 → 週 → 日（いつもの表示に戻すのは長押し）
     if(_calLongFired){_calLongFired=false;return;} // 長押しで戻した直後のタップは無視
     calMonthAll=false;
@@ -2261,9 +2281,9 @@ function render(){
   const el=$('#view');const sy=window.scrollY;
   // バーチカルと右一覧は独立スクロール。再描画で先頭に戻らないよう位置を控える
   const tlY=$('.tlscroll')?.scrollTop||0,asY=$('.tlaside')?.scrollTop||0;
-  if(view==='today')el.innerHTML=renderToday();
+  if(view==='diary')el.innerHTML=renderDiary();
   else if(view==='shop')el.innerHTML=renderShopping();
-  else if(view==='tasks')el.innerHTML=renderTasks();
+  else if(view==='tasks'||view==='today')el.innerHTML=renderTasks();/* today は廃止＝タスクへ寄せる */
   else if(view==='tstats')el.innerHTML=renderTStats();
   else if(view==='cal'){el.innerHTML=renderCal();attachCellPress();attachCalSwipe();}
   else if(view==='routine')el.innerHTML=renderRoutines();
@@ -3382,17 +3402,18 @@ async function delPattern(id){if(!await uiConfirm('このパターンを削除�
 
 /* ========================= タスク ========================= */
 function taskRow(x,o={}){
-  const todayBtn=`<button class="todayBtn ${x.today===todayStr()?'on':''}" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>`;
   const arrows=o.arrowsTok?todayArrows(o.arrowsTok)
     :o.arrows?`<div class="arrows"><button onclick="event.stopPropagation();moveToday('${x.id}',-1)">▲</button><button onclick="event.stopPropagation();moveToday('${x.id}',1)">▼</button></div>`:'';
   const active=o.tabAction&&taskActiveRow===x.id;
   const onclick=o.tabAction?`setTaskActive('${x.id}')`:`${o.arrowsTok?`setAnchor('${o.arrowsTok}');`:''}taskModal('${x.id}')`;
-  return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}" ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}" style="${active?'':(taskBg(x)?`background:${taskBg(x)};`:'')}">
-    <div class="bar" style="background:${taskLineC(x)||'var(--line2)'};"></div>
+  const drag=o.drag?` data-tid="${x.id}" onpointerdown="tdragDown(event,'${x.id}')"`:'';
+  return `<div class="titem ${x.status==='done'?'done':''} ${active?'ractive':''}" data-lp="t_${x.id}"${drag} ${o.arrowsTok?`data-do="${o.arrowsTok}"`:''} onclick="${onclick}">
+    <div class="bar" style="background:var(--line2);"></div>
     <div class="chk" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
-      <div class="tt ${x.status==='done'?'done':''} ${x.repeat?'cont':''}">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${repBadgeT(x)}</div>
+      <div class="tt ${x.status==='done'?'done':''} ${x.repeat?'cont':''}">${esc(x.title)}${repBadgeT(x)}</div>
       <div class="meta">
+        ${x.today&&x.today>todayStr()&&x.today!==tomorrowStr()?`<span style="color:var(--accent);font-weight:700;">${fmtDateJa(x.today)}</span>`:''}
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
         ${x.due?`<span>期限 ${fmtDateJa(x.due)}</span>`:''}
         ${x.groupId&&S.groups.some(g=>g.id===x.groupId)?`<span class="gtag"><i style="${markCss(x.groupId)}"></i>${esc(groupPath(x.groupId))}</span>`:''}
@@ -3401,14 +3422,138 @@ function taskRow(x,o={}){
     </div>
     <div class="right">
       ${x.status!=='done'?`<button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>`:''}
-      ${todayBtn}
+      ${o.drag?'<span class="tdhandle" title="長押しして動かす">⋮⋮</span>':''}
     </div>${arrows}</div>${active?`<div class="ractions">
     <button onclick="event.stopPropagation();openTaskEdit('${x.id}')">✎ 編集</button>
-    <button onclick="event.stopPropagation();enterTaskReorderWith('${x.id}')">↕ 並び替え</button>
+    ${WHENS.filter(([w])=>w!==taskWhen(x)).map(([w,l])=>`<button onclick="event.stopPropagation();moveTaskWhen('${x.id}','${w}')">${l}へ</button>`).join('')}
     <button onclick="event.stopPropagation();addTaskAfter('${x.id}')">＋ この下に追加</button></div>`:''}`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const seq=['todo','doing','wait','done'];x.status=seq[(seq.indexOf(x.status)+1)%4];
   if(x.status==='done'){x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);advanceRepeatTask(x);}save();render();checkCelebrate();}
+/* ===== 長押し→ドラッグでタスクを並び替える（区分をまたぐと区分も変わる） =====
+   ゆっくり押す＝持ち上げ／すっと動かす＝画面スクロール、が両立するように
+   ・450ms 押し続けて発火（その間に10px以上動いたらスクロールに譲る）
+   ・発火したら本体を浮かせ、元の場所には点線のすきま（プレースホルダー）を置く
+   ・画面の上下はしに近づくと自動でスクロール */
+let _td=null; // {id,el,ghost,ph,x,y,timer,fired,sx,sy,pid}
+function tdragDown(ev,id){
+  if(ev.pointerType==='mouse'&&ev.button!==0)return;
+  if(_td)tdragEnd(true);
+  const el=ev.currentTarget;
+  const thr=ev.pointerType==='mouse'?18:10;
+  _td={id,el,sx:ev.clientX,sy:ev.clientY,x:ev.clientX,y:ev.clientY,pid:ev.pointerId,fired:false,thr,timer:null};
+  el.classList.add('lpress');
+  _td.timer=setTimeout(()=>tdragFire(),450);
+  document.addEventListener('pointermove',tdragMove,{passive:false});
+  document.addEventListener('pointerup',tdragUp);
+  document.addEventListener('pointercancel',tdragUp);
+  document.addEventListener('scroll',tdragScrollCancel,{passive:true,capture:true});}
+function tdragScrollCancel(){if(_td&&!_td.fired)tdragEnd(true);}
+function tdragFire(){if(!_td)return;const {el}=_td;
+  _td.fired=true;el.classList.remove('lpress');
+  try{navigator.vibrate&&navigator.vibrate(30);}catch(e){}
+  try{el.setPointerCapture(_td.pid);}catch(e){}
+  const r=el.getBoundingClientRect();
+  const g=el.cloneNode(true);g.className='titem tdghost';g.style.width=r.width+'px';
+  g.style.left=r.left+'px';g.style.top=r.top+'px';
+  _td.offY=_td.y-r.top;_td.offX=_td.x-r.left;
+  document.body.appendChild(g);_td.ghost=g;
+  const ph=document.createElement('div');ph.id='tdplace';ph.style.height=r.height+'px';
+  el.parentNode.insertBefore(ph,el);_td.ph=ph;
+  el.classList.add('tdsrc');
+  document.body.classList.add('tdragging');
+  tdragPaint();}
+function tdragPaint(){if(!_td||!_td.ghost)return;
+  _td.ghost.style.left=(_td.x-_td.offX)+'px';_td.ghost.style.top=(_td.y-_td.offY)+'px';}
+function tdragMove(ev){if(!_td)return;
+  _td.x=ev.clientX;_td.y=ev.clientY;
+  if(!_td.fired){
+    if(Math.abs(ev.clientX-_td.sx)>_td.thr||Math.abs(ev.clientY-_td.sy)>_td.thr)tdragEnd(true);
+    return;}
+  ev.preventDefault();
+  tdragPaint();tdragAuto(ev.clientY);tdragPlace(ev.clientX,ev.clientY);}
+/* すきまを、いま指がある場所へ移す */
+function tdragPlace(x,y){
+  const ph=_td.ph;if(!ph)return;
+  const g=_td.ghost;g.style.visibility='hidden';
+  const under=document.elementFromPoint(Math.max(2,Math.min(innerWidth-2,x)),Math.max(2,Math.min(innerHeight-2,y)));
+  g.style.visibility='';
+  if(!under)return;
+  const sec=under.closest('.tsec');if(!sec)return;
+  const bodyEl=sec.querySelector('.tsecb');if(!bodyEl)return;
+  document.querySelectorAll('.tsec.tdover').forEach(e=>e.classList.remove('tdover'));
+  sec.classList.add('tdover');
+  const row=under.closest('.titem[data-tid]');
+  if(row&&row!==_td.el){const r=row.getBoundingClientRect();
+    (y<r.top+r.height/2)?bodyEl.insertBefore(ph,row):bodyEl.insertBefore(ph,row.nextSibling);}
+  else if(!row){ // 行の外＝そのセクションの末尾（空セクションもここ）
+    const rows=[...bodyEl.querySelectorAll('.titem[data-tid]')].filter(e=>e!==_td.el);
+    if(!rows.length)bodyEl.appendChild(ph);
+    else{const last=rows[rows.length-1].getBoundingClientRect();
+      if(y>last.bottom)bodyEl.appendChild(ph);}}
+  const empty=bodyEl.querySelector('.tsecempty');if(empty)empty.style.display='none';}
+/* 画面の上下はしで自動スクロール */
+let _tdAuto=null;
+function tdragAuto(y){const M=70;
+  let v=0;
+  if(y<M)v=-Math.ceil((M-y)/6);
+  else if(y>innerHeight-M)v=Math.ceil((y-(innerHeight-M))/6);
+  if(!v){tdragAutoStop();return;}
+  if(_tdAuto&&_tdAuto.v===v)return;
+  tdragAutoStop();
+  _tdAuto={v,id:setInterval(()=>{window.scrollBy(0,v);if(_td)tdragPlace(_td.x,_td.y);},16)};}
+function tdragAutoStop(){if(_tdAuto){clearInterval(_tdAuto.id);_tdAuto=null;}}
+function tdragUp(){if(!_td)return;
+  if(!_td.fired){tdragEnd(true);return;}
+  tdragCommit();}
+function tdragEnd(cancel){
+  if(!_td)return;
+  clearTimeout(_td.timer);tdragAutoStop();
+  document.removeEventListener('pointermove',tdragMove);
+  document.removeEventListener('pointerup',tdragUp);
+  document.removeEventListener('pointercancel',tdragUp);
+  document.removeEventListener('scroll',tdragScrollCancel,{capture:true});
+  _td.el.classList.remove('lpress','tdsrc');
+  if(_td.ghost)_td.ghost.remove();
+  if(cancel&&_td.ph)_td.ph.remove();
+  document.body.classList.remove('tdragging');
+  document.querySelectorAll('.tsec.tdover').forEach(e=>e.classList.remove('tdover'));
+  const fired=_td.fired;_td=null;
+  if(fired){lpSuppress=true;setTimeout(()=>{lpSuppress=false;},400);} // 離した直後のタップで開かない
+}
+function tdragCommit(){
+  const ph=_td.ph,id=_td.id;
+  const sec=ph?ph.closest('.tsec'):null;
+  if(!sec){tdragEnd(true);return;}
+  const w=sec.dataset.when;
+  const ids=[...sec.querySelectorAll('.tsecb > .titem[data-tid], .tsecb > #tdplace')]
+    .map(el=>el.id==='tdplace'?id:el.dataset.tid).filter(v=>v&&v!==id||v===id);
+  const uniq=[];ids.forEach(v=>{if(!uniq.includes(v))uniq.push(v);});
+  const x=S.tasks.find(t=>t.id===id);
+  tdragEnd(true);
+  if(!x)return;
+  snapUndo();
+  const changed=taskWhen(x)!==w;
+  if(changed)setTaskWhen(x,w);
+  uniq.forEach((tid,i)=>{const t=S.tasks.find(v=>v.id===tid);if(t)t.torder=i;});
+  _landTok='t_'+id;setTimeout(()=>{_landTok=null;},400);
+  save();render();
+  flashUndo(changed?`${WHEN_LABEL[w]}に移しました`:'並びを変えました');}
+/* ===== タスクの区分＝今日・明日・優先・通常（データは today と priority を流用） ===== */
+const WHENS=[['today','☀ 今日'],['tomorrow','➡ 明日'],['priority','★ 優先'],['normal','通常']];
+const WHEN_LABEL=Object.fromEntries(WHENS);
+function taskWhen(x){const t=todayStr();
+  if(x.today&&x.today<=t)return 'today';        // 繰り越しも「今日」
+  if(x.today===tomorrowStr())return 'tomorrow';
+  if(x.today&&x.today>t)return 'normal';        // 先の日付は通常に置き、行に日付を出す
+  return x.priority===1?'priority':'normal';}
+function setTaskWhen(x,w){
+  if(w==='today'){x.today=todayStr();x.snooze=null;}
+  else if(w==='tomorrow'){x.today=tomorrowStr();x.snooze=null;}
+  else{x.today=null;x.priority=(w==='priority'?1:2);}
+  touchPicked(x);}
+function moveTaskWhen(id,w){const x=S.tasks.find(t=>t.id===id);if(!x)return;
+  snapUndo();setTaskWhen(x,w);taskActiveRow=null;save();render();flashUndo(`${WHEN_LABEL[w]}にしました`);}
 function toggleToday(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   x.today=x.today===todayStr()?null:todayStr();save();render();}
 function visibleGroups(sel){ // 選択グループ＋その子孫
@@ -3468,50 +3613,48 @@ function enterTaskReorderWith(id){taskActiveRow=null;taskSort='manual';taskReord
 function addTaskAfter(id){taskActiveRow=null;taskAddAfter=id;taskModal(null);}
 let taskQuery='';
 function onTaskSearch(v){taskQuery=v;_focusSearch=true;render();}
+function renderDiary(){ /* v4.10 で作りこむ。いまは入口だけ */
+  return `<div class="vhead"><h1>日記</h1><span class="sub">じゅんび中</span></div>
+  <div class="mini" style="padding:16px;">1日のふりかえり（今日の完了・明日のタスク）と、日記（文章＋写真）をここに置きます。<br>次の更新でお使いいただけるようになります。</div>`;}
 function renderTasks(){
-  let list=S.tasks.filter(x=>taskGroupMatch(x)&&(!taskColorSel.size||taskColorSel.has(taskPastelIdx(x))));
+  let list=S.tasks.filter(x=>taskGroupMatch(x));
   if(taskQuery.trim()){const q=taskQuery.trim().toLowerCase();
     list=list.filter(x=>(x.title||'').toLowerCase().includes(q)||(x.memo||'').toLowerCase().includes(q));}
   const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
-  const sortFn=(a,b)=>a.priority-b.priority||(a.due||'9999').localeCompare(b.due||'9999')||a.order-b.order;
-  let body='';
-  if(taskSort==='pr'){body=open.sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join('');}
-  else if(taskSort==='grp'){ // 色ごとに区切って表示
-    body=[...pastelOrder(),-1].map(ci=>{const ts=open.filter(x=>taskPastelIdx(x)===ci).sort(sortFn);
-      return ts.length?`<div class="sec-h"><span class="cswb" style="background:${ci>=0?pastelSw(ci):'var(--line2)'}"></span>　${ci>=0?'':'色なし'}（${ts.length}）</div>${ts.map(x=>taskRow(x,{tabAction:true})).join('')}`:'';}).join('');}
-  else if(taskSort==='manual'){
-    const mlist=manualTaskIds().map(id=>S.tasks.find(t=>t.id===id));
-    body=taskReorder?taskReorderHtml(mlist):(mlist.length?mlist.map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>');}
-  else{ // 旧「4つの箱」は廃止したので優先度順にフォールバック
-    body=open.length?open.slice().sort(sortFn).map(x=>taskRow(x,{tabAction:true})).join(''):'<div class="mini">未完了のタスクはありません</div>';}
+  // 区分の中の並び：手動で決めた順（torder）→ 決めていないものは新しく入れた順
+  const inSec=(a,b)=>((a.torder??1e9)-(b.torder??1e9))
+    ||(pickedTime(b)-pickedTime(a))
+    ||(b.createdAt||'').localeCompare(a.createdAt||'')
+    ||((b.order||0)-(a.order||0));
+  const body=WHENS.map(([w,label])=>{
+    const ts=open.filter(x=>taskWhen(x)===w).sort(inSec);
+    return `<div class="tsec" data-when="${w}">
+      <div class="tsech">${label}<span class="n">${ts.length}</span></div>
+      <div class="tsecb">${ts.length?ts.map(x=>taskRow(x,{tabAction:true,drag:true})).join('')
+        :'<div class="tsecempty">なし</div>'}</div></div>`;}).join('');
+  const total=open.reduce((s,x)=>s+(+x.estMin||0),0);
   return `
-  <div class="vhead"><h1><button class="backbtn" onclick="switchView('today')">‹</button>タスク一覧</h1><span class="sub">${open.length}件 ・ 合計${fmtMin(open.reduce((s,x)=>s+(+x.estMin||0),0))}</span></div>
+  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件${total?' ・ 合計'+fmtMin(total):''}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   <div class="tgfil">${taskGroupFilterHtml()}</div>
-  ${colorChipsHtml()}
-  <div style="display:flex;justify-content:space-between;align-items:center;padding-right:16px;gap:8px;">
-    <div class="seg"><button class="${taskSort==='pr'?'on':''}" onclick="setTaskSort('pr')">優先</button>
-    <button class="${taskSort==='grp'?'on':''}" onclick="setTaskSort('grp')">色</button>
-    <button class="${taskSort==='manual'?'on':''}" onclick="setTaskSort('manual')">手動</button></div>
-    ${taskSort==='manual'
-      ?(taskReorder?`<button class="act" onclick="exitTaskReorder()">完了</button>`:`<button class="act" onclick="enterTaskReorder()">並び替え</button>`)
-      :`<button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋詳細</button>`}
+  <div style="display:flex;justify-content:flex-end;align-items:center;padding:0 16px 2px;gap:10px;">
+    <button class="act" onclick="switchView('tstats')">⏱ 記録</button>
+    <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ 詳しく追加</button>
   </div>
-  ${taskReorder?'':`<div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
-    <button onclick="quickAddTask()">追加</button></div>`}
-  ${body||'<div class="mini">タスクはありません</div>'}
+  <div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
+    <button onclick="quickAddTask()">追加</button></div>
+  ${body}
+  <div class="mini" style="padding:8px 16px 0;">行を<b>長押しすると持ち上がり</b>、そのまま指を動かして<b>好きな場所・別の区分へ</b>運べます。</div>
   ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act" onclick="clearDone()">完了を一括削除</button></div>
-    ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(x=>taskRow(x)).join('')}`:''}`;
+    ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(x=>taskRow(x)).join('')}`:''}
+  <div style="height:60px;"></div>`;
 }
 /* 4つの箱の操作 */
 let taskAnchorId=null;
 function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
   const id=uid();
-  S.tasks.push({id,title:v,groupId:lastTaskGroupId(),estMin:15,priority:2,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr()});
-  if(taskSort==='manual'){let ids=manualTaskIds().filter(i=>i!==id);
-    const ai=taskAnchorId?ids.indexOf(taskAnchorId):-1;
-    if(ai>=0)ids.splice(ai+1,0,id);else ids.push(id);
-    commitTaskOrder(ids);taskAnchorId=id;}
+  // 新しいタスクの既定は「優先」（priority=1・日付なし）
+  S.tasks.push({id,title:v,groupId:lastTaskGroupId(),estMin:15,priority:1,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr(),pickedAt:Date.now()});
   save();render();}
 /* ===== タスクタブ「手動」並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let taskReorder=false,taskRSel=[];
@@ -3597,7 +3740,8 @@ function fabItems(){
       {i:'📝',l:'記録',f:()=>{calMode='day';calDate=d;render();addTodayLog('event');}}];}
   if(view==='routine')return [{i:'🔁',l:'ルーティン',f:()=>routineModal(null)}];
   if(view==='habit')return [{i:'⚡',l:'習慣',f:()=>habitModal(null)}];
-  if(view==='tasks')return [{i:'✔',l:'タスク',f:()=>taskModal(null)}];
+  if(view==='tasks'||view==='today')return [{i:'✔',l:'タスク',f:()=>taskModal(null)}];
+  if(view==='diary')return [{i:'✔',l:'タスク',f:()=>taskModal(null)}];
   // 今日タブ
   return [{i:'✔',l:'タスク',f:()=>taskModal(null,'',true)},
     {i:'📅',l:'予定',f:()=>eventModal(null,t,nowHm)},
@@ -3627,7 +3771,7 @@ function fabRun(k){const f=_fabFns[k];fabClose();if(f)f();}
 function quickAddPop(){taskModal(null,'',true);}
 function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
-let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
+let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfWhen='priority',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
 /* Nヶ月ごとの言いかた（タスク・予定・テンプレで共通） */
 function repNLabel(n){n=+n||1;return n===1?'毎月':n===6?'半年ごと':n===12?'1年ごと':`${n}ヶ月ごと`;}
 let _tfPlace=null; // 週カレンダーで時間を決めてから作るとき {d,s,e}
@@ -3648,7 +3792,7 @@ function taskModal(id,presetDue,presetToday,place){
   _tfGroup=x?(x.groupId||''):lastTaskGroupId();
   _tfStash=null;
   _tfDue=x?.due||presetDue||'';
-  _tfToday=x?.today===todayStr()?'today':x?.today===tomorrowStr()?'tomorrow':(!x&&presetToday?'today':'');
+  _tfWhen=x?taskWhen(x):(presetToday?'today':'priority'); // 新しいタスクの既定は「優先」
   _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;_tfRepMonthN=(+x?.repMonthN>0)?+x.repMonthN:1;
   _tfDueOpen=false;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
   tfRender(true);}
@@ -3688,16 +3832,11 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     <div class="tfh"><b>${tmpl?(_tfTmplEdit?'テンプレを編集':'テンプレを作る'):(x?'タスクを編集':'タスクを追加')}</b><button type="button" onclick="dlgEnd()">✕</button></div>
     ${tmpl?'':(x?'':tfTabsHtml())}
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??src?.title??'')}" placeholder="やること"></div>
-    <div class="frow"><label>色</label><div class="cpsw emsw tfsw">
-      <button type="button" class="${_tfColor==null?'on':''}" style="background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px)" onclick="tfPickColor(null)" title="色なし"></button>
-      ${pastelOrder().map(i=>`<button type="button" class="${_tfColor===i?'on':''}" style="background:${pastelSw(i)}" onclick="tfPickColor(${i})"></button>`).join('')}</div></div>
     <div class="frow"><label>グループ（カテゴリ）</label>${tfGroupHtml()}</div>
-    ${tmpl?'':`<div class="frow"><label>いつやる（つけなければ、ためておくタスク）</label>
-      <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfToday===v?'on':''}" onclick="tfPickToday('${v}')">${l}</button>`).join('')}</div></div>`}
-    <div class="frow f2"><div><label>優先度</label>
-      <div class="btnrow" id="tmPrioRow">${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button type="button" data-v="${p}" class="${prio===p?'on':''}" onclick="pickBtn('tmPrioRow','tmPrio','${p}')">${l}</button>`).join('')}</div>
-      <input type="hidden" id="tmPrio" value="${prio}"></div>
-      ${tmpl?'<div></div>':`<div><label>期限</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()">📅 ${_tfDue?fmtDateJa(_tfDue):'なし'}</button></div></div>`}</div>
+    ${tmpl?'':`<div class="frow"><label>いつやる</label>
+      <div class="btnrow" id="tmTodayRow">${WHENS.map(([v,l])=>`<button type="button" class="${_tfWhen===v?'on':''}" onclick="tfPickWhen('${v}')">${l}</button>`).join('')}</div></div>`}
+    ${tmpl?'':`<div class="frow"><label>期限</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()">📅 ${_tfDue?fmtDateJa(_tfDue):'なし'}</button></div></div>`}
+    <input type="hidden" id="tmPrio" value="${prio}">
     ${_tfDueOpen&&!tmpl?`<div class="frow">${tfDueCalHtml()}</div>`:''}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??src?.estMin??15)}</div>
     ${tmpl?`<div class="frow"><label>呼び出したとき</label><div class="btnrow"><button type="button" class="${_tfKeepEst?'on':''}" onclick="_tfKeepEst=!_tfKeepEst;tfRender()">かかる時間も入れる</button></div></div>`:''}
@@ -3746,7 +3885,7 @@ function tfAddGroup(){
   _tfStash={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
   groupInlinePop(null,gid=>{if(gid)_tfGroup=gid;tfRender();}); // やめる＝gid null。その時はグループを消さない
 }
-function tfPickToday(v){_tfToday=(_tfToday===v?'':v);tfRender();}
+function tfPickWhen(v){_tfWhen=v;tfRender();}
 /* ===== タスクのテンプレ（カード一覧・タップで適用・✎でその場編集） ===== */
 function taskTmplSorted(){return (S.taskTemplates||[]).slice().sort((a,b)=>(a.order??1e9)-(b.order??1e9));}
 function tmplRepTextT(t){if(!t.repeat)return'';
@@ -3855,8 +3994,8 @@ function saveTask(id){
   if(saveGuard())return;
   const title=($('#tmTitle')?.value||'').trim();if(!title){uiAlert('タスク名を入力してください');return;}
   snapUndo();
-  const today=_tfToday==='today'?todayStr():_tfToday==='tomorrow'?tomorrowStr():null;
-  const data={title,estMin:+$('#tmEst').value||0,priority:+($('#tmPrio')?.value||2),
+  const today=_tfWhen==='today'?todayStr():_tfWhen==='tomorrow'?tomorrowStr():null;
+  const data={title,estMin:+$('#tmEst').value||0,priority:(_tfWhen==='priority'?1:2),
     groupId:_tfGroup||'',due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),};
@@ -4619,10 +4758,11 @@ function openItemColorSheet(tok){const type=tok.slice(0,1),id=tok.slice(2);
   const obj=type==='r'?S.routines.find(r=>r.id===id):S.tasks.find(x=>x.id===id);if(!obj)return;
   const anchor=document.querySelector(`[data-lp="${tok}"]`);
   const html=`<div class="cptitle">${esc(obj.title)}</div>
-    ${type==='t'?`<div class="cprow"><span class="cplab">優先度</span>${[[1,'高'],[2,'中'],[3,'低']].map(([p,l])=>`<button class="cpprio ${(obj.priority||2)===p?'on':''}" onclick="setItemPrio('${id}',${p})">${l}</button>`).join('')}</div>`:''}
-    <div class="cprow"><div class="cpsw">
+    ${type==='t'
+      ?`<div class="cprow"><span class="cplab">いつやる</span>${WHENS.map(([w,l])=>`<button class="cpprio ${taskWhen(obj)===w?'on':''}" onclick="cpClose();moveTaskWhen('${id}','${w}')">${l}</button>`).join('')}</div>`
+      :`<div class="cprow"><div class="cpsw">
       ${PASTELS.map((p,i)=>`<button class="${obj.color===i?'on':''}" style="background:${p.s}" onclick="setItemColor('${tok}',${i})"></button>`).join('')}
-      <button class="clear ${obj.color==null?'on':''}" onclick="setItemColor('${tok}',null)">なし</button></div></div>`;
+      <button class="clear ${obj.color==null?'on':''}" onclick="setItemColor('${tok}',null)">なし</button></div></div>`}`;
   cellpopAt(anchor,html,{wide:true,forId:tok+'_lp'});}
 function setItemPrio(id,p){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   x.priority=p;touchPicked(x);save();render();cpClose();toast('優先度を「'+({1:'高',2:'中',3:'低'}[p])+'」にしました');}
@@ -5386,7 +5526,7 @@ function habitWeekCount(h,off){const t=todayStr();const ws=S.settings.weekStart|
   return (h.logs||[]).filter(l=>l.d>=s&&l.d<=e).length;}
 function habitTrend(h){const a=habitWeekCount(h,0),b=habitWeekCount(h,1);const d=a-b;
   return d>0?`<i class="up">↑+${d}</i>`:d<0?`<i class="dn">↓${d}</i>`:'<i class="fl">→</i>';}
-function renderHabits(){
+function renderHabits(){ /* navから外し、設定→習慣 で開く内部ビュー（v4.00） */
   const courses=habitCourses();
   return `<div class="vhead"><h1>習慣</h1><button class="act" style="color:var(--accent);" onclick="habitModal(null)">＋ 追加</button></div>
   <div class="mini">こまめに積み上げる習慣。やるたびに「＋1回」。<b>マスの濃さ＝その日の回数</b>、空きマス＝おやすみ。🔥は連続日数です。</div>
@@ -5643,7 +5783,7 @@ function tsAgg(ym){const out={};
 function renderTStats(){const ym=tsMonthOf();const rows=tsAgg(ym);
   const total=rows.reduce((s,r)=>s+r.min,0);const max=Math.max(1,...rows.map(r=>r.min));
   const [y,m]=ym.split('-').map(Number);
-  return `<div class="vhead"><h1><button class="backbtn" onclick="switchView('today')">‹</button>時間の記録</h1>
+  return `<div class="vhead"><h1><button class="backbtn" onclick="switchView('tasks')">‹</button>時間の記録</h1>
     <span class="sub">${total?`合計 ${fmtMin(total)}`:''}</span></div>
   <div class="dpnav" style="padding:0 16px;"><button onclick="tsNav(-1)">‹</button><span>${y}年${m}月</span><button onclick="tsNav(1)">›</button></div>
   <div style="display:flex;justify-content:flex-end;padding:4px 16px;">
@@ -5896,16 +6036,18 @@ function renderSettings(){
     data:'<path d="M6 19a4 4 0 0 1 0-8 6 6 0 0 1 11.5-1.5A3.5 3.5 0 0 1 18 19z"/>',
     personal:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"/>',
     release:'<path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 15.5h6"/>',
-    help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01"/>'};
+    help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01"/>',
+    habitpage:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'};
   if(P==='')return `<div class="vhead"><h1>設定</h1><span class="sub">項目を選ぶ</span></div><div class="setmenu">
     ${[['event','予定・カテゴリ・色設定','グループと色・誕生日・マーク・テンプレ・カラーパレット'],
        ['disp','表示設定','週開始・初期表示・祝日/六曜・網かけ・夜の切り分け'],
        ['time','時間関連設定','活動の開始/終了・夜の開始・通知時刻'],
+       ['habitpage','習慣','コースごとの記録・連続日数（別ページで開きます）'],
        ['data','同期・データ','クラウド同期・バックアップ'],
        ['personal','個人・改善設定','通知先メール・改善メモ送信'],
        ['release','リリース情報','更新履歴'],
        ['help','使い方','初めての方へ・基本の流れ']]
-      .map(([k,t,d])=>`<div class="listrow" onclick="goSet('${k}')"><span class="seticon"><svg viewBox="0 0 24 24">${SETICON[k]}</svg></span><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>
+      .map(([k,t,d])=>`<div class="listrow" onclick="${k==='habitpage'?"switchView('habit')":`goSet('${k}')`}"><span class="seticon"><svg viewBox="0 0 24 24">${SETICON[k]}</svg></span><div style="flex:1;min-width:0;"><div class="lt">${t}</div><div class="ls">${d}</div></div><span class="chev">▸</span></div>`).join('')}</div>
     <div class="mini" style="text-align:center;padding:14px 16px 4px;">現在のバージョン <b>${APP_VERSION}</b></div>
     <div style="padding:0 16px 10px;text-align:center;"><button style="border:1px solid var(--line);padding:8px 16px;font-size:12.5px;" onclick="forceReload()">最新に更新する</button></div>`;
   if(P==='help')return back+`<div class="vhead"><h1>使い方</h1></div>
@@ -6029,6 +6171,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.00（2026-09-07）「タスク」タブに一新／長押しドラッグで並べ替え</b><br>
+  ・いちばん左のタブが <b>「今日」から「タスク」</b> になりました。<b>ぜんぶのタスクが1画面</b>に並びます（バーチカルの時間軸は一旦しまいました）<br>
+  ・タスクは <b>今日・明日・優先・通常</b> の4つに分かれて並びます。新しいタスクは<b>「優先」</b>から始まります<br>
+  ・<b>行を長押しすると持ち上がり</b>、そのまま指を動かして<b>好きな場所・別のまとまりへ</b>運べます。指を上下のはしに近づけると<b>自動でスクロール</b>します。ゆっくり押さずにさっと動かした時は、今までどおり画面がスクロールします<br>
+  ・区分は<b>入力画面の4つのボタン</b>や、行を<b>長押ししたメニュー</b>からも変えられます<br>
+  ・<b>タスクの色分けをやめました</b>（日づけの色・週の色帯・習慣の色はそのままです）<br>
+  ・タブの<b>「習慣」は「日記」</b>に変わりました。習慣は<b>設定 → 習慣</b>から開けます<br>
+  ・<b>日記</b>は次の更新で使えるようになります（1日のふりかえり・文章・写真）<br>
+  </div>
   <div class="mini"><b>v3.07（2026-09-07）保存できない・同じ予定が増える不具合の修正</b><br>
   ・<b>保存を押しても画面が閉じず、押すたびに予定が増えてしまう</b>不具合を直しました。原因は<b>端末の保存容量オーバー</b>で、保存の途中で処理が止まっていたことです。これで<b>削除したのに画面に残る／最後の1件を消したら全部消えた</b>も起きなくなります<br>
   ・容量がいっぱいのときは、画面の上に<b>赤いおしらせ</b>が出るようにしました。タップすると容量の画面に移動します<br>
@@ -6717,12 +6868,7 @@ function glColorHtml(){
     <div class="seg" style="margin:2px 0 0;width:100%;">
       ${Object.keys(COLOR_TONES).map(k=>`<button style="flex:1;" class="${(S.settings.colorTone||'pastel')===k?'on':''}" onclick="S.settings.colorTone='${k}';save();glRender();render();">${COLOR_TONES[k]}</button>`).join('')}</div>
     <div class="mini" style="padding:7px 0 0;">見本：${['vivid','pastel','muted'].map(k=>`<span style="display:inline-block;background:${toneHex(HUE(6).p,k)};color:${evTextColor(toneHex(HUE(6).p,k))};padding:1px 8px;margin-right:5px;border-radius:5px !important;font-size:11px;">${COLOR_TONES[k]}</span>`).join('')}</div>
-    <div class="sec-h">タスクの色（6色）の並び順</div>
-    <div class="poList">${pastelOrder().map((i,pos)=>`<div class="poRow" data-i="${i}">
-      <span class="poSw" style="background:${pastelSw(i)}"></span><span class="poName"></span>
-      <span class="poNo">${pos+1}番目</span>
-      <div class="arrows h"><button onclick="movePastelOrder(${i},-1);glRender();">▲</button><button onclick="movePastelOrder(${i},1);glRender();">▼</button></div></div>`).join('')}</div>
-    <div class="mini" style="padding:6px 0 0;">今日タブのタスクはこの順で並びます（優先度「高」だけ最上部・完了は下）。タスクの色は<b>行を長押し</b>して選びます。</div>`;}
+    `;}
 function bdayModal(id){
   const b=id?S.birthdays.find(x=>x.id===id):null;
   openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
@@ -6907,7 +7053,7 @@ async function checkDayRollover(){const today=todayStr();const last=S.lastActive
     applyDayOrderToRoutines(last);render();toast('ルーティンの並びを更新しました');}}
 /* ========================= 起動 ========================= */
 load();save();
-switchView('today');
+switchView('tasks');
 applyUiTheme(); // テーマカラー（設定から切替できる）
 flowRestore();
 ttRestore(); // タスクタイマー（当日のみ復元＝リロードしても計測がつづく）
