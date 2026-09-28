@@ -1198,6 +1198,31 @@ body.swiping .lpress{animation:none;}
 #dlg .tmplcard .tmpca button{width:30px;height:24px;border:1px solid var(--line);background:var(--bg);font-size:11px;color:var(--ink);border-radius:5px !important;display:flex;align-items:center;justify-content:center;}
 #dlg .tmplcard .tmpca button.del{color:var(--danger);}
 #dlg .tmplbody{padding-bottom:8px;}
+/* テンプレ一覧（1行ずつ） */
+#dlg .tmhead{display:flex;gap:8px;align-items:center;margin:2px 0 8px;}
+#dlg .tmq{flex:1;min-width:0;font-size:16px;padding:8px 12px;}
+#dlg .tmcount{flex:1;font-size:12px;color:var(--sub);}
+#dlg .tmedit{flex:0 0 auto;font-size:12px;padding:7px 12px;border:1px solid var(--line);border-radius:999px !important;color:var(--sub);background:var(--bg);white-space:nowrap;}
+#dlg .tmedit.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
+#dlg .tmlist{display:flex;flex-direction:column;border:1px solid var(--line2);border-radius:12px !important;overflow:hidden;background:var(--bg);}
+#dlg .tmrow{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 8px 0 12px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .12s ease;}
+#dlg .tmrow:last-child{border-bottom:none;}
+#dlg .tmrow:active{background:var(--ring);}
+#dlg .tmsw{flex:0 0 12px;width:12px;height:12px;border-radius:50% !important;border:1px solid rgba(0,0,0,.08);}
+#dlg .tmsw.none{background:var(--line2);}
+#dlg .tmsw.mk{flex:0 0 18px;width:18px;height:18px;border:none;border-radius:0 !important;}
+#dlg .tmsw.mk svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;}
+#dlg .tmt{flex:1;min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#dlg .tmm{flex:0 0 auto;font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums;}
+#dlg .tmgo{flex:0 0 auto;color:var(--sub);opacity:.55;font-size:18px;line-height:1;padding-left:2px;}
+#dlg .tmacts{flex:0 0 auto;display:flex;gap:4px;}
+#dlg .tmacts button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px !important;font-size:12px;background:var(--bg);color:var(--ink);display:flex;align-items:center;justify-content:center;}
+#dlg .tmacts .del{color:var(--danger);}
+#dlg .tmhint{font-size:11px;color:var(--sub);padding:6px 4px 0;}
+#dlg .tmempty{padding:14px;text-align:center;font-size:12.5px;color:var(--sub);}
+#dlg .tmempty.big{border:1px dashed var(--line);border-radius:12px !important;line-height:1.7;}
+#dlg .tmfoot{display:flex;gap:6px;margin-top:10px;}
+#dlg .tmfoot button{flex:1;font-size:12.5px;padding:10px 6px;border:1px dashed var(--line);border-radius:10px !important;color:var(--accent);background:var(--bg);white-space:nowrap;}
 #dlg .tform .tfh b{font-size:14px;letter-spacing:.06em;}
 #dlg .tform .tfh button{font-size:20px;color:var(--sub);padding:0 4px;line-height:1;}
 #dlg .tform .frow{margin-bottom:9px;}
@@ -1540,7 +1565,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.30';
+const APP_VERSION='v4.31';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1996,7 +2021,7 @@ function attachCalSwipe(){
     if(view==='today'){const r=e.target.closest&&e.target.closest('[data-do]');if(r)dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do,{target:r});}});
   attachMouseSwipe();attachNavSwipe();}
 /* PCのマウスでも横スワイプできるように（タッチ側は実績があるのでそのまま） */
-const SW_SKIP='.chips,.gtabs,.tftabs,.tmplcard,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wksel,.wkbody,#nav,#cellpop,#daypop,#multibar';
+const SW_SKIP='.chips,.gtabs,.tftabs,.tmplcard,.tmlist,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wksel,.wkbody,#nav,#cellpop,#daypop,#multibar';
 function attachMouseSwipe(){
   let sx=0,sy=0,st=0,on=false,axis=null,row=null;
   document.addEventListener('pointerdown',e=>{
@@ -4256,7 +4281,7 @@ function lastTaskGroupId(){
   if(view==='tasks'&&taskGroupSel&&taskGroupSel!=='__none'&&S.groups.some(g=>g.id===taskGroupSel))return taskGroupSel;
   const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:'';}
-function taskModal(id,presetDue,presetToday,place){
+function taskModal(id,presetDue,presetToday,place){tmplReset();
   _tfPlace=place||null;_tfTab='form';_tfTmplEdit=null;_tfHold=null;
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
@@ -4276,7 +4301,7 @@ function taskModal(id,presetDue,presetToday,place){
 function tfTabsHtml(){return `<div class="tftabs">
   <button type="button" class="${_tfTab!=='tmpl'?'on':''}" onclick="tfTab('form')">入力</button>
   <button type="button" class="${_tfTab==='tmpl'?'on':''}" onclick="tfTab('tmpl')">テンプレート${S.taskTemplates.length?`（${S.taskTemplates.length}）`:''}</button></div>`;}
-function tfTab(v){if(v===_tfTab)return;
+function tfTab(v){if(v===_tfTab)return;tmplReset();
   if(v==='tmpl'){ // 入力中の値を控えてからタブを替える（戻った時に消えないように）
     _tfHold={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
     _tfTmplEdit=null;}
@@ -4378,25 +4403,40 @@ function tmplRepTextT(t){if(!t.repeat)return'';
     if(t.repNth&&t.repNth.d!=null)return base+evNthLabel(t.repNth);
     return t.repDom?`${base}${t.repDom}日`:base;}
   return'';}
-function tfTmplListHtml(){const list=taskTmplSorted();
+/* ---- テンプレの一覧（v4.31）：1行ずつで一度にたくさん見える。さがす／並べ替え・編集は切り替え ---- */
+let _tmplEditMode=false,_tmplQ='';
+function tmplReset(){_tmplEditMode=false;_tmplQ='';}
+function tmplEditToggle(ctx){_tmplEditMode=!_tmplEditMode;ctx==='em'?emRender():tfRender();}
+function tmplSearch(ctx,v){_tmplQ=v;const l=$('#tmList');if(l)l.innerHTML=tmplRows(ctx);}
+function tmplRows(ctx){const q=(_tmplQ||'').trim().toLowerCase();
+  const all=ctx==='em'?tmplSorted():taskTmplSorted();
+  const list=q?all.filter(t=>(t.title||'').toLowerCase().includes(q)||(t.memo||'').toLowerCase().includes(q)):all;
+  if(!list.length)return `<div class="tmempty">${q?'見つかりません':'まだテンプレがありません'}</div>`;
+  const fn=ctx==='em'?{move:'emTmplMove',edit:'emTmplEditOpen',del:'emTmplDel',use:'emTmplPickOpen'}:{move:'tfTmplMove',edit:'tfTmplEditOpen',del:'tfTmplDel',use:'applyTaskTmpl'};
+  return list.map(t=>{let sw,meta;
+    if(ctx==='em'){const fake={groupId:t.groupId,hue:t.hue};const bg=evColor(fake);
+      sw=t.mark?`<span class="tmsw mk" style="color:${evLine(fake)}">${icSvg(t.mark)}</span>`:`<span class="tmsw" style="background:${bg}"></span>`;
+      meta=[t.keepTime===false?'':(t.start||'終日'),t.repeat?'🔁':''].filter(Boolean).join(' ');}
+    else{sw=t.groupId&&S.groups.some(g=>g.id===t.groupId)?`<span class="tmsw" style="${markCss(t.groupId)}"></span>`:'<span class="tmsw none"></span>';
+      meta=[t.estMin?fmtMin(t.estMin):'',t.repeat?'🔁':''].filter(Boolean).join(' ');}
+    return `<div class="tmrow" onclick="${_tmplEditMode?`${fn.edit}('${t.id}')`:`${fn.use}('${t.id}')`}">
+      ${sw}<span class="tmt">${esc(t.title||'（名前なし）')}</span>
+      ${_tmplEditMode?`<span class="tmacts" onclick="event.stopPropagation()">
+          <button type="button" onclick="${fn.move}('${t.id}',-1)" aria-label="上へ">▲</button><button type="button" onclick="${fn.move}('${t.id}',1)" aria-label="下へ">▼</button>
+          <button type="button" onclick="${fn.edit}('${t.id}')" aria-label="編集">✎</button><button type="button" class="del" onclick="${fn.del}('${t.id}')" aria-label="削除">🗑</button></span>`
+        :`<span class="tmm">${meta}</span><span class="tmgo">›</span>`}</div>`;}).join('');}
+function tmplListFrame(ctx){const n=(ctx==='em'?S.templates:S.taskTemplates).length;
+  const neu=ctx==='em'?'emTmplEditOpen':'tfTmplEditOpen',from=ctx==='em'?'emTmplFromForm':'tfTmplFromForm';
   return `<div class="tmplbody">
-    <div class="btnrow" style="margin-bottom:8px;">
-      <button type="button" onclick="tfTmplEditOpen('')">＋ 新しいテンプレを作る</button>
-      <button type="button" onclick="tfTmplFromForm()">⭐ いまの入力内容を登録</button></div>
-    ${list.length?list.map(t=>{const c=(t.color!=null&&PASTELS[t.color])?PASTELS[t.color].c:'';
-      const gn=(t.groupId&&S.groups.some(g=>g.id===t.groupId))?groupPath(t.groupId):'';
-      const meta=[t.estMin?fmtMin(t.estMin):'',t.priority===1?'優先高':(t.priority===3?'優先低':''),tmplRepTextT(t),gn,t.keepEst===false?'時間は入れない':''].filter(Boolean).join('・');
-      return `<div class="tmplcard" style="${c?`background:${c};`:''}" onclick="applyTaskTmpl('${t.id}')">
-        <div class="tmpcb"><div class="tmpct">${esc(t.title||'（名前なし）')}</div>
-          <div class="tmpcm">${meta||'タップで入力欄に入ります'}</div>
-          ${t.memo?`<div class="tmpcmemo">${esc(t.memo).slice(0,60)}</div>`:''}</div>
-        <div class="tmpca" onclick="event.stopPropagation()">
-          <button type="button" onclick="tfTmplMove('${t.id}',-1)">▲</button><button type="button" onclick="tfTmplMove('${t.id}',1)">▼</button>
-          <button type="button" onclick="tfTmplEditOpen('${t.id}')">✎</button>
-          <button type="button" class="del" onclick="tfTmplDel('${t.id}')">🗑</button></div></div>`;}).join('')
-      :`<div class="mini" style="padding:10px 4px;">まだテンプレがありません。<b>＋ 新しいテンプレを作る</b>か、入力タブに内容を入れてから<b>⭐ いまの入力内容を登録</b>で作れます。</div>`}
-    ${list.length?`<div class="mini" style="padding:8px 4px 0;">カードを<b>タップ</b>すると入力欄にまるごと入ります。<b>✎</b>＝その場で編集、<b>▲▼</b>＝並べ替え。</div>`:''}
+    ${n?`<div class="tmhead">
+      ${n>=5?`<input class="tmq" id="tmQ" value="${esc(_tmplQ)}" placeholder="🔍 テンプレをさがす" oninput="tmplSearch('${ctx}',this.value)">`:`<span class="tmcount">${n}件</span>`}
+      <button type="button" class="tmedit${_tmplEditMode?' on':''}" onclick="tmplEditToggle('${ctx}')">${_tmplEditMode?'✓ 完了':'並べ替え・編集'}</button></div>
+    <div class="tmlist" id="tmList">${tmplRows(ctx)}</div>
+    <div class="tmhint">${_tmplEditMode?'行をタップで中身を編集。▲▼で並べ替え、🗑で削除':(ctx==='em'?'タップ → カレンダーで日付をえらんで追加（複数日OK）':'タップ → 入力欄にまるごと入ります')}</div>`
+    :`<div class="tmempty big">まだテンプレがありません。<br>よく入れる${ctx==='em'?'予定':'タスク'}を登録しておくと、1タップで入れられます。</div>`}
+    <div class="tmfoot"><button type="button" onclick="${neu}('')">＋ 新しく作る</button><button type="button" onclick="${from}()">⭐ いまの入力内容を登録</button></div>
   </div>`;}
+function tfTmplListHtml(){return tmplListFrame('tf');}
 function tfTmplEditOpen(id){const t=id?S.taskTemplates.find(v=>v.id===id):null;
   _tfTmplEdit=id||'';_tfTab='form';
   _tfColor=t?(t.color??null):null;
@@ -5471,7 +5511,7 @@ let _emId=null,_emDate='',_emStart='',_emEnd='',_emGroup='',_emHue=-1,_emMark=''
     _emRepeat='',_emRepDays=[],_emRepDom=null,_emUntil='',_emImp=false,_emMarkOnly=false,_emNoFill=false,
     _emCalOpen=false,_emCalY=0,_emCalX=0,_emStash=null;
 let _emTab='form',_emTmplEdit=null,_emKeepTime=true,_emHold=null,_emTmplPick=null,_emTmplDates=new Set();
-function eventModal(id,presetDate,presetStart,occDate,presetEnd){
+function eventModal(id,presetDate,presetStart,occDate,presetEnd){tmplReset();
   const e=id?S.events.find(v=>v.id===id):null;
   _emTab='form';_emTmplEdit=null;_emTmplPick=null;_emHold=null;_emTmplDates=new Set();
   _emOcc=(e&&e.repeat)?(occDate||e.date):null; // 繰り返し編集の対象回
@@ -5491,7 +5531,7 @@ function lastEvGroupId(){const g=S.settings.lastEvGroup;
 function emTabsHtml(){return `<div class="tftabs">
   <button type="button" class="${_emTab!=='tmpl'?'on':''}" onclick="emTab('form')">入力</button>
   <button type="button" class="${_emTab==='tmpl'?'on':''}" onclick="emTab('tmpl')">テンプレート${S.templates.length?`（${S.templates.length}）`:''}</button></div>`;}
-function emTab(v){if(v===_emTab)return;
+function emTab(v){if(v===_emTab)return;tmplReset();
   if(v==='tmpl'){ // 入力中の値を控える（戻った時に消えないように）
     _emHold={title:$('#emTitle')?.value,memo:$('#emMemo')?.value,start:$('#emStart')?.value,end:$('#emEnd')?.value};
     _emTmplPick=null;_emTmplDates=new Set();}
@@ -5682,25 +5722,7 @@ function tmplRepTextE(t){if(!t.repeat)return'';
   if(t.repeat==='monthly'){const n=(+t.repMonthN>0)?+t.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
     return t.repDom?`${base}${t.repDom}日`:base;}
   return'';}
-function emTmplListHtml(){const list=tmplSorted();
-  return `<div class="tmplbody">
-    <div class="btnrow" style="margin-bottom:8px;">
-      <button type="button" onclick="emTmplEditOpen('')">＋ 新しいテンプレを作る</button>
-      <button type="button" onclick="emTmplFromForm()">⭐ いまの入力内容を登録</button></div>
-    ${list.length?list.map(t=>{const fake={groupId:t.groupId,hue:t.hue};const bg=evColor(fake);
-      const plain=t.markOnly||t.noFill;
-      const meta=[t.keepTime===false?'時刻は入れない':(t.start?t.start+(t.end?'〜'+t.end:''):'終日'),tmplRepTextE(t),esc(group(t.groupId).name||''),t.important?'★重要':''].filter(Boolean).join('・');
-      return `<div class="tmplcard" style="${plain?`color:${evLine(fake)};`:`background:${bg};`}" onclick="emTmplPickOpen('${t.id}')">
-        <div class="tmpcb"><div class="tmpct">${t.mark?`<span class="evmk">${icSvg(t.mark)}</span> `:''}${esc(t.title||'（名前なし）')}</div>
-          <div class="tmpcm" style="${plain?'':'color:inherit;opacity:.75;'}">${meta}</div>
-          ${t.memo?`<div class="tmpcmemo" style="${plain?'':'color:inherit;opacity:.7;'}">${esc(t.memo).slice(0,60)}</div>`:''}</div>
-        <div class="tmpca" onclick="event.stopPropagation()">
-          <button type="button" onclick="emTmplMove('${t.id}',-1)">▲</button><button type="button" onclick="emTmplMove('${t.id}',1)">▼</button>
-          <button type="button" onclick="emTmplEditOpen('${t.id}')">✎</button>
-          <button type="button" class="del" onclick="emTmplDel('${t.id}')">🗑</button></div></div>`;}).join('')
-      :`<div class="mini" style="padding:10px 4px;">まだテンプレがありません。<b>＋ 新しいテンプレを作る</b>か、入力タブに内容を入れてから<b>⭐ いまの入力内容を登録</b>で作れます。</div>`}
-    ${list.length?`<div class="mini" style="padding:8px 4px 0;">カードを<b>タップ→カレンダーで日付を選んで</b>そのまま追加できます（複数日OK）。<b>✎</b>＝その場で編集。</div>`:''}
-  </div>`;}
+function emTmplListHtml(){return tmplListFrame('em');}
 /* カードタップ→日付えらび（他の予定との兼ね合いを見ながら・複数日OK） */
 function emTmplPickOpen(id){_emTmplPick=id;_emTmplDates=new Set();
   const d=new Date();_emCalY=d.getFullYear();_emCalX=d.getMonth();emRender();}
@@ -6837,6 +6859,12 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.31（2026-09-28）テンプレを一覧でえらびやすく</b><br>
+  ・予定・タスクのテンプレートを<b>1行ずつの一覧</b>にしました。スクロールしなくても<b>10件ほどが一度に見えます</b>。行をタップするだけで使えます<br>
+  ・行の右に<b>時刻やかかる時間・🔁（繰り返し）</b>が出るので、似た名前でも見分けられます<br>
+  ・テンプレが5件以上あると<b>🔍 さがす</b>欄が出ます<br>
+  ・並べ替え・編集・削除は<b>「並べ替え・編集」</b>を押したときだけ出るようにしました（ふだんの一覧はすっきり）<br>
+  </div>
   <div class="mini"><b>v4.30（2026-09-28）連日の予定・月カレンダーでの並び替え・「〇〇の予定の前日」</b><br>
   ・<b>何日もつづく予定</b>が入れられるようになりました。予定の日付の横の<b>「終わりの日」</b>を押して選びます。月カレンダーでは<b>日をまたいでつながったバー</b>、週カレンダーでは上の「連日」の段に出ます（日カレンダーには「2/5日目」と出ます）<br>
   ・<b>月カレンダーの並び順を変えられる</b>ようになりました。日付をタップして出るポップで、<b>⋮⋮ を押したまま上下</b>に動かすと、その順番が月のセルにも出ます。<b>タスクも予定と同じ列</b>に並びます<br>
@@ -7678,7 +7706,7 @@ function dlgEnd(v){$('#dlgWrap').classList.remove('show');$('#dlg').style.transf
     axis=null;moved=0;armed=false;
     if(e.touches.length!==1)return;
     // 横スクロールや選択グリッドの上からは引き下げを始めない
-    if(e.target.closest&&e.target.closest('.gtabs,.tftabs,.tmplcard,.daysel,.dpgrid,.minchips,textarea,select,input'))return;
+    if(e.target.closest&&e.target.closest('.gtabs,.tftabs,.tmplcard,.tmlist,.daysel,.dpgrid,.minchips,textarea,select,input'))return;
     // 中身がスクロール済みなら（＝上端にいない）引き下げにしない
     const f=box.querySelector('.tform');if(f&&f.scrollTop>0)return;
     sx=e.touches[0].clientX;sy=e.touches[0].clientY;armed=true;},{passive:true});
