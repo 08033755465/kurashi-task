@@ -777,6 +777,38 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 @keyframes slideR{0%{transform:translateX(-26px);opacity:.4;}100%{transform:translateX(0);opacity:1;}}
 .slidein-l{animation:slideL .2s ease-out;}
 .slidein-r{animation:slideR .2s ease-out;}
+#calpage{will-change:transform;touch-action:pan-y;}
+/* 予定の完了（黒塗り＝タスク運用） */
+.cell .evdonen{font-size:8.5px;color:var(--sub);opacity:.8;line-height:1.3;font-variant-numeric:tabular-nums;}
+#daypop .dpchk{width:19px;height:19px;flex:0 0 19px;border:1.5px solid currentColor;border-radius:6px !important;opacity:.8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;background:none;color:inherit;box-sizing:border-box;position:relative;}
+#daypop .dpchk::after{content:'';position:absolute;inset:-10px;}/* 当たり判定を44px相当に */
+#daypop .dpdel{flex:0 0 auto;font-size:13px;opacity:.75;padding:8px 6px;margin:-8px -2px;background:none;border:none;color:inherit;position:relative;}
+#daypop .dpevt{flex:1;min-width:0;text-overflow:ellipsis;}
+#daypop .dpevrow{gap:7px;}
+#daypop .dpev.evdn{opacity:.55;}
+#daypop .dpev.evdn .dpevt{text-decoration:line-through;}
+#daypop .dpdones{font-size:10.5px;color:var(--sub);padding:4px 2px 0;font-weight:700;}
+#daypop .dpdones span{font-weight:400;opacity:.8;}
+.dcev .evchk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.5px solid currentColor;border-radius:5px !important;margin-right:7px;vertical-align:-3px;font-size:11px;font-weight:700;opacity:.75;cursor:pointer;position:relative;}
+.dcev .evchk::after{content:'';position:absolute;inset:-12px;}
+.dcev.evdn{opacity:.55;}
+.dcev.evdn .cevt{text-decoration:line-through;}
+.nightsep.dnsep{color:var(--sub);}
+.wkev.evdn{opacity:.4;}
+.wkev.evdn .wkevt{text-decoration:line-through;}
+/* 予定フォームのヘッダー右上：削除（スクロール不要） */
+#dlg .tfh .tfhacts{display:flex;gap:2px;align-items:center;}
+#dlg .tfh .tfhdel{font-size:14px;padding:6px 10px;background:none;color:var(--danger);opacity:.85;}
+/* 複製先えらび：複製元の日 */
+.dpgrid button.org{box-shadow:inset 0 0 0 2px var(--accent);}
+.mini .dporg{display:inline-block;width:12px;height:12px;border-radius:3px !important;box-shadow:inset 0 0 0 2px var(--accent);vertical-align:-1px;}
+/* 繰り返し範囲えらびの説明つきボタン */
+.scopebtns button i{display:block;font-style:normal;font-size:10.5px;color:var(--sub);margin-top:3px;font-weight:400;}
+#daypop .dpchk,.dcev .evchk{transition:transform .12s ease;}
+#daypop .dpchk:active,.dcev .evchk:active{transform:scale(1.28);}
+.evland{animation:evlandK .34s cubic-bezier(.34,1.56,.64,1);}
+@keyframes evlandK{0%{transform:scale(.92);opacity:.4;}60%{transform:scale(1.03);}100%{transform:scale(1);opacity:1;}}
+@media (prefers-reduced-motion: reduce){.evland{animation:none;}#daypop .dpchk,.dcev .evchk{transition:none;}}
 /* 長押しシートの優先度ボタン */
 #colorSheet .sw.prio button{font-size:13px;font-weight:600;align-items:center;padding-bottom:0;color:var(--ink);}
 #colorSheet .sw.prio button.on{border:2px solid var(--ink);font-weight:800;}
@@ -1450,7 +1482,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.10';
+const APP_VERSION='v4.20';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1886,9 +1918,9 @@ function attachCalSwipe(){
     if(e.target.closest&&e.target.closest('.tlwrap,.chips,input,textarea,select,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール領域・重なるUIは触らない（週グリッド.wkbodyはスワイプ対象）
     const t=e.touches[0],dx=t.clientX-swSx,dy=t.clientY-swSy;
     if(swAxis===null&&(Math.abs(dx)>8||Math.abs(dy)>8))swAxis=Math.abs(dx)>Math.abs(dy)?'h':'v';
-    if(swAxis==='h')e.preventDefault(); // 横スワイプ確定→縦スクロール抑止
+    if(swAxis==='h'){e.preventDefault();calDragMove(dx);} // 横スワイプ確定→ページが指についてくる
   },{passive:false});
-  el.addEventListener('touchcancel',()=>{swValid=false;swAxis=null;swMoveOff();swRowReset();});
+  el.addEventListener('touchcancel',()=>{swValid=false;swAxis=null;swMoveOff();swRowReset();if(_calDragX)calDragCancel();});
   el.addEventListener('touchend',e=>{
     swMoveOff();
     if(!swValid)return;swValid=false;const wasAxis=swAxis;swAxis=null;
@@ -1896,10 +1928,12 @@ function attachCalSwipe(){
     if($('#modalWrap').classList.contains('show')||$('#colorSheet').classList.contains('show')||$('#dlgWrap').classList.contains('show'))return;
     if(e.target.closest&&e.target.closest('.chips,a[href],input,textarea,select,.tlbh,.tlblock,.tlwrap,.wksel,#nav,#cellpop,#daypop,#multibar'))return; // 横スクロール/ドラッグ/リンク/重なるUIは邪魔しない（週グリッドは長押ししてから範囲えらびなので横スワイプは通す）
     const t=e.changedTouches[0];const dx=t.clientX-swSx,dy=t.clientY-swSy;
-    if(!(Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15))return;
+    const fire=Date.now()-swT<1000&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.15;
+    if(view==='cal'&&_calDragX&&!fire){calDragCancel();return;} // 途中まで引っぱってやめた→ゴムのように戻る
+    if(!fire)return;
     // 今日のタスク行：右スワイプ＝完了／左スワイプ＝明日へ
     if(row){const tok=row.dataset.lp;dx>0?swipeComplete(tok):sendTaskTomorrow(tok.slice(2));return;}
-    if(view==='cal'){swSuppress=true;calNav(dx<0?1:-1);return;} // ページ送り後の誤タップを1回だけ握り潰す
+    if(view==='cal'){swSuppress=true;calSlideNav(dx<0?1:-1);return;} // ページ送り後の誤タップを1回だけ握り潰す
     if(view==='today'){const r=e.target.closest&&e.target.closest('[data-do]');if(r)dx>0?swipeComplete(r.dataset.do):todayItemMenu(r.dataset.do,{target:r});}});
   attachMouseSwipe();attachNavSwipe();}
 /* PCのマウスでも横スワイプできるように（タッチ側は実績があるのでそのまま） */
@@ -1927,7 +1961,7 @@ function attachMouseSwipe(){
     if(e.target.closest&&e.target.closest(SW_SKIP))return;
     swSuppress=true;setTimeout(()=>{swSuppress=false;},400);
     if(r){const tok=r.dataset.lp;dx>0?swipeComplete(tok):sendTaskTomorrow(tok.slice(2));return;}
-    if(view==='cal'){calNav(dx<0?1:-1);return;}});
+    if(view==='cal'){calSlideNav(dx<0?1:-1);return;}});
   document.addEventListener('pointercancel',()=>{on=false;swMoveOff();
     if(row){row.style.transition='';row.style.transform='';row.classList.remove('swR','swL');row=null;}});}
 /* タブバーの上を横になぞる＝となりのタブへ（画面本体のスワイプとは分ける） */
@@ -2323,6 +2357,7 @@ function calTabUp(){clearTimeout(_calLongT);_calLongT=null;}
 function calTabMove(ev){if(_calLongT&&Math.abs(ev.clientY-_calLongY)>10)calTabUp();}
 function switchView(v){
   if(v==='today')v='tasks'; // 「今日」タブは廃止（v4.00）。バーチカルは一旦しまってある
+  cpClose();if(typeof closeDayPopup==='function')closeDayPopup(); // タブを替えたら近接ポップ・日ポップは置いていかない
   if(v==='cal'&&view==='cal'){ // 押すたびに 月 → 週 → 日（いつもの表示に戻すのは長押し）
     if(_calLongFired){_calLongFired=false;return;} // 長押しで戻した直後のタップは無視
     calMonthAll=false;
@@ -4331,10 +4366,42 @@ function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
 /* ========================= カレンダー ========================= */
 function calNav(n){clearPrime();if(calMode==='month'){calX+=n;if(calX<0){calX=11;calY--;}if(calX>11){calX=0;calY++;}}
   else{const d=parseDs(calDate);d.setDate(d.getDate()+(calMode==='week'?7*n:n));calDate=dsOf(d);calY=d.getFullYear();calX=d.getMonth();}
-  render();toTop();
-  // ページ切替のスライド感（次へ＝右から、前へ＝左からスッと入る）
-  const pg=$('#calpage');if(pg){pg.classList.add(n>0?'slidein-l':'slidein-r');
-    setTimeout(()=>{const p=$('#calpage');if(p)p.classList.remove('slidein-l','slidein-r');},250);}}
+  render();toTop();}
+/* ページ送りを「いま見ている月が流れて出て、次の月が流れて入る」動きに（v4.20）
+   指でひっぱっている途中の位置（_calDragX）から続きの動きになるので、とってつけた感じにならない */
+let _calAnim=false,_calDragX=0;
+function calPageEl(){return $('#calpage');}
+function calDragMove(dx){const pg=calPageEl();if(!pg||_calAnim)return;
+  _calDragX=dx;
+  pg.style.transition='none';
+  pg.style.transform=`translateX(${dx}px)`;
+  pg.style.opacity=String(Math.max(.4,1-Math.abs(dx)/((pg.offsetWidth||360)*1.6)));}
+function calDragCancel(){const pg=calPageEl();_calDragX=0;if(!pg)return;
+  pg.style.transition='transform .24s cubic-bezier(.2,.8,.3,1.1),opacity .2s ease';
+  pg.style.transform='';pg.style.opacity='1';
+  setTimeout(()=>{const p=calPageEl();if(p){p.style.transition='';p.style.transform='';p.style.opacity='';}},260);}
+function calSlideNav(n){
+  const pg=calPageEl();
+  const noAnim=!pg||_calAnim||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if(noAnim){_calDragX=0;calNav(n);return;}
+  _calAnim=true;
+  const w=pg.offsetWidth||innerWidth;
+  pg.style.transition='transform .17s cubic-bezier(.35,.1,.6,.9),opacity .17s linear';
+  pg.style.transform=`translateX(${n>0?-w*0.55:w*0.55}px)`;
+  pg.style.opacity='0';
+  setTimeout(()=>{
+    _calDragX=0;
+    calNav(n); // ここで新しい月が描かれる（transformごと入れ替わる）
+    const np=calPageEl();
+    if(np){
+      np.style.transition='none';
+      np.style.transform=`translateX(${n>0?w*0.4:-w*0.4}px)`;
+      np.style.opacity='0';
+      np.getBoundingClientRect(); // 一度反映してから流し込む
+      np.style.transition='transform .3s cubic-bezier(.17,.84,.3,1),opacity .22s linear';
+      np.style.transform='';np.style.opacity='1';}
+    setTimeout(()=>{const p=calPageEl();if(p){p.style.transition='';p.style.transform='';p.style.opacity='';}_calAnim=false;},320);
+  },160);}
 function setCalMode(m){calMode=m;if(m!=='month')calMonthAll=false;render();toTop();}
 function onMonthBtn(){if(calMode==='month')calMonthAll=!calMonthAll;else{calMonthAll=false;calMode='month';}render();toTop();}
 function isNight(e){return !!(e.start&&S.settings.showNight&&e.start>=S.settings.nightStart);}
@@ -4354,17 +4421,21 @@ function dnColor(startOrEvent){const t=typeof startOrEvent==='string'?startOrEve
 function dayMin(t,wake){if(!t)return -1;const m=hm2min(t),w=hm2min(wake||S.settings.wakeDef);return m<w?m+1440:m;}
 /* 予定を午前/午後/夜の区切り付きタイムラインで表示（日ビュー・今日で共用） */
 function scheduleListHtml(evs,wake,dstr){
-  const sorted=[...evs].sort((a,b)=>dayMin(a.start,wake)-dayMin(b.start,wake));
+  const und=dstr?evs.filter(e=>!evDone(e,dstr)):evs.slice();
+  const dn=dstr?evs.filter(e=>evDone(e,dstr)):[];
+  const bySt=(a,b)=>dayMin(a.start,wake)-dayMin(b.start,wake);
   let cur=null,html='';
-  sorted.forEach(e=>{const b=bandOf(e.start,wake);
-    if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
-    const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e),tc=(mo||nf)?evLine(e):evTextColor(bg);
+  const row=(e,done)=>{const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e),tc=(mo||nf)?evLine(e):evTextColor(bg);
     const st=(mo||nf)?`color:${tc};${nf?`border-left:3px solid ${evLine(e)};`:''}`:`background:${bg};color:${tc};`;
-    html+=`<div class="cev dcev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}" style="${st}" onclick="eventTap('${e.id}',${dstr?`'${dstr}'`:'null'},event)">
+    return `<div class="cev dcev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}${done?' evdn':''}" data-ev="${e.id}" style="${st}" onclick="eventTap('${e.id}',${dstr?`'${dstr}'`:'null'},event)">
       ${e.repeat?`<span class="cevrep">${REFRESHI}</span>`:''}
-      <div class="cevt">${evLabel(e)}</div>
+      <div class="cevt">${dstr?`<span class="evchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>`:''}${evLabel(e)}</div>
       <div class="cevm" style="color:${(mo||nf)?'var(--sub)':tc};">${CLOCKI}${evTimeText(e)}　<span style="opacity:.85;">${esc(group(e.groupId).name)}</span></div>
-      ${e.memo?`<div class="cevmemo" style="color:${(mo||nf)?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;});
+      ${e.memo?`<div class="cevmemo" style="color:${(mo||nf)?'var(--sub)':tc};">${linkify(e.memo)}</div>`:''}${linkChips(e.links)}${rowImgs(e.images)}</div>`;};
+  [...und].sort(bySt).forEach(e=>{const b=bandOf(e.start,wake);
+    if(S.settings.showNight&&b!==cur){cur=b;html+=`<div class="nightsep ${b}">${bandLabel(b)}</div>`;}
+    html+=row(e,false);});
+  if(dn.length)html+=`<div class="nightsep dnsep">✓ 完了（${dn.length}）</div>`+[...dn].sort(bySt).map(e=>row(e,true)).join('');
   return html;}
 function setMonthFont(k){if(!MONTH_FONTS[k])return;S.settings.monthFont=k;save();render();}
 /* 週表示（Googleカレンダー方式）：重なる予定をレーンに割り振る */
@@ -4690,7 +4761,8 @@ function renderCal(){
       const rk=S.settings.showRokuyo?rokuyo(y,m,d):'';
       const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
       const mks=marksOn(m,d);
-      const evs=eventsOn(dstr);const tt=timedTasksOn(dstr);const ttIds=new Set(tt.map(o=>o.x.id));
+      const evsAll=eventsOn(dstr);const evs=evsAll.filter(e=>!evDone(e,dstr));const evDoneN=evsAll.length-evs.length;
+      const tt=timedTasksOn(dstr);const ttIds=new Set(tt.map(o=>o.x.id));
       const dues=dueTasksOn(dstr).filter(x=>!ttIds.has(x.id));
       const nightM=hm2min(S.settings.nightStart||'18:00');
       const items=[...evs.map(e=>({t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly,nf:!!e.noFill,ni:!!(e.start&&hm2min(e.start)>=nightM)})),
@@ -4713,6 +4785,7 @@ function renderCal(){
           else{st=`style="background:${it.c};color:${evTextColor(it.c)};"`;}
           return `<div class="${cls}" ${st}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
         ${!allMode&&items.length>max?`<div class="evmore">+${items.length-max}</div>`:''}
+        ${evDoneN?`<div class="evdonen">✓${evDoneN}</div>`:''}
       </div>`;}
     const gridAll=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     body=`<div id="calGrid" class="${gridAll?'allmode':''}" style="--mfs:${(MONTH_FONTS[S.settings.monthFont]||MONTH_FONTS.m).px}px;">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
@@ -4753,7 +4826,7 @@ function renderCal(){
         if(e.__t){const tc=taskLineC(e.__t);
           return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:var(--ink);`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">✔ ${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
-        let cls='wkev'+(e.important?' imp':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
+        let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
         if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
         const rng=o.h>=26?`<div class="wkevm">${CLOCKI}${e.start}${e.end?'–'+e.end:''}</div>`:'';
         return `<div class="${cls}" style="${st}" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}',event)"><div class="wkevt">${evLabel(e)}</div>${rng}</div>`;}).join('');
@@ -4781,7 +4854,7 @@ function renderCal(){
   }
   return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替${searchBtn()}</span></div>
   ${groupChipsHtml(calSel,'tglCalSel')}
-  <div class="calbar"><div class="mv"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calNav(1)">›</button></div>
+  <div class="calbar"><div class="mv"><button onclick="calSlideNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calSlideNav(1)">›</button></div>
     <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
@@ -4983,18 +5056,24 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dues=due
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpbody">
       ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
-      ${evs.length?evs.map(e=>{const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e);
-        const tc=(mo||nf)?evLine(e):evTextColor(bg);
-        const st=(mo||nf)?`color:${tc};`:`background:${bg};color:${tc};`;
-        return `<div class="dpev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}" style="${st}" onpointerdown="event.stopPropagation()">
-        <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}',null,null,'${dstr}')"><span class="dpevt">${evLabel(e)}</span><span class="dpevm">${evTimeText(e)}</span></div>
-        ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}).join(''):(mks.length?'':'<div class="dpempty">予定はありません</div>')}
+      ${(()=>{const und=evs.filter(e=>!evDone(e,dstr)),dn=evs.filter(e=>evDone(e,dstr));
+        const row=(e,done)=>{const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e);
+          const tc=(mo||nf)?evLine(e):evTextColor(bg);
+          const st=(mo||nf)?`color:${tc};`:`background:${bg};color:${tc};`;
+          return `<div class="dpev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}${done?' evdn':''}" data-ev="${e.id}" style="${st}" onpointerdown="event.stopPropagation()">
+          <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}',null,null,'${dstr}')">
+            <span class="dpchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>
+            <span class="dpevt">${evLabel(e)}</span><span class="dpevm">${evTimeText(e)}</span>
+            <button class="dpdel" onclick="event.stopPropagation();closeDayPopup();delEvent('${e.id}','${dstr}')">🗑</button></div>
+          ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;};
+        return (und.length?und.map(e=>row(e,false)).join(''):(mks.length||dn.length?'':'<div class="dpempty">予定はありません</div>'))
+          +(dn.length?`<div class="dpdones">✓ 完了（${dn.length}）　<span>タップで開く・☑で戻す</span></div>`+dn.map(e=>row(e,true)).join(''):'');})()}
       ${dues.map(x=>`<div class="dpdue">⏰ 期限：${esc(x.title)}</div>`).join('')}
     </div>
     <div class="dpacts">
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')">🎨 色分け</button>
-      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 この日を開く</button></div>
+      <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 日を開く</button></div>
     <div class="dphint">長押しでこの日のページへ</div>
   </div>`;
   el.classList.add('show');
@@ -5197,7 +5276,7 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
       ${emTabsHtml()}${_emTmplPick?emTmplPickHtml():emTmplListHtml()}</div>`;
     $('#dlgWrap').classList.add('show');return;}
   $('#dlg').innerHTML=`<div class="dm tform">
-    <div class="tfh"><b>${tmplEd?(_emTmplEdit?'テンプレを編集':'テンプレを作る'):(e?'予定を編集':'予定を追加')}</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="tfh"><b>${tmplEd?(_emTmplEdit?'テンプレを編集':'テンプレを作る'):(e?'予定を編集':'予定を追加')}</b><span class="tfhacts">${e&&!tmplEd?`<button type="button" class="tfhdel" onclick="delEvent('${e.id}'${_emOcc?`,'${_emOcc}'`:''})">🗑</button>`:''}<button type="button" onclick="dlgEnd()">✕</button></span></div>
     ${tmplEd?'':(e?'':emTabsHtml())}
     <div class="frow"><label>予定名</label><input id="emTitle" value="${esc(keep.title??src?.title??'')}" placeholder="例）通院、打合せ など"></div>
     ${tmplEd?'':`<div class="frow"><label>日付</label>
@@ -5469,9 +5548,9 @@ function saveEvent(id){
   applyEventSave(id,data,false);}
 function recurScopePop(){const occ=_pendingEvt.occ;const d=parseDs(occ);const md=`${d.getMonth()+1}/${d.getDate()}`;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 繰り返しの予定です。<br>どの範囲を変更しますか？
-    <div class="scopebtns"><button onclick="applyRecur('one')">この予定のみ（${md}）</button>
-      <button onclick="applyRecur('future')">この予定以降（${md}〜）</button>
-      <button onclick="applyRecur('all')">すべての予定</button></div></div>
+    <div class="scopebtns"><button onclick="applyRecur('one')">この予定のみ（${md}）<i>この日だけ内容が変わります</i></button>
+      <button onclick="applyRecur('future')">この予定以降（${md}〜）<i>この日から先がぜんぶ変わります（前はそのまま）</i></button>
+      <button onclick="applyRecur('all')">すべての予定<i>過去もふくめて全部変わります</i></button></div></div>
     <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyRecur(scope){const p=_pendingEvt;if(!p)return;const orig=S.events.find(e=>e.id===p.id);if(!orig){dlgEnd();return;}
@@ -5492,15 +5571,27 @@ function applyEventSave(id,data,tmpl){snapUndo();
   else S.events.push({id:uid(),...data});
   if(tmpl)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
   _emStash=null;save();dlgEnd();closeModal();render();attachCellPress();flashUndo(id?'予定を更新しました':'予定を追加しました');}
+/* ---- 予定の完了（黒塗り＝その日のタスク運用）。繰り返しは日ごとに完了できる（v4.20） ---- */
+function evDone(e,dstr){return !!(e&&e.doneDates&&e.doneDates.includes(dstr));}
+function toggleEvDone(id,dstr){const e=S.events.find(v=>v.id===id);if(!e||!dstr)return;
+  snapUndo();e.doneDates=e.doneDates||[];
+  const i=e.doneDates.indexOf(dstr);
+  if(i>=0){e.doneDates.splice(i,1);}else{e.doneDates.push(dstr);try{navigator.vibrate&&navigator.vibrate(18);}catch(_){}}
+  save();render();attachCellPress();
+  const dp=$('#daypop');if(dp&&dp.classList.contains('show'))openDayPopup(dstr); // 開いている日POPは描き直す
+  // 動かした行がどこへ行ったか分かるように、ぽよんと着地させる
+  setTimeout(()=>{document.querySelectorAll(`[data-ev="${id}"]`).forEach(el=>{el.classList.add('evland');
+    setTimeout(()=>el.classList.remove('evland'),380);});},30);
+  flashUndo(i>=0?'未完了に戻しました':'完了にしました（月では非表示）');}
 async function delEvent(id,occDate){const e=S.events.find(v=>v.id===id);if(!e)return;
   if(e.repeat){delRecurPop(id,occDate||_emOcc||e.date);return;}
   if(!await uiConfirm('この予定を削除しますか？','削除'))return;
   snapUndo();S.events=S.events.filter(x=>x.id!==id);_emStash=null;save();dlgEnd();closeModal();render();attachCellPress();flashUndo('予定を削除しました');}
 function delRecurPop(id,occ){const d=parseDs(occ);const md=`${d.getMonth()+1}/${d.getDate()}`;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 繰り返しの予定です。<br>どの範囲を削除しますか？
-    <div class="scopebtns"><button onclick="applyDelRecur('${id}','${occ}','one')">この予定のみ（${md}）</button>
-      <button onclick="applyDelRecur('${id}','${occ}','future')">この予定以降（${md}〜）</button>
-      <button onclick="applyDelRecur('${id}','${occ}','all')" style="color:var(--danger);">すべての予定を削除</button></div></div>
+    <div class="scopebtns"><button onclick="applyDelRecur('${id}','${occ}','one')">この予定のみ（${md}）<i>この日の1回だけ消します</i></button>
+      <button onclick="applyDelRecur('${id}','${occ}','future')">この予定以降（${md}〜）<i>この日から先をぜんぶ消します（前は残る）</i></button>
+      <button onclick="applyDelRecur('${id}','${occ}','all')" style="color:var(--danger);">すべての予定を削除<i>過去もふくめて全部消します</i></button></div></div>
     <div class="db"><button onclick="${_emStash?'emStashBack()':'dlgEnd()'}">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyDelRecur(id,occ,scope){const e=S.events.find(v=>v.id===id);if(!e){dlgEnd();return;}snapUndo();
@@ -5514,7 +5605,9 @@ function applyDelRecur(id,occ,scope){const e=S.events.find(v=>v.id===id);if(!e){
 function eventTap(id,occDate,ev){const e=S.events.find(x=>x.id===id);if(!e)return;
   const occ=occDate||todayStr();
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.cev,.wkev,.wkadchip,.dcev'):null;
+  const dn=evDone(e,occ);
   const html=`<div class="cpmenu"><div style="font-size:10px;color:var(--sub);padding:4px 12px 4px;">${esc(evTitle(e))}${e.repeat?' 🔁':''}　${e.start||''}${e.end?'〜'+e.end:''}</div>
+      <button class="hi" onclick="cpClose();toggleEvDone('${id}','${occ}')">${dn?'↩ 未完了に戻す':'✓ 完了にする'}</button>
       <button onclick="cpClose();eventModal('${id}',null,null,'${occ}')">✎ 編集</button>
       <button onclick="cpClose();dupEventPick('${id}')">⧉ 複製（日付を選ぶ）</button>
       <button class="del" onclick="cpClose();delEvent('${id}','${occ}')">🗑 削除</button></div>`;
@@ -5526,12 +5619,12 @@ function dupToggle(ds){_dupSel.has(ds)?_dupSel.delete(ds):_dupSel.add(ds);dupPic
 function dupNav(k){_dpX+=k;if(_dpX<0){_dpX=11;_dpY--;}if(_dpX>11){_dpX=0;_dpY++;}dupPickRender();}
 function dupPickRender(){const e=S.events.find(v=>v.id===_dupId);const ws=S.settings.weekStart||0;const start=(new Date(_dpY,_dpX,1).getDay()-ws+7)%7;const dim=new Date(_dpY,_dpX+1,0).getDate();let cells='';
   for(let i=0;i<start;i++)cells+='<span></span>';
-  for(let dn=1;dn<=dim;dn++){const ds=`${_dpY}-${pad(_dpX+1)}-${pad(dn)}`;cells+=`<button class="${_dupSel.has(ds)?'on':''}${ds===todayStr()?' td':''}" onclick="dupToggle('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
+  for(let dn=1;dn<=dim;dn++){const ds=`${_dpY}-${pad(_dpX+1)}-${pad(dn)}`;cells+=`<button class="${_dupSel.has(ds)?'on':''}${ds===todayStr()?' td':''}${ds===e.date?' org':''}" onclick="dupToggle('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
   openModal(`<div class="mh"><b>「${esc(evTitle(e))}」を複製</b><button onclick="closeModal()">✕</button></div>
     <div class="mbody"><div class="dpnav"><button onclick="dupNav(-1)">‹</button><span>${_dpY}年${_dpX+1}月</span><button onclick="dupNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
-    <div class="mini">複製先の日付をタップ（<b>複数OK</b>）。予定のある日には<b>点</b>が付いています。1日なら選んでそのまま内容編集、複数ならまとめて複製します。</div></div>
+    <div class="mini">複製先の日付をタップ（<b>複数OK</b>）。<span class="dporg">◎</span>＝いまの予定の日、<b>点</b>＝予定のある日。1日だけ選ぶとそのまま内容も直せます。${e.repeat?'<br>※複製したものは<b>繰り返しなしの1回きり</b>の予定になります':''}</div></div>
     <div class="mbtns"><button onclick="closeModal()">やめる</button><button class="save" onclick="dupDo()">${_dupSel.size?_dupSel.size+'日に複製':'複製する'}</button></div>`);}
 function dupDo(){if(!_dupSel.size){toast('複製先の日付を選んでください');return;}const e=S.events.find(v=>v.id===_dupId);if(!e){closeModal();return;}
   snapUndo();const dates=[..._dupSel].sort();let firstId=null;
@@ -6481,6 +6574,14 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.20（2026-09-28）予定を「その日のタスク」として完了できるように／削除を近く／月めくりを滑らかに</b><br>
+  ・予定に<b>チェックボックス</b>が付きました。日付のポップ・日カレンダーの<b>☑を押すと完了</b>になり、<b>月カレンダーからは消えます</b>（セルに小さく「✓件数」だけ残ります）<br>
+  ・完了した予定は<b>日付のポップ・日カレンダーの下の「✓ 完了」</b>にまとまり、☑を押せばいつでも戻せます。繰り返しの予定は<b>その日の分だけ</b>完了になります<br>
+  ・<b>削除がすぐ押せる</b>ようになりました：日付ポップの各行に🗑、予定の編集画面は<b>右上に🗑</b>（下までスクロールしなくてOK。確認は今までどおり出ます）<br>
+  ・<b>月めくりが指についてくる</b>ようになりました。ひっぱった分だけ画面が動き、離すと流れるように次の月へ。途中でやめるとゴムのように戻ります（‹ ›ボタンも同じ動き）<br>
+  ・繰り返しの「この予定のみ／以降／すべて」に<b>説明の一行</b>が付きました。複製えらびは<b>◎＝いまの予定の日</b>が分かるようになり、繰り返し予定の複製は「1回きりになる」ことを明記<br>
+  ・タブを切り替えたとき、前の画面のポップが残らないようにしました<br>
+  </div>
   <div class="mini"><b>v4.10（2026-09-07）日記タブ／1日のふりかえり／ぜんぶから検索</b><br>
   ・<b>日記タブ</b>ができました。<b>カレンダー</b>で見ると、写真を入れた日は<b>いちばん最初の1枚</b>が出ます。日づけをタップするとその日の日記が開きます<br>
   ・<b>「写真をぜんぶ」</b>に切り替えると、その月の写真がずらっと並びます<br>
