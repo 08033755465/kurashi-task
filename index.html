@@ -897,6 +897,46 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .nightsep.dnsep{color:var(--sub);}
 .wkev.evdn{opacity:.4;}
 .wkev.evdn .wkevt{text-decoration:line-through;}
+/* ミニ画面（v4.70）：PCの小窓／スマホの ?mini=1 */
+body.minimode #app,body.minimode #nav,body.minimode #quickadd,body.minimode #fabmenu,body.minimode #safetop{display:none!important;}
+body.minimode{padding:0!important;}
+body.inpip{margin:0;background:var(--bg);color:var(--ink);overflow-y:auto;}
+.sqbtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mp{padding:max(12px,env(safe-area-inset-top)) 14px max(16px,env(safe-area-inset-bottom));max-width:520px;margin:0 auto;}
+.mp-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.mp-h b{font-size:15px;letter-spacing:.04em;}
+.mp-st{font-size:11px;color:var(--sub);transition:color .2s;}
+.mp-st.on{color:var(--accent);font-weight:700;}
+.mp-form{background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.04);}
+.mp-seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-bottom:8px;}
+.mp-seg button{flex:1;padding:8px 0;font-size:13px;color:var(--sub);background:transparent;}
+.mp-seg button.on{background:var(--ink);color:#fff;font-weight:700;}
+.mp-in{display:flex;gap:6px;}
+.mp-in input{flex:1;min-width:0;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);}
+.mp-add{padding:0 16px;border-radius:10px;background:var(--gradA,var(--accent));color:#fff;font-weight:700;font-size:14px;}
+.mp-add:active,.mp-ck:active,.mp-days button:active{transform:scale(.94);}
+.mp-opt{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+.mp-days{display:flex;gap:6px;}
+.mp-days button{padding:0 12px;height:34px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;color:var(--sub);background:var(--bg);}
+.mp-days button.on{border-color:var(--accent);color:var(--accent);font-weight:700;background:color-mix(in srgb,var(--accent) 10%,var(--bg));}
+.mp-time .tp-num{width:40px;font-size:15px;}
+.mp-time .tp-col button{padding:3px 10px;}
+.mp-tl{font-size:11px;color:var(--sub);margin-left:4px;}
+.mp-sec{font-size:12px;font-weight:700;color:var(--sub);margin:12px 2px 4px;letter-spacing:.04em;}
+.mp-sec span{color:var(--accent);margin-left:2px;}
+.mp-it{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 2px;border-bottom:1px solid var(--line2);}
+.mp-ck{flex-shrink:0;width:24px;height:24px;border:1.6px solid var(--ink);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;background:transparent;color:#fff;padding:0;}
+.mp-ck.ev{border-radius:50%;}
+.mp-it.dn .mp-ck{background:var(--accent);border-color:var(--accent);}
+.mp-it.dn .mp-tt{text-decoration:line-through;color:var(--sub);}
+.mp-tm{flex-shrink:0;font-size:12px;color:var(--accent);font-weight:700;min-width:36px;font-variant-numeric:tabular-nums;}
+.mp-tt{flex:1;min-width:0;font-size:14px;line-height:1.4;word-break:break-word;}
+.mp-tt i{font-style:normal;font-size:11px;color:var(--sub);}
+.mp-tt .mp-old{color:var(--danger);}
+.mp-none{font-size:12px;color:var(--sub);padding:8px 2px;}
+.mp-dtog{display:block;margin:12px 0 2px;font-size:12px;color:var(--sub);padding:6px 2px;background:none;}
+.mp-foot{display:flex;gap:8px;margin-top:18px;}
+.mp-foot button{flex:1;height:44px;border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--ink);background:var(--bg);}
 /* 編集画面の見出し：タイトルのすぐ横に［🗑 削除］［⧉ 複製］、✕は右端に離して置く（v4.61・押し間違い防止） */
 .hdl{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .hdl>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
@@ -1613,7 +1653,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.61';
+const APP_VERSION='v4.70';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -2420,6 +2460,7 @@ async function pushState(){if(!syncReady())return;
             if(!adoptBusy()){render();window.scrollTo(0,sy);}}}}
     }catch(e){/* 確認に失敗したら従来どおり上げる */}
     S.updatedAt=Date.now();
+    try{S.widget=buildWidgetSnap();}catch(_){} // iPhoneウィジェット用の要約（v4.70）
     const body=JSON.stringify([{room:SYNC.room,data:S,updated_at:new Date(S.updatedAt).toISOString()}]);
     if(body.length>3_000_000)throw new Error('TOO_BIG');
     const res=await fetch(syncBase(),{method:'POST',
@@ -2491,7 +2532,7 @@ function saveSyncCfg(){
   if(syncReady()){syncState={msg:'接続確認中…',t:0,err:''};pullState(true);}
   render();}
 // 表示中は数秒ごとにクラウドと突き合わせ＝ほぼリアルタイム連動。非表示中や編集中は自動でお休み
-setInterval(()=>{if(syncReady()&&!document.hidden)pullState();},4000);
+setInterval(()=>{if(syncReady()&&(!document.hidden||MINI.pip))pullState();},4000); // 小窓が出ている間は本体が裏でも取り込む
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullState();});
 
 /* ========================= 暦（祝日・六曜・一粒万倍日） ========================= */
@@ -4230,7 +4271,7 @@ function renderTasks(){
         :'<div class="tsecempty">なし</div>'}</div></div>`;}).join('');
   const total=open.reduce((s,x)=>s+(+x.estMin||0),0);
   return `
-  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length+openEvs.length}件${total?' ・ 合計'+fmtMin(total):''}${searchBtn()}</span></div>
+  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length+openEvs.length}件${total?' ・ 合計'+fmtMin(total):''}${pipBtn()}${searchBtn()}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   <div class="tgfil">${taskGroupFilterHtml()}</div>
   ${rvHintHtml()}
@@ -6222,7 +6263,7 @@ function toggleEvDone(id,dstr){const e=S.events.find(v=>v.id===id);if(!e||!dstr)
   // 動かした行がどこへ行ったか分かるように、ぽよんと着地させる
   setTimeout(()=>{document.querySelectorAll(`[data-ev="${id}"]`).forEach(el=>{el.classList.add('evland');
     setTimeout(()=>el.classList.remove('evland'),380);});},30);
-  flashUndo(i>=0?'未完了に戻しました':'完了にしました（月では非表示）');}
+  flashUndo(i>=0?'未完了に戻しました':'完了にしました（月では打ち消し線で残ります）');}
 async function delEvent(id,occDate){const e=S.events.find(v=>v.id===id);if(!e)return;
   if(e.repeat){delRecurPop(id,occDate||_emOcc||e.date);return;}
   const deps=S.events.filter(v=>v.rel&&v.rel.ev===id).length+S.tasks.filter(x=>(x.rel&&x.rel.ev===id)||(x.relDue&&x.relDue.ev===id)).length;
@@ -7227,6 +7268,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.70（2026-09-30）小窓とホーム画面ウィジェット</b><br>
+  ・<b>PC（Chrome・Edge）</b>：タスクタブの見出しの<b>小窓ボタン</b>を押すと、<b>ほかのアプリの上に常に浮く小さな窓</b>が出ます。中身は<b>ひと言入力（タスク／予定・今日／明日・時刻）</b>と<b>今日やるタスク・まだの予定</b>。チェックで完了、アプリ本体ともすぐ連動します<br>
+  ・<b>iPhone</b>：Scriptable のウィジェットで、ホーム画面・ロック画面に<b>今日のまだの予定と今日やるタスク</b>を表示。タップすると同じ<b>ミニ画面</b>が開き、そのまま入力・チェックできます（ミニ画面から「詳しく入力」「アプリ全体を見る」も可）<br>
+  ・予定を完了したときの案内を「月では打ち消し線で残ります」に直しました<br>
+  </div>
   <div class="mini"><b>v4.61（2026-09-29）編集画面の削除・複製を上に／過ぎたタスクの日付を整理</b><br>
   ・<b>タスク・予定・ルーティン・習慣・買い物・グループ・リンク・誕生日・マーク・記録</b>の編集画面で、<b>［🗑 削除］［⧉ 複製］がいちばん上</b>（タイトルのすぐ横）に並びます。下までスクロールしなくてOK<br>
   ・<b>✕（閉じる）は右端に離して</b>置き、削除と押し間違えないようにしました。削除は今までどおり確認が出ます（記録の削除にも確認を追加）<br>
@@ -8170,9 +8216,127 @@ async function checkDayRollover(){const today=todayStr();const last=S.lastActive
   const md=parseDs(last);
   if(await uiConfirm(`${md.getMonth()+1}/${md.getDate()}のタイムラインで、ルーティンの順番を並べ替えました。\nこの並び順を「ルーティン」タブの標準の並びにも反映しますか？`,'反映する')){
     applyDayOrderToRoutines(last);render();toast('ルーティンの並びを更新しました');}}
+/* ========================= ミニ画面（v4.70）：ひと言入力＋今日やるタスク＋まだの予定 =========================
+   ・PC（Chrome/Edge）：📌で「小窓」＝ほかのアプリの上に常に浮く（Document Picture-in-Picture）
+   ・スマホ：?mini=1 で開くとこの画面だけ（iPhoneのScriptableウィジェットから開く）
+   小窓は別の document なので DOM は MINI.doc から探す。ボタンの関数は小窓の window にも渡している（MINI_FNS） */
+const MINI={doc:null,pip:null,mode:false,kind:'task',day:0,time:'',showDone:false,flash:'',flashT:0};
+const mq=sel=>(MINI.doc||document).querySelector(sel);
+function miniTasksOn(d){return S.tasks.filter(x=>x.status!=='done'&&x.today&&x.today<=d)
+  .sort((a,b)=>(a.start||'99').localeCompare(b.start||'99')||((a.torder??1e9)-(b.torder??1e9))||((b.pickedAt||0)-(a.pickedAt||0)));}
+function miniEventsOn(d){return S.events.filter(e=>eventOccursOn(e,d)).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+function miniHtml(){const d=todayStr(),dt=parseDs(d),isT=MINI.kind==='task';
+  const evs=miniEventsOn(d),evOpen=evs.filter(e=>!evDone(e,d)),evDn=evs.filter(e=>evDone(e,d));
+  const tks=miniTasksOn(d),tkDn=S.tasks.filter(x=>x.status==='done'&&x.doneAt===d);
+  const chip=(v,l)=>`<button type="button" class="${MINI.day===v?'on':''}" onclick="miniDay(${v===null?'null':v})">${l}</button>`;
+  const evRow=(e,dn)=>`<div class="mp-it${dn?' dn':''}"><button type="button" class="mp-ck ev" onclick="miniEvDone('${e.id}')" aria-label="${dn?'未完了に戻す':'完了'}">${dn?'✓':''}</button><span class="mp-tm">${e.start||'終日'}</span><span class="mp-tt">${esc(evTitle(e))}</span></div>`;
+  const tkRow=(x,dn)=>`<div class="mp-it${dn?' dn':''}"><button type="button" class="mp-ck" onclick="miniTkDone('${x.id}')" aria-label="${dn?'未完了に戻す':'完了'}">${dn?'✓':''}</button>${x.start?`<span class="mp-tm">${x.start}</span>`:''}<span class="mp-tt">${esc(x.title||'')}${x.repeat?' <i>🔁</i>':''}${!dn&&x.today<d?` <i class="mp-old">${+x.today.slice(5,7)}/${+x.today.slice(8)}から</i>`:''}</span></div>`;
+  const nDone=evDn.length+tkDn.length,fl=MINI.flash&&Date.now()-MINI.flashT<2600;
+  return `<div class="mp">
+  <div class="mp-h"><b>今日 ${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]})</b><span class="mp-st${fl?' on':''}">${fl?esc(MINI.flash):(syncReady()?(syncState.err?'⚠ 同期エラー':'☁︎ 同期'):'')}</span></div>
+  <div class="mp-form">
+    <div class="mp-seg"><button type="button" class="${isT?'on':''}" onclick="miniKind('task')">✔ タスク</button><button type="button" class="${isT?'':'on'}" onclick="miniKind('event')">📅 予定</button></div>
+    <div class="mp-in"><input id="mpTitle" placeholder="${isT?'やること':'予定名'}（Enterで追加）" enterkeyhint="done" autocomplete="off" onkeydown="miniKey(event)"><button type="button" class="mp-add" onclick="miniAdd()">追加</button></div>
+    <div class="mp-opt"><span class="mp-days">${chip(0,'今日')}${chip(1,'明日')}${isT?chip(null,'日付なし'):''}</span>${isT?'':miniTimeHtml()}</div>
+  </div>
+  <div class="mp-sec">📅 まだの予定 <span>${evOpen.length}</span></div>
+  ${evOpen.length?evOpen.map(e=>evRow(e,false)).join(''):'<div class="mp-none">まだ終わっていない予定はありません</div>'}
+  <div class="mp-sec">✔ 今日やるタスク <span>${tks.length}</span></div>
+  ${tks.length?tks.map(x=>tkRow(x,false)).join(''):'<div class="mp-none">今日やるタスクはありません</div>'}
+  ${nDone?`<button type="button" class="mp-dtog" onclick="miniShowDone()">✓ 終わったもの ${nDone}件 ${MINI.showDone?'▾':'▸'}</button>${MINI.showDone?evDn.map(e=>evRow(e,true)).join('')+tkDn.map(x=>tkRow(x,true)).join(''):''}`:''}
+  ${MINI.mode?`<div class="mp-foot"><button type="button" onclick="miniDetail()">✎ 詳しく入力</button><button type="button" onclick="miniExit()">アプリ全体を見る ›</button></div>`:''}
+  </div>`;}
+/* 時刻（予定のとき）：テンキー＋▲▼（分は15分きざみ）。見た目は timeInput と同じ */
+function miniTimeHtml(){const p=(MINI.time||'').split(':');
+  return `<span class="mp-time"><div class="tp">
+    <div class="tp-col"><button type="button" onclick="miniTp('h',1)">▲</button><input class="tp-num" id="mpH" type="text" inputmode="numeric" maxlength="2" value="${p[0]||''}" placeholder="--" onfocus="this.select()" oninput="miniTpType()"><button type="button" onclick="miniTp('h',-1)">▼</button></div><span class="tp-sep">:</span>
+    <div class="tp-col"><button type="button" onclick="miniTp('m',1)">▲</button><input class="tp-num" id="mpM" type="text" inputmode="numeric" maxlength="2" value="${p[1]||''}" placeholder="--" onfocus="this.select()" oninput="miniTpType()"><button type="button" onclick="miniTp('m',-1)">▼</button></div>
+    ${MINI.time?`<button type="button" class="tp-clear" onclick="miniTpClear()" title="時刻なし（終日）">✕</button>`:'<span class="mp-tl">終日</span>'}</div></span>`;}
+function miniTp(part,dir){
+  if(!MINI.time){MINI.time=pad((new Date().getHours()+1)%24)+':00';miniRender();return;} // 1回目は「次の正時」から
+  let[h,m]=MINI.time.split(':').map(Number);
+  if(part==='h')h=(h+dir+24)%24;else{m=Math.round(m/15)*15+dir*15;if(m>=60)m=0;if(m<0)m=45;}
+  MINI.time=pad(h)+':'+pad(m);miniRender();}
+function miniTpType(){const H=mq('#mpH'),M=mq('#mpM');if(!H||!M)return;
+  const hv=zen2han(H.value).replace(/\D/g,''),mv=zen2han(M.value).replace(/\D/g,'');H.value=hv;M.value=mv;
+  if(hv===''&&mv===''){MINI.time='';return;}
+  MINI.time=pad(Math.min(23,+hv||0))+':'+pad(Math.min(59,+mv||0));
+  if(hv.length===2&&(MINI.doc||document).activeElement===H)M.focus();}
+function miniTpClear(){MINI.time='';miniRender();}
+function miniRender(){const root=mq('#miniRoot');if(!root)return;
+  // 描き直しても、打ちかけの文字・カーソルの位置はそのまま（名前・時・分）
+  const D=MINI.doc||document,ae=D.activeElement,keep={};
+  ['mpTitle','mpH','mpM'].forEach(id=>{const el=mq('#'+id);if(el)keep[id]={v:el.value,f:ae===el,s:el.selectionStart,e:el.selectionEnd};});
+  if(MINI.pip){D.documentElement.style.cssText=document.documentElement.style.cssText;} // テーマ色を合わせる
+  root.innerHTML=miniHtml();
+  Object.entries(keep).forEach(([id,k])=>{const el=mq('#'+id);if(!el)return;
+    if(id==='mpTitle'||k.f)el.value=k.v; // 時・分は打っている最中だけ生の値を残す（▲▼で変えた値は描き直しに任せる）
+    if(k.f){el.focus();try{el.setSelectionRange(k.s,k.e);}catch(_){}}});}
+function miniFlash(msg){MINI.flash=msg;MINI.flashT=Date.now();miniRender();setTimeout(miniRender,2700);}
+/* 追加・完了のあとはすぐクラウドへ（小窓・スマホはすぐ閉じられることがあるため、待たずに上げる） */
+function miniPush(){if(!syncReady())return;clearTimeout(syncTimer);
+  pushState().then(()=>{if(!syncState.err)miniFlash('☁︎ 保存しました');else miniRender();});}
+function miniAdd(){const inp=mq('#mpTitle');const v=(inp?.value||'').trim();
+  if(!v){inp&&inp.focus();miniFlash('名前を入れてください');return;}
+  const d=MINI.day===null?null:shiftDs(todayStr(),MINI.day);
+  if(MINI.kind==='task'){
+    S.tasks.push({id:uid(),title:v,groupId:lastTaskGroupId(),estMin:15,priority:1,status:'todo',links:[],due:'',today:d,memo:'',snooze:null,order:Date.now(),createdAt:todayStr(),pickedAt:Date.now()});}
+  else{const st=MINI.time||'';
+    S.events.push({id:uid(),title:v,date:d||todayStr(),groupId:lastEvGroupId(),repeat:'',start:st,end:st?min2hm(Math.min(hm2min(st)+60,1439)):'',memo:'',links:[],images:[],doneDates:[],exdates:[]});
+    MINI.time='';}
+  inp.value='';save();render();
+  miniFlash(`${MINI.kind==='task'?'タスク':'予定'}を追加しました${MINI.day===1?'（明日）':MINI.day===null?'（日付なし）':''}`);
+  const ni=mq('#mpTitle');if(ni)ni.focus(); // 続けて入れられるように
+  miniPush();}
+function miniKey(ev){if(ev.key==='Enter'&&!ev.isComposing&&ev.keyCode!==229){ev.preventDefault();miniAdd();}}
+function miniKind(k){MINI.kind=k;if(k==='event'&&MINI.day===null)MINI.day=0;miniRender();const i=mq('#mpTitle');i&&i.focus();}
+function miniDay(v){MINI.day=v;miniRender();}
+function miniShowDone(){MINI.showDone=!MINI.showDone;miniRender();}
+function miniTkDone(id){toggleTaskDone(id);miniPush();}
+function miniEvDone(id){toggleEvDone(id,todayStr());miniPush();}
+/* スマホのミニ画面から、いつもの入力画面へ（打ちかけの名前を引き継ぐ） */
+function miniDetail(){const v=(mq('#mpTitle')?.value||'').trim();if(mq('#mpTitle'))mq('#mpTitle').value=''; // 名前は入力画面へ引き継ぐconst d=MINI.day===null?null:shiftDs(todayStr(),MINI.day);
+  if(MINI.kind==='task'){taskModal(null,'',false,null,d?{date:d}:undefined);setTimeout(()=>{const t=$('#tmTitle');if(t&&v)t.value=v;},0);}
+  else{eventModal(null,d||todayStr());setTimeout(()=>{const t=$('#emTitle');if(t&&v)t.value=v;},0);}}
+function miniEnterMode(){MINI.mode=true;MINI.doc=document;document.body.classList.add('minimode');
+  if(!$('#miniRoot')){const r=document.createElement('div');r.id='miniRoot';document.body.insertBefore(r,document.body.firstChild);}
+  miniRender();}
+function miniExit(){MINI.mode=false;document.body.classList.remove('minimode');MINI.doc=MINI.pip?MINI.pip.document:null;
+  try{history.replaceState(null,'',location.pathname);}catch(_){}
+  switchView('tasks');}
+const MINI_FNS=['miniAdd','miniKey','miniKind','miniDay','miniTp','miniTpType','miniTpClear','miniTkDone','miniEvDone','miniShowDone'];
+function pipBtn(){if(MINI.mode||!('documentPictureInPicture' in window))return '';
+  return `<button class="sqbtn${MINI.pip?' on':''}" onclick="${MINI.pip?'closeMiniPip()':'openMiniPip()'}" title="${MINI.pip?'小窓を閉じる':'小窓で出す（ほかのアプリの上に浮く）'}"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1" fill="currentColor" stroke="none"/></svg></button>`;}
+async function openMiniPip(){
+  if(!('documentPictureInPicture' in window)){uiAlert('小窓は PC の Chrome か Edge で使えます（Safari は未対応です）');return;}
+  if(MINI.pip){try{MINI.pip.focus();}catch(_){}return;}
+  let w;try{w=await documentPictureInPicture.requestWindow({width:340,height:580});}
+  catch(e){uiAlert('小窓を開けませんでした：'+(e&&e.message||e));return;}
+  document.querySelectorAll('style,link[rel="stylesheet"]').forEach(n=>w.document.head.appendChild(n.cloneNode(true)));
+  w.document.documentElement.style.cssText=document.documentElement.style.cssText;
+  [...document.documentElement.attributes].forEach(a=>{if(a.name.startsWith('data-'))w.document.documentElement.setAttribute(a.name,a.value);});
+  w.document.title='くらしタスク';
+  w.document.body.className='inpip';w.document.body.innerHTML='<div id="miniRoot"></div>';
+  MINI_FNS.forEach(n=>{w[n]=window[n];});
+  MINI.pip=w;MINI.doc=w.document;miniRender();
+  w.addEventListener('pagehide',()=>{MINI.pip=null;MINI.doc=MINI.mode?document:null;render();});
+  render();}
+function closeMiniPip(){try{MINI.pip&&MINI.pip.close();}catch(_){}}
+/* 画面を描き直したら小窓も追随（同期の取り込み・本体での操作も反映） */
+{const _r0=render;render=function(){_r0.apply(this,arguments);if(MINI.pip||MINI.mode)miniRender();};}
+setInterval(()=>{if(MINI.pip||MINI.mode)miniRender();},60000); // 日付が変わったら「今日」を切り替える
+/* iPhoneウィジェット用：これから14日ぶんの「未完了の予定・今日やるタスク」をクラウドの行に一緒に載せる
+   （ウィジェットは繰り返しの計算をしなくてよい＝アプリと同じ結果になる） */
+function buildWidgetSnap(){const out={at:Date.now(),days:{},acc:(UITHEMES[S.settings.uiTheme]||UITHEMES.peach).acc};const t0=todayStr();
+  for(let i=0;i<14;i++){const d=shiftDs(t0,i);
+    const ev=miniEventsOn(d).filter(e=>!evDone(e,d)),tk=miniTasksOn(d);
+    out.days[d]={e:ev.slice(0,12).map(e=>({t:evTitle(e),s:e.start||''})),t:tk.slice(0,15).map(x=>({t:x.title||'',s:x.start||'',o:x.today<d?1:0})),en:ev.length,tn:tk.length};}
+  return out;}
+
 /* ========================= 起動 ========================= */
 load();save();
 switchView('tasks');
+if(new URLSearchParams(location.search).has('mini'))miniEnterMode(); // スマホのウィジェットから＝ミニ画面だけ
 applyUiTheme(); // テーマカラー（設定から切替できる）
 flowRestore();
 ttRestore(); // タスクタイマー（当日のみ復元＝リロードしても計測がつづく）
