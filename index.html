@@ -636,6 +636,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .evbar.mkonly .evmk{width:1.55em;height:1.55em;vertical-align:-.35em;margin-right:2px;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 .evbar.evdn{opacity:.42;text-decoration:line-through;}
+.evbar.due.ghost{opacity:.5;border-style:dotted;}
 /* 連日の予定＝週ごとの行の上に、つながったバーを重ねる（v4.30） */
 .mweek{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);position:relative;
   --mtop:24px;--mbh:calc(var(--mfs,9.5px) * 1.45 + 2px);}
@@ -654,7 +655,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 /* 週：連日の行 */
 .wkspanrow .wkspan{flex:1;position:relative;--mtop:2px;--mbh:15px;--mfs:9px;min-height:18px;}
 /* 予定の入力：はじまり〜終わり */
-#dlg .seg.emkind{width:100%;display:flex;border:1px solid var(--line);border-radius:999px !important;overflow:hidden;}
+#dlg .seg.emkind{width:100%;margin:0;box-sizing:border-box;display:flex;border:1px solid var(--line);border-radius:999px !important;overflow:hidden;}
 #dlg .seg.emkind button{flex:1;padding:11px 6px;font-size:14px;font-weight:600;color:var(--sub);background:var(--bg);}
 #dlg .seg.emkind button.on{background:var(--ink);color:#fff;}
 #dlg .emtaskclr{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);}
@@ -1607,7 +1608,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.50';
+const APP_VERSION='v4.60';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1639,7 +1640,9 @@ const PALETTE=(()=>{const F=[
 function repLabelT(x){if(!x||!x.repeat)return '';
   if(x.repeat==='weekly'&&x.repDays&&x.repDays.length)return '毎週'+x.repDays.slice().sort((a,b)=>a-b).map(d=>WD[d]).join('・');
   if(x.repeat==='monthly'){const n=(+x.repMonthN>0)?+x.repMonthN:1;const base=n===1?'毎月':repNLabel(n);
+    if(x.repNth&&x.repNth.d!=null)return base+evNthLabel(x.repNth);
     return x.repDom?base+(x.repDom>=31?'末日':x.repDom+'日'):base;}
+  if(x.repeat==='biweekly')return '隔週';
   return REPEAT_LABEL_T[x.repeat]||'';}
 const QUADS=[
  {t:'今すぐやる',s:'重要×緊急',c:'#C9403C'},
@@ -1855,6 +1858,7 @@ function migrate(){const st=S.settings;
   S.habits.forEach(h=>{if(!h.logs)h.logs=[];if(!h.links)h.links=[];});
   if(!S.dayBands)S.dayBands={}; // 週カレンダーの色帯（その日だけ）
   if(!S.dayOrder)S.dayOrder={}; // 月カレンダー・日付ポップでの並び順（その日だけ）
+  if((S.events||[]).some(e=>e.isTask))unifyTaskEvents();
   if(!S._repDateFix){ // v4.50：やる日が無いままの繰り返しタスクに、最初の回の日付を入れる（カレンダー・区分に正しく出るように）
     const y=shiftDs(todayStr(),-1);
     (S.tasks||[]).forEach(x=>{if(x.repeat&&!x.today&&!x.due&&x.status!=='done'){const d=nextTaskDate(y,x.repeat,x);if(d)x.today=d;}});
@@ -2133,7 +2137,7 @@ function relSync(){
       const a=relAnchor(r);
       if(!a||a.repeat||!a.date){delete x[k];any=true;return;}
       if(x.status==='done'||(k==='rel'&&x.repeat))return;
-      const nd=shiftDs(a.date,+r.off||0);if(x[f]!==nd){x[f]=nd;any=true;}});});
+      const nd=shiftDs(a.date,+r.off||0);if(x[f]!==nd){const sp=f==='today'?tSpan(x):0;x[f]=nd;if(sp)x.endDate=shiftDs(nd,sp);any=true;}});});
     if(!any)break;}}
 function relOf(ctx){return ctx==='em'?_emRel:ctx==='tf'?_tfRel:_tfRelDue;}
 function relChipHtml(ctx){const r=relOf(ctx);const a=relAnchor(r);if(!a)return '';
@@ -3729,7 +3733,8 @@ function taskRow(x,o={}){
     <div class="body">
       <div class="tt ${x.status==='done'?'done':''} ${x.repeat?'cont':''}">${esc(x.title)}${repBadgeT(x)}</div>
       <div class="meta">
-        ${x.today&&x.today>todayStr()&&x.today!==tomorrowStr()?`<span style="color:var(--accent);font-weight:700;">${fmtDateJa(x.today)}</span>`:''}
+        ${x.today&&((x.today>todayStr()&&x.today!==tomorrowStr())||tSpan(x))?`<span style="color:var(--accent);font-weight:700;">${fmtDateJa(x.today)}${tSpan(x)?'〜'+fmtDateJa(x.endDate):''}</span>`:''}
+        ${x.start?`<span>🕐 ${x.start}${x.end?'〜'+x.end:''}</span>`:''}
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
         ${x.due?`<span>期限 ${fmtDateJa(x.due)}${x.relDue?'🔗':''}</span>`:''}
         ${x.rel&&relAnchor(x.rel)?`<span class="relm">🔗 ${esc(relLabel(x.rel))}</span>`:''}
@@ -4346,7 +4351,10 @@ function fabRun(k){const f=_fabFns[k];fabClose();if(f)f();}
 function quickAddPop(){taskModal(null,'',true);}
 function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
-let _tfDate='',_tfRel=null,_tfRelDue=null,_tfCalFor='due'; // やる日（日付指定）／基準の予定（v4.30）
+let _tfDate='',_tfRel=null,_tfRelDue=null,_tfCalFor='due';
+let _tfEnd='',_tfStart='',_tfEndT='',_tfRepNth=null,_tfUntil='',_tfFromEv=null; // 連日・時間・第◯週・終了日・予定からの切替（v4.60）
+/* いま選んでいる「やる日」（今日／明日／日付） */
+function tfDateOf(){return _tfWhen==='today'?todayStr():_tfWhen==='tomorrow'?tomorrowStr():(_tfWhen==='dated'?_tfDate:'');} // やる日（日付指定）／基準の予定（v4.30）
 let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfWhen='priority',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
 /* Nヶ月ごとの言いかた（タスク・予定・テンプレで共通） */
 function repNLabel(n){n=+n||1;return n===1?'毎月':n===6?'半年ごと':n===12?'1年ごと':`${n}ヶ月ごと`;}
@@ -4358,7 +4366,7 @@ function lastTaskGroupId(){
   if(view==='tasks'&&taskGroupSel&&taskGroupSel!=='__none'&&S.groups.some(g=>g.id===taskGroupSel))return taskGroupSel;
   const g=S.settings.lastTaskGroup;
   return (g&&S.groups.some(x=>x.id===g))?g:'';}
-function taskModal(id,presetDue,presetToday,place){tmplReset();
+function taskModal(id,presetDue,presetToday,place,opts){tmplReset();opts=opts||{};_tfFromEv=null;
   _tfPlace=place||null;_tfTab='form';_tfTmplEdit=null;_tfHold=null;
   if(id)taskAnchorId=id;
   const x=id?S.tasks.find(t=>t.id===id):null;
@@ -4373,6 +4381,12 @@ function taskModal(id,presetDue,presetToday,place){tmplReset();
   _tfRel=x&&x.rel?{...x.rel}:null;_tfRelDue=x&&x.relDue?{...x.relDue}:null;_relOpen=null;_tfCalFor='due';_tfDate='';
   if(x&&x.today&&(x.rel||x.today>tomorrowStr())){_tfWhen='dated';_tfDate=x.today;}
   _tfRepeat=x?.repeat||'';_tfRepDays=(x?.repDays||[]).slice();_tfRepDom=x?.repDom??null;_tfRepMonthN=(+x?.repMonthN>0)?+x.repMonthN:1;
+  _tfRepNth=x&&x.repNth&&x.repNth.d!=null?{...x.repNth}:null;_tfUntil=x?.until||'';
+  _tfStart=x?.start||'';_tfEndT=x?.end||'';_tfEnd=(x&&tSpan(x))?x.endDate:'';
+  if(x&&x.today&&(tSpan(x)||x.start)&&!_tfDate&&_tfWhen!=='today'&&_tfWhen!=='tomorrow'){_tfWhen='dated';_tfDate=x.today;}
+  // カレンダー側から開いた（その日付・時間を入れて開く）
+  if(!x&&opts.date){const d=opts.date;_tfWhen=d===todayStr()?'today':d===tomorrowStr()?'tomorrow':'dated';_tfDate=d;}
+  if(!x&&opts.start){_tfStart=opts.start;_tfEndT=opts.end||'';}
   _tfDueOpen=false;const dd=parseDs(_tfDue||todayStr());_tfDueY=dd.getFullYear();_tfDueX=dd.getMonth();
   tfRender(true);}
 function tfTabsHtml(){return `<div class="tftabs">
@@ -4404,21 +4418,32 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
   const dom={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
   const keep=fresh?{}:(_tfStash?Object.assign({},_tfStash,Object.fromEntries(Object.entries(dom).filter(([,v])=>v!=null))):dom);
   _tfStash=null;
+  if(!fresh){tfSyncTime();}
   const st=keep.st??(src?.status||'todo');
   const prio=+(keep.prio??src?.priority??2);
   const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0); // ボタンを押すたび上に戻らないように
   $('#dlg').innerHTML=`<div class="dm tform">
     <div class="tfh"><b>${tmpl?(_tfTmplEdit?'テンプレを編集':'テンプレを作る'):(x?'タスクを編集':'タスクを追加')}</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    ${tmpl?'':`<div class="frow"><div class="seg emkind"><button type="button" onclick="tfToEvent()">📅 予定</button><button type="button" class="on">✔ タスク</button></div></div>`}
     ${tmpl?'':(x?'':tfTabsHtml())}
-    <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??src?.title??'')}" placeholder="やること"></div>
-    <div class="frow"><label>グループ（カテゴリ）</label>${tfGroupHtml()}</div>
+    <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??src?.title??'')}" placeholder="例）書類を出す、洗車 など"></div>
     ${tmpl?'':`<div class="frow"><label>いつやる</label>
-      <div class="btnrow" id="tmTodayRow">${WHENS.map(([v,l])=>`<button type="button" class="${_tfWhen===v?'on':''}" onclick="tfPickWhen('${v}')">${l}</button>`).join('')}<button type="button" class="${_tfWhen==='dated'?'on':''}" onclick="tfDateToggle()">📅 ${_tfWhen==='dated'&&_tfDate?fmtDateJa(_tfDate):'日付'}</button></div>
+      <div class="btnrow" id="tmTodayRow">${[['today','☀ 今日'],['tomorrow','➡ 明日']].map(([v,l])=>`<button type="button" class="${_tfWhen===v?'on':''}" onclick="tfPickWhen('${v}')">${l}</button>`).join('')}<button type="button" class="${_tfWhen==='dated'?'on':''}" onclick="tfDateToggle()">📅 日付</button>${[['priority','★ 優先'],['normal','通常']].map(([v,l])=>`<button type="button" class="${_tfWhen===v?'on':''}" onclick="tfPickWhen('${v}')">${l}</button>`).join('')}</div>
+      <div class="mini" style="padding:3px 0 0;">${tfDateOf()?'':'日付を決めないタスクは「優先」か「通常」に入ります'}</div>
+      ${tfDateOf()?`<div class="btnrow emdates" style="margin-top:6px;"><button type="button" class="on${_tfDueOpen&&_tfCalFor==='date'?' act':''}" onclick="tfDateToggle()">📅 ${fmtDateJa(tfDateOf())}</button>
+        <span class="emtw">〜</span><button type="button" class="${_tfEnd?'on':''}${_tfDueOpen&&_tfCalFor==='end'?' act':''}" onclick="tfEndToggle()">${_tfEnd?fmtDateJa(_tfEnd):'終わりの日'}</button>
+        ${_tfEnd?`<button type="button" class="emx" onclick="_tfEnd='';tfRender()" aria-label="1日だけにする">✕</button>`:''}</div>`:''}
       ${relChipHtml('tf')}</div>`}
+    ${_tfDueOpen&&!tmpl&&_tfCalFor!=='due'?`<div class="frow">${tfDueCalHtml()}</div>`:''}
+    ${_relOpen==='tf'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
+    ${tmpl||!tfDateOf()?'':`<div class="frow"><label>時間</label>
+      <div class="emtime">${timeField('tmStart',_tfStart,{next:'tmEndT',onchange:'tfSyncTime()'})}<span class="emtw">〜</span>${timeField('tmEndT',_tfEndT,{onchange:'tfSyncTime()'})}
+        <button type="button" class="emallday ${!_tfStart&&!_tfEndT?'on':''}" onclick="_tfStart='';_tfEndT='';tfRender()">なし</button></div></div>`}
+    <div class="frow"><label>グループ（カテゴリ）</label>${tfGroupHtml()}</div>
     ${tmpl?'':`<div class="frow"><label>期限</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()">📅 ${_tfDue?fmtDateJa(_tfDue):'なし'}</button></div>${relChipHtml('tfdue')}</div>`}
     <input type="hidden" id="tmPrio" value="${prio}">
-    ${_tfDueOpen&&!tmpl?`<div class="frow">${tfDueCalHtml()}</div>`:''}
-    ${(_relOpen==='tf'||_relOpen==='tfdue')&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
+    ${_tfDueOpen&&!tmpl&&_tfCalFor==='due'?`<div class="frow">${tfDueCalHtml()}</div>`:''}
+    ${_relOpen==='tfdue'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??src?.estMin??15)}</div>
     ${tmpl?`<div class="frow"><label>呼び出したとき</label><div class="btnrow"><button type="button" class="${_tfKeepEst?'on':''}" onclick="_tfKeepEst=!_tfKeepEst;tfRender()">かかる時間も入れる</button></div></div>`:''}
     <div class="frow"><label>繰り返し</label>${tfRepeatHtml()}</div>
@@ -4466,6 +4491,11 @@ function tfAddGroup(){
   _tfStash={title:$('#tmTitle')?.value,est:$('#tmEst')?.value,memo:$('#tmMemo')?.value,wait:$('#tmWait')?.value,st:$('#tmSt')?.value,prio:$('#tmPrio')?.value};
   groupInlinePop(null,gid=>{if(gid)_tfGroup=gid;tfRender();}); // やめる＝gid null。その時はグループを消さない
 }
+function tfSyncTime(){if($('#tmStart'))_tfStart=$('#tmStart').value||'';if($('#tmEndT'))_tfEndT=$('#tmEndT').value||'';}
+function tfEndToggle(){tfSyncTime();_relOpen=null;
+  if(_tfDueOpen&&_tfCalFor==='end'){_tfDueOpen=false;}
+  else{_tfCalFor='end';_tfDueOpen=true;const d=parseDs(_tfEnd||tfDateOf()||todayStr());_tfDueY=d.getFullYear();_tfDueX=d.getMonth();}
+  tfRender();}
 function tfPickWhen(v){_tfWhen=v;if(v!=='dated')_tfRel=null;if(_tfCalFor==='date')_tfDueOpen=false;tfRender();}
 function tfDateToggle(){_relOpen=null;
   if(_tfDueOpen&&_tfCalFor==='date'){_tfDueOpen=false;}
@@ -4561,38 +4591,59 @@ function tfDueCalHtml(){
   const start=(new Date(_tfDueY,_tfDueX,1).getDay()-ws+7)%7,dim=new Date(_tfDueY,_tfDueX+1,0).getDate();
   let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
   for(let dn=1;dn<=dim;dn++){const ds=`${_tfDueY}-${pad(_tfDueX+1)}-${pad(dn)}`;
-    const selD=_tfCalFor==='date'?_tfDate:_tfDue;
-    cells+=`<button type="button" class="${ds===selD?'on':''}${ds===todayStr()?' td':''}" onclick="tfPickDue('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
+    const f=_tfCalFor;const st=tfDateOf();
+    const selD=f==='date'?st:f==='end'?_tfEnd:f==='until'?_tfUntil:_tfDue;
+    const inRng=(f==='date'||f==='end')&&_tfEnd&&st&&ds>st&&ds<_tfEnd;
+    cells+=`<button type="button" class="${ds===selD||((f==='date'||f==='end')&&(ds===st||ds===_tfEnd))?'on':''}${inRng?' rng':''}${ds===todayStr()?' td':''}" onclick="tfPickDue('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
-  const isDate=_tfCalFor==='date';const cur=isDate?_tfDate:_tfDue;
-  return `<div class="emcalh">${isDate?'<b>やる日</b>をえらぶ':'<b>期限</b>をえらぶ'}<button type="button" class="relbtn" onclick="relOpen('${isDate?'tf':'tfdue'}')">🔗 予定を基準にえらぶ</button></div>
+  const isDate=_tfCalFor==='date';const cur=isDate?_tfDate:_tfCalFor==='end'?_tfEnd:_tfCalFor==='until'?_tfUntil:_tfDue;
+  const head={date:'<b>やる日</b>をえらぶ',end:'<b>終わりの日</b>をえらぶ（はじまりの日を押すと1日だけに）',due:'<b>期限</b>をえらぶ',until:'<b>くり返しの最後の日</b>をえらぶ'}[_tfCalFor]||'';
+  return `<div class="emcalh">${head}${isDate||_tfCalFor==='due'?`<button type="button" class="relbtn" onclick="relOpen('${isDate?'tf':'tfdue'}')">🔗 予定を基準にえらぶ</button>`:''}</div>
     <div class="dpnav"><button type="button" onclick="tfDueNav(-1)">‹</button><span>${_tfDueY}年${_tfDueX+1}月</span><button type="button" onclick="tfDueNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
-    ${cur?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">${isDate?'日付をやめる':'期限なしにする'}</button></div>`:''}`;}
+    ${cur&&_tfCalFor!=='end'?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">${isDate?'日付をやめる':_tfCalFor==='until'?'ずっとくり返す':'期限なしにする'}</button></div>`:''}`;}
 function tfDueNav(k){_tfDueX+=k;if(_tfDueX<0){_tfDueX=11;_tfDueY--;}if(_tfDueX>11){_tfDueX=0;_tfDueY++;}tfRender();}
 function tfPickDue(ds){ // 選んだら閉じる。手でえらんだら基準のリンクは外す
-  if(_tfCalFor==='date'){_tfDate=ds;_tfWhen='dated';_tfRel=null;_tfDueOpen=false;}
+  tfSyncTime();
+  if(_tfCalFor==='end'){const st=tfDateOf();
+    if(!st||ds===st)_tfEnd='';else if(ds<st){_tfEnd=st;_tfDate=ds;_tfWhen='dated';_tfRel=null;}else _tfEnd=ds;
+    _tfDueOpen=false;tfRender();return;}
+  if(_tfCalFor==='until'){_tfUntil=ds;_tfDueOpen=false;tfRender();return;}
+  if(_tfCalFor==='date'){const st=tfDateOf();const sp=(_tfEnd&&st)?Math.round((parseDs(_tfEnd)-parseDs(st))/86400000):0;
+    _tfDate=ds;_tfWhen='dated';_tfRel=null;_tfDueOpen=false;if(sp>0)_tfEnd=shiftDs(ds,sp);}
   else{_tfDue=(_tfDue===ds?'':ds);_tfRelDue=null;if(_tfDue)_tfDueOpen=false;}
   tfRender();}
 function tfDueClear(){
-  if(_tfCalFor==='date'){_tfDate='';_tfRel=null;if(_tfWhen==='dated')_tfWhen='normal';}
+  if(_tfCalFor==='until'){_tfUntil='';_tfDueOpen=false;tfRender();return;}
+  if(_tfCalFor==='date'){_tfEnd='';_tfDate='';_tfRel=null;if(_tfWhen==='dated')_tfWhen='normal';}
   else{_tfDue='';_tfRelDue=null;}
   _tfDueOpen=false;tfRender();}
 /* 繰り返し＝毎週は曜日（複数可）、毎月は何日かを選ぶ */
 function tfRepeatHtml(){
-  const tabs=[['','なし'],['daily','毎日'],['weekly','毎週'],['monthly','毎月']]
+  const tabs=[['','なし'],['daily','毎日'],['weekly','毎週'],['biweekly','隔週'],['monthly','毎月']]
     .map(([v,l])=>`<button type="button" class="${_tfRepeat===v?'on':''}" onclick="tfPickRepeat('${v}')">${l}</button>`).join('');
   let detail='';
   if(_tfRepeat==='weekly'){const ws=S.settings.weekStart||0;
     detail=`<div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;
       return `<button type="button" class="${_tfRepDays.includes(d)?'on':''}" onclick="tfToggleRepDay(${d})">${WD[d]}</button>`;}).join('')}</div>
       <div class="mini">${_tfRepDays.length?`毎週 ${_tfRepDays.slice().sort().map(d=>WD[d]).join('・')}曜日`:'曜日を選ばないと「完了した日の7日後」になります'}</div>`;}
-  if(_tfRepeat==='monthly'){ // 間隔（Nヶ月ごと）＋カレンダーと同じ見た目の1〜31グリッド
+  if(_tfRepeat==='monthly'&&_tfRepNth){const ws=S.settings.weekStart||0; // 第◯週の曜日（予定と同じ）
     detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_tfRepMonthN===n?'on':''}" onclick="tfPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>
+      <div class="seg" style="margin:0 0 6px;"><button type="button" style="flex:1;" onclick="tfRepMode('dom')">日にちで</button><button type="button" style="flex:1;" class="on">第◯週の曜日で</button></div>
+      <div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,5,-1].map(n=>`<button type="button" class="${_tfRepNth.n===n?'on':''}" onclick="_tfRepNth={..._tfRepNth,n:${n}};tfRender()">${n===-1?'最終':'第'+n}</button>`).join('')}</div>
+      <div class="daysel">${[...Array(7)].map((_,i)=>{const d=(i+ws)%7;return `<button type="button" class="${_tfRepNth.d===d?'on':''}" onclick="_tfRepNth={..._tfRepNth,d:${d}};tfRender()">${WD[d]}</button>`;}).join('')}</div>
+      <div class="mini">${repNLabel(_tfRepMonthN)} ${evNthLabel(_tfRepNth)}</div>`;}
+  else if(_tfRepeat==='monthly'){ // 間隔（Nヶ月ごと）＋カレンダーと同じ見た目の1〜31グリッド
+    detail=`<div class="btnrow" style="margin-bottom:5px;">${[1,2,3,4,6,12].map(n=>`<button type="button" class="${_tfRepMonthN===n?'on':''}" onclick="tfPickRepN(${n})">${repNLabel(n)}</button>`).join('')}</div>
+      <div class="seg" style="margin:0 0 6px;"><button type="button" style="flex:1;" class="on">日にちで</button><button type="button" style="flex:1;" onclick="tfRepMode('nth')">第◯週の曜日で</button></div>
       <div class="dpgrid domcal">${[...Array(31)].map((_,i)=>`<button type="button" class="${_tfRepDom===i+1?'on':''}" onclick="tfPickDom(${i+1})">${i+1}</button>`).join('')}</div>
       <div class="mini">${_tfRepDom?`${repNLabel(_tfRepMonthN)} ${_tfRepDom}日にくり返します（ない月は月末）`:`日を選ばないと「完了した日の${_tfRepMonthN===1?'1か月':repNLabel(_tfRepMonthN).replace('ごと','')}後」になります`}</div>`;}
-  return `<div class="btnrow" id="tmRepRow">${tabs}</div>${detail}`;}
-function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly'){_tfRepDom=null;_tfRepMonthN=1;}tfRender();}
+  const until=_tfRepeat?`<div class="btnrow" style="margin-top:6px;"><button type="button" class="${_tfUntil?'on':''}" onclick="tfUntilToggle()">${_tfUntil?'～'+fmtDateJa(_tfUntil)+' まで':'ずっと'}</button>${_tfUntil?`<button type="button" onclick="_tfUntil='';tfRender()">ずっとに戻す</button>`:''}</div>
+    ${_tfDueOpen&&_tfCalFor==='until'?`<div style="margin-top:6px;">${tfDueCalHtml()}</div>`:''}`:'';
+  return `<div class="btnrow" id="tmRepRow">${tabs}</div>${detail}${until}`;}
+function tfRepMode(m){if(m==='nth'){const d=parseDs(tfDateOf()||todayStr());_tfRepNth={n:Math.floor((d.getDate()-1)/7)+1,d:d.getDay()};_tfRepDom=null;}else _tfRepNth=null;tfRender();}
+function tfUntilToggle(){tfSyncTime();if(_tfDueOpen&&_tfCalFor==='until'){_tfDueOpen=false;}else{_tfCalFor='until';_tfDueOpen=true;const d=parseDs(_tfUntil||tfDateOf()||todayStr());_tfDueY=d.getFullYear();_tfDueX=d.getMonth();}tfRender();}
+function tfPickRepeat(v){_tfRepeat=v;if(v!=='weekly')_tfRepDays=[];if(v!=='monthly'){_tfRepDom=null;_tfRepMonthN=1;_tfRepNth=null;}if(!v)_tfUntil='';tfRender();}
 function tfPickRepN(n){_tfRepMonthN=n;tfRender();}
 function tfToggleRepDay(d){const i=_tfRepDays.indexOf(d);i>=0?_tfRepDays.splice(i,1):_tfRepDays.push(d);tfRender();}
 function tfPickDom(n){_tfRepDom=(_tfRepDom===n?null:n);tfRender();}
@@ -4605,12 +4656,15 @@ function saveTask(id){
   snapUndo();
   let today=_tfWhen==='today'?todayStr():_tfWhen==='tomorrow'?tomorrowStr():(_tfWhen==='dated'&&_tfDate)?_tfDate:null;
   // 繰り返しなのにやる日が無い＝最初の回（今日以降でいちばん近い日）をやる日にする。月末・◯日・第◯週もここで決まる
-  if(_tfRepeat&&!today&&!_tfDue){const fx={repDays:_tfRepDays,repDom:_tfRepDom,repMonthN:_tfRepMonthN};
+  tfSyncTime();
+  if(_tfRepeat&&!today&&!_tfDue){const fx={repDays:_tfRepDays,repDom:_tfRepDom,repMonthN:_tfRepMonthN,repNth:_tfRepNth};
     const y=shiftDs(todayStr(),-1);today=nextTaskDate(y,_tfRepeat,fx)||null;}
   const data={title,estMin:+$('#tmEst').value||0,priority:(_tfWhen==='priority'?1:2),
     rel:(_tfWhen==='dated'&&_tfDate&&_tfRel&&!_tfRepeat)?{..._tfRel}:undefined,
     relDue:(_tfDue&&_tfRelDue)?{..._tfRelDue}:undefined,
     groupId:_tfGroup||'',due:_tfDue,repeat:_tfRepeat,repDays:_tfRepDays.slice(),repDom:_tfRepDom,repMonthN:_tfRepMonthN||1,
+    repNth:_tfRepeat==='monthly'&&_tfRepNth?{..._tfRepNth}:null,until:_tfRepeat&&_tfUntil?_tfUntil:undefined,
+    start:today?_tfStart:'',end:today?_tfEndT:'',endDate:(today&&_tfEnd&&_tfEnd>today)?_tfEnd:undefined,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),};
   let savedId=id;
@@ -4627,8 +4681,9 @@ function saveTask(id){
     if(o)placeTaskAt(o,_tfPlace.d,_tfPlace.s,Math.max(5,_tfPlace.e-_tfPlace.s),true);
     _tfPlace=null;}
   S.settings.lastTaskGroup=_tfGroup||''; // 次に作るタスクの既定にする（「なし」も覚える）
+  let conv=false;if(_tfFromEv){S.events=S.events.filter(e=>e.id!==_tfFromEv);_tfFromEv=null;conv=true;} // 予定→タスクに切り替えた
   chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
-  save();dlgEnd();render();flashUndo(id?'タスクを更新しました':'タスクを追加しました');}
+  save();dlgEnd();render();attachCellPress();flashUndo(conv?'予定をタスクに変えました':id?'タスクを更新しました':'タスクを追加しました');}
 async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
   snapUndo();S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();dlgEnd();render();flashUndo('タスクを削除しました');}
 function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -4848,7 +4903,7 @@ function wkTaskPick(d,s,e){const sel=document.querySelector('.wksel');
       :`<div class="poolempty">まだタスクがありません</div>`}
     <button onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
   cellpopAt(sel,html,{wide:true,forId:'wktaskpick'});}
-function wkNewTask(d,s,e){wkClearSel();taskModal(null,'',false,{d,s,e});}
+function wkNewTask(d,s,e){wkClearSel();taskModal(null,'',false,null,{date:d,start:min2hm(s),end:min2hm(e)});}
 function wkPutTask(d,s,e,id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   snapUndo();placeTaskAt(x,d,s,Math.max(5,e-s));
   wkClearSel();cpClose();save();render();
@@ -4941,9 +4996,13 @@ function dueTasksOn(d){if(!S.settings.showDue)return[];
 /* 時間を決めたタスク＝「その日の何時からやる」。1タスクに何コマでもあり得る */
 function taskAtOf(d,id){const a=taskSlots(d,id);return a.length?a[0].s:null;}
 function timedTasksOn(d){const out=[];
-  S.tasks.forEach(x=>{if(x.today!==d||x.status==='done')return;
-    taskSlots(d,x.id).forEach(sl=>{if(sl.done)return;
-      out.push({x,sl,s:sl.s,e:Math.min(1440,sl.s+slotMin(x,sl))});});});
+  S.tasks.forEach(x=>{if(x.today!==d||x.status==='done'||tSpan(x))return;
+    const sls=taskSlots(d,x.id);
+    sls.forEach(sl=>{if(sl.done)return;
+      out.push({x,sl,s:sl.s,e:Math.min(1440,sl.s+slotMin(x,sl))});});
+    // 入力画面で時間を決めたタスク（v4.60）
+    if(!sls.length&&x.start){const s=hm2min(x.start);const e=x.end?hm2min(x.end):s+Math.max(15,+x.estMin||30);
+      out.push({x,sl:null,s,e:Math.max(e,s+15)});}});
   return out.sort((a,b)=>a.s-b.s);}
 function marksOn(m,d){const out=[];
   S.birthdays.forEach(b=>{if(+b.month===m&&+b.day===d)out.push({icon:'cake',color:b.gift?(b.color||'#E8618C'):'#788091',name:b.name+'の誕生日'+(b.gift?'（プレゼント準備！）':''),gift:b.gift});});
@@ -5049,8 +5108,14 @@ function sortByDayOrder(dstr,arr,tok){const o=(S.dayOrder||{})[dstr];if(!o||!o.l
   const pos=new Map(o.map((t,i)=>[t,i]));
   return arr.map((x,i)=>({x,i,p:pos.has(tok(x))?pos.get(tok(x)):1e6+i})).sort((a,b)=>a.p-b.p||a.i-b.i).map(v=>v.x);}
 /* 日付を決めたタスク（やる日＝その日）。今日より前は出さない（繰り越しはタスク一覧で見る） */
-function datedTasksOn(d){if(d<todayStr())return[];
-  return S.tasks.filter(x=>x.status!=='done'&&x.today===d&&!taskSlots(d,x.id).length);}
+function datedTasksOn(d){ // やる日＝その日（過ぎた日も元の日に出す。連日・時間つきは別の出し方）
+  return S.tasks.filter(x=>x.status!=='done'&&x.today===d&&!tSpan(x)&&!x.start&&!taskSlots(d,x.id).length);}
+/* 繰り返しタスクの「この先の回」（見通し用・うすく出す）。{ 'YYYY-MM-DD':[task,…] } */
+function repGhostMap(from,to){const map={};
+  S.tasks.forEach(x=>{if(!x.repeat||x.status==='done'||!x.today)return;let d=x.today;
+    for(let i=0;i<80;i++){const nd=nextTaskDate(d,x.repeat,x);if(!nd||nd<=d)break;d=nd;
+      if(x.until&&d>x.until)break;if(d>to)break;if(d>=from)(map[d]=map[d]||[]).push(x);}});
+  return map;}
 /* その日に見せるタスク（時間を決めた／やる日／期限）を重複なしで */
 function dayTasksOn(d){const seen=new Set(),out=[];
   const add=(x,kind,time)=>{if(seen.has(x.id))return;seen.add(x.id);out.push({x,kind,time:time||''});};
@@ -5069,6 +5134,11 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
     const os=evOccStart(e,ds);const k=e.id+'@'+os;if(seen.has(k))return;seen.add(k);
     const oe=shiftDs(os,sp);const a=os<wkS?wkS:os,b=oe>wkE?wkE:oe;
     segs.push({e,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn});});});
+  // 連日のタスク（やる日〜終わりの日）
+  S.tasks.forEach(x=>{const sp=tSpan(x);if(!sp||x.status==='done')return;
+    const os=x.today,oe=x.endDate;if(oe<wkS||os>wkE)return;
+    const a=os<wkS?wkS:os,b=oe>wkE?wkE:oe;
+    segs.push({e:{id:x.id,title:x.title,isTask:true,start:x.start||''},task:x,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn:false});});
   segs.sort((x,y)=>x.c0-y.c0||(y.c1-y.c0)-(x.c1-x.c0)||(x.e.start||'').localeCompare(y.e.start||''));
   const ends=[];segs.forEach(g=>{let l=ends.findIndex(v=>v<g.c0);if(l<0){l=ends.length;ends.push(-1);}ends[l]=g.c1;g.lane=l;});
   const n=ends.length,cap=Math.min(n,opts.cap==null?99:opts.cap);
@@ -5077,8 +5147,8 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
     let st=`left:calc(${g.c0} * 100% / 7 + 1px);width:calc(${g.c1-g.c0+1} * 100% / 7 - 2px);top:calc(var(--mtop) + ${g.lane} * var(--mbh));`;
     let cls='mbar'+(g.hl?' hl':'')+(g.hr?' hr':'')+(e.important?' imp':'')+(g.dn?' evdn':'');
     if(mo||nf){cls+=' plain';st+=`color:${evLine(e)};border-color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
-    const tap=opts.tap?` onclick="event.stopPropagation();eventTap('${e.id}','${g.os}',event)"`:'';
-    return `<div class="${cls}" style="${st}"${tap}>${g.hl?'':'<i class="mcont">‹</i>'}${evLabel(e)}${g.hr?'':'<i class="mcont r">›</i>'}</div>`;}).join('');
+    const tap=opts.tap?(g.task?` onclick="event.stopPropagation();taskModal('${e.id}')"`:` onclick="event.stopPropagation();eventTap('${e.id}','${g.os}',event)"`):'';
+    return `<div class="${cls}" style="${st}"${tap}>${g.hl?'':'<i class="mcont">‹</i>'}${g.task?'<i class="evtk">✔</i>'+esc(e.title):evLabel(e)}${g.hr?'':'<i class="mcont r">›</i>'}</div>`;}).join('');
   return {shown:cap,hid,spacer:cap?`<div class="mlanes" style="height:calc(${cap} * var(--mbh))"></div>`:'',
     html:bars?`<div class="mbars${opts.tap?' tap':''}">${bars}</div>`:''};}
 function renderCal(){
@@ -5097,6 +5167,8 @@ function renderCal(){
     const days=[];for(let i=0;i<42;i++){const c=new Date(start);c.setDate(start.getDate()+i);if(i===35&&c.getMonth()!==calX)break;days.push(c);}
     const allModeM=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     let wk=null; // その週の「連日の予定」＝つながったバー
+    const ghosts=repGhostMap(dsOf(days[0]),dsOf(days[days.length-1]));
+    const tkBg=evColor({isTask:true}),tkFg=evTextColor(tkBg);
     for(let i=0;i<days.length;i++){
       if(i%7===0){wk=monthWeekSpans(days.slice(i,i+7),{cap:allModeM?99:(S.settings.monthMax||4),keepDone:allModeM});cells+='<div class="mweek">';}
       const c=days[i];
@@ -5108,12 +5180,15 @@ function renderCal(){
       const mks=marksOn(m,d);
       const evsAll=eventsOn(dstr);const allHere=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
       const evs=evsAll.filter(e=>(allHere||!evDone(e,dstr)||!e.isTask)&&!evSpan(e)); // 予定は完了しても打ち消し線で残す・タスクは消える
-      const evDoneN=allHere?0:evsAll.filter(e=>e.isTask&&evDone(e,dstr)).length;
+      const tDone=S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr&&(x.today===dstr||x.due===dstr||!x.today));
+      const evDoneN=allHere?0:evsAll.filter(e=>e.isTask&&evDone(e,dstr)).length+tDone.length;
       const dts=dayTasksOn(dstr);
       const nightM=hm2min(S.settings.nightStart||'18:00');
       const evItem=e=>({tok:'e_'+e.id,t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly,nf:!!e.noFill,dn:evDone(e,dstr),ni:!!(e.start&&hm2min(e.start)>=nightM)});
       const items=[...sortByDayOrder(dstr,evs.filter(e=>!e.isTask).map(evItem),it=>it.tok),
-                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,t:o.x.title,c:'',due:1,tl:taskLineC(o.x),time:o.time,imp:0}))],it=>it.tok)];
+                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,t:o.x.title,c:'',due:1,tk:o.kind!=='due',time:o.time,imp:0}))],it=>it.tok),
+                   ...(allHere?tDone.map(x=>({tok:'t_'+x.id,t:x.title,due:1,tk:1,dn:1,time:''})):[]),
+                   ...(ghosts[dstr]||[]).filter(x=>x.today!==dstr).map(x=>({tok:'g_'+x.id,t:x.title,due:1,gh:1,time:x.start||''}))];
       const evMode=MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark';
       const allMode=calMonthAll||evMode==='all';const showTime=allMode||evMode==='time';
       const max=S.settings.monthMax||4;const maxS=Math.max(0,max-wk.shown);
@@ -5127,7 +5202,7 @@ function renderCal(){
         ${(mks.length||extBadges(dstr))?`<div class="marks">${extBadges(dstr)}${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(showTime&&it.time)?monthEvTime(it.time):'';
           let cls='evbar'+(it.ni?' night':'')+(it.dn?' evdn':''),st='';
-          if(it.due){cls+=' due';if(it.tl)st=`style="background:${it.tl};border-style:solid;color:var(--ink);"`;} // タスクの色を月にも
+          if(it.due){cls+=' due'+(it.gh?' ghost':'');if(it.tk&&!it.gh)st=`style="background:${tkBg};border-color:transparent;color:${tkFg};"`;} // タスク＝設定の「タスクの色」／期限だけ＝点線／先の回＝うすい点線
           else if(it.mo){cls+=' mkonly';st=`style="color:${it.line};"`;}
           else if(it.nf){cls+=' plain';st=`style="color:${it.line};"`;}
           else{st=`style="background:${it.c};color:${evTextColor(it.c)};"`;}
@@ -5165,7 +5240,7 @@ function renderCal(){
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}',event)">${esc(evTitle(e))}</span>`),
-        ...dd.dues.map(x=>`<span class="wkadchip" style="${taskLineC(x)?`background:${taskLineC(x)};color:var(--ink);`:'border:1px dashed var(--sub);color:var(--sub);'}">${esc(x.title)}</span>`)];
+        ...dd.dues.map(x=>`<span class="wkadchip" style="${x.today===dd.dstr?`background:${evColor({isTask:true})};color:${evTextColor(evColor({isTask:true}))};`:'border:1px dashed var(--sub);color:var(--sub);'}" onclick="event.stopPropagation();taskModal('${x.id}')">✔${esc(x.title)}</span>`)];
       // 月で付けた「その日の色」を週の終日欄にも反映（編集は月カレンダーだけ）
       const dayBg=S.dayColors[dd.dstr]!==undefined?PASTELS[S.dayColors[dd.dstr]].c:'';
       return `<div class="wkad${dayBg?' hascol':''}${dd.dstr===todayS?' today':''}${dd.hol||dd.dow===0?' sun':''}${dd.dow===6?' sat':''}${ci%2?' alt':''}" ${dayBg?`style="background:${dayBg}"`:''} onclick="eventModal(null,'${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
@@ -5174,7 +5249,7 @@ function renderCal(){
       // 予定とタスクを同じレーン計算に通す（重ならず、どちらも読める）
       const wkItems=[...dd.timed,...dd.tt.map(o=>({__t:o.x,__sid:o.sl?o.sl.id:'',start:min2hm(o.s),end:min2hm(o.e)}))];
       const blocks=weekLayout(wkItems,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const w=100/o.lanes,l=o.lane*w;
-        if(e.__t){const tc=taskLineC(e.__t);
+        if(e.__t){const tc=evColor({isTask:true});
           return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:var(--ink);`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">✔ ${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
         let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
@@ -5210,7 +5285,7 @@ function renderCal(){
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 /* カレンダーの日から「＋タスク」＝その日を期限に“しない”（期限は自分で選ぶもの・v3.05） */
-function taskModalWithDue(d){taskModal(null);}
+function taskModalWithDue(d){taskModal(null,'',false,null,{date:d});} // v4.60：カレンダーから＝その日にやるタスク（期限ではなく“やる日”）
 /* タスクの繰り返し：完了したら次回の日付へ送る（今日の記録に完了を残す） */
 /* 次回日付：毎週は指定の曜日、毎月は指定の日。指定が無ければ今まで通り7日後／1か月後 */
 function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
@@ -5221,6 +5296,14 @@ function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
     if(days){for(let i=1;i<=7;i++){const c=new Date(d);c.setDate(d.getDate()+i);
       if(days.includes(c.getDay()))return dsOf(c);}}
     d.setDate(d.getDate()+7);}
+  else if(repeat==='biweekly'){d.setDate(d.getDate()+14);} // 隔週（v4.60・タスクでも）
+  else if(repeat==='monthly'&&x&&x.repNth&&x.repNth.d!=null){ // 第◯週の◯曜日（最終＝-1）
+    const N=(+x.repMonthN>0)?+x.repMonthN:1;const nth=+x.repNth.n,wd=+x.repNth.d;
+    const pick=(y,m)=>{const last=new Date(y,m+1,0).getDate();const cands=[];
+      for(let dd=1;dd<=last;dd++){const c=new Date(y,m,dd);if(c.getDay()===wd)cands.push(c);}
+      return nth===-1?cands[cands.length-1]:cands[nth-1]||null;};
+    for(let k=0;k<=N*24;k+=(k===0?N:N)){const c=pick(d.getFullYear(),d.getMonth()+k);if(c&&c>d)return dsOf(c);}
+    return null;}
   else if(repeat==='monthly'){
     const N=(x&&+x.repMonthN>0)?+x.repMonthN:1; // Nヶ月ごと（既定＝毎月）
     const dd0=dom||d.getDate();
@@ -5232,10 +5315,35 @@ function nextTaskDate(fromDs,repeat,x){const d=parseDs(fromDs);
   else return null;
   return dsOf(d);}
 /* 繰り返しタスク：今日は「完了」のまま残す（グレー・戻せる）。次回日付へ進め、日付が変わったら自動で未完了に復活 */
+/* v4.60：タスクを1種類に統一。「✔タスク」で入っていた予定を、タスク（S.tasks）に移し替える */
+function unifyTaskEvents(){if(!S.events)return;S.tasks=S.tasks||[];
+  const conv=S.events.filter(e=>e.isTask);if(!conv.length)return;
+  try{backupLocal('タスクを1種類にまとめる前');}catch(_){}
+  conv.forEach(e=>{const id='tk_'+e.id;
+    if(!S.tasks.some(x=>x.id===id)){
+      let today=e.date,status='todo',doneAt;
+      if(e.repeat){today=(typeof repNextOpenOcc==='function'&&repNextOpenOcc(e))||e.date;}
+      else if(e.doneDates&&e.doneDates.includes(e.date)){status='done';doneAt=e.date;}
+      const sp=evSpan(e);
+      const x={id,title:e.title||'',groupId:e.groupId||'',today,endDate:sp?shiftDs(today,sp):undefined,
+        start:e.start||'',end:e.end||'',memo:e.memo||'',links:e.links||[],images:e.images||[],
+        priority:2,status,doneAt,estMin:0,snooze:null,due:'',
+        repeat:e.repeat||'',repDays:(e.repDays||[]).slice(),repDom:e.repDom??null,repMonthN:e.repMonthN||1,
+        repNth:e.repNth||null,until:e.until||undefined,rel:e.rel?{...e.rel}:undefined,
+        createdAt:e.date||todayStr(),order:Date.now(),pickedAt:0};
+      if(x.repeat==='monthly'&&!x.repDom&&!x.repNth)x.repDom=parseDs(e.date).getDate(); // 「毎月（その日）」を明示
+      S.tasks.push(x);}
+    Object.values(S.dayOrder||{}).forEach(arr=>{const i=arr.indexOf('e_'+e.id);if(i>=0)arr[i]='t_'+id;});});
+  S.events=S.events.filter(e=>!e.isTask);}
+/* タスクの連日（やる日〜終わりの日） */
+function tSpan(x){if(!x||!x.endDate||!x.today||x.endDate<=x.today)return 0;
+  return Math.min(366,Math.round((parseDs(x.endDate)-parseDs(x.today))/86400000));}
 function advanceRepeatTask(x){if(!x.repeat)return false;
   const t=todayStr();const base=x.today||x.due||t;const nd=nextTaskDate(base,x.repeat,x);if(!nd)return false;
-  x.repeatPrev={today:x.today??null,due:x.due||''}; // 戻す用
-  x.today=nd;if(x.due)x.due=nd;
+  if(x.until&&nd>x.until){x.repeat='';toast('くり返しの最後の回でした');return false;} // 終了日をすぎたら普通の完了に
+  const sp=tSpan(x);
+  x.repeatPrev={today:x.today??null,due:x.due||'',endDate:x.endDate||''}; // 戻す用
+  x.today=nd;if(x.due)x.due=nd;if(sp)x.endDate=shiftDs(nd,sp);
   const at=dayLog(t).at;if(at)delete at['t_'+x.id];
   toast(`完了！${fmtDateJa(nd)} にまた表示します🔁`);return true;}
 /* 日付が変わったら、完了済みの繰り返しタスクを未完了に戻す（＝翌日また入る） */
@@ -5325,7 +5433,7 @@ function fullyCompleteTask(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;s
 /* 「未完了に戻す」の後始末はここに一本化（経路ごとに消し忘れがあったのを統一） */
 function undoTaskFields(x){x.status='todo';
   delete x.doneAt;delete x.doneMin;delete x.doneSec;delete x.dayDone;
-  if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
+  if(x.repeat&&x.repeatPrev){x.today=x.repeatPrev.today||null;x.due=x.repeatPrev.due||'';if(x.repeatPrev.endDate)x.endDate=x.repeatPrev.endDate;delete x.repeatPrev;}} // 繰り返しも元の日付に戻す
 function undoneTask(id,quiet){const x=S.tasks.find(v=>v.id===id);if(!x||x.status!=='done')return;
   setAnchor('t_'+id);snapUndo();
   syncSlotsDone(x.today||x.doneAt||todayStr(),id,false); // 置いたコマも未完了に戻す
@@ -5431,7 +5539,7 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpacts top">
       <button class="pri" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
-      <button class="pri" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}');emKind(true)">＋ タスク</button>
+      <button class="pri" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 日を開く</button>
       <button class="ic" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')" aria-label="色分け">🎨</button></div>
     ${extDayLine(dstr)}
@@ -5485,14 +5593,14 @@ function carriedFor(dstr){const late=[],none=[];
   S.tasks.forEach(x=>{if(x.status==='done')return;
     const d=x.today||x.due||'';
     if(!d){none.push({tok:'t_'+x.id,kind:'task',id:x.id,date:'',title:x.title,pr:x.priority||2,t:pickedTime(x)});return;}
-    if((x.today&&x.today<dstr)||(!x.today&&x.due&&x.due<dstr))late.push({tok:'t_'+x.id,kind:'task',id:x.id,date:x.today||x.due,title:x.title,st:''});});
+    if((x.today&&(x.endDate||x.today)<dstr)||(!x.today&&x.due&&x.due<dstr))late.push({tok:'t_'+x.id,kind:'task',id:x.id,date:x.today||x.due,title:x.title,st:''});});
   late.sort((a,b)=>a.date.localeCompare(b.date)||a.st.localeCompare(b.st));
   none.sort((a,b)=>a.pr-b.pr||b.t-a.t);
   return {late,none};}
 /* 1件を dstr へ。種類ごとに正しく動かす（連日の長さ維持・基準リンクは外す・繰り返しはその回だけ） */
 function moveTokTo(tok,dstr){
   if(tok.startsWith('t_')){const x=S.tasks.find(v=>v.id===tok.slice(2));if(!x)return null;
-    x.today=dstr;x.snooze=null;delete x.rel;touchPicked&&touchPicked(x);return x.id;}
+    const sp=tSpan(x);x.today=dstr;if(sp)x.endDate=shiftDs(dstr,sp);x.snooze=null;delete x.rel;touchPicked&&touchPicked(x);return x.id;}
   if(tok.startsWith('r_')){const [id,occ]=tok.slice(2).split('@');const e=S.events.find(v=>v.id===id);if(!e)return null;
     e.exdates=[...(e.exdates||[]),occ];
     const c={...JSON.parse(JSON.stringify(e)),id:uid(),...evShiftTo(e,dstr),repeat:'',exdates:[],until:undefined,doneDates:[],rel:undefined};
@@ -5708,7 +5816,7 @@ let _emId=null,_emDate='',_emStart='',_emEnd='',_emGroup='',_emHue=-1,_emMark=''
     _emRepeat='',_emRepDays=[],_emRepDom=null,_emUntil='',_emImp=false,_emMarkOnly=false,_emNoFill=false,
     _emCalOpen=false,_emCalY=0,_emCalX=0,_emStash=null;
 let _emTab='form',_emTmplEdit=null,_emKeepTime=true,_emHold=null,_emTmplPick=null,_emTmplDates=new Set();
-function eventModal(id,presetDate,presetStart,occDate,presetEnd){tmplReset();
+function eventModal(id,presetDate,presetStart,occDate,presetEnd){tmplReset();_emFromTask=null;
   const e=id?S.events.find(v=>v.id===id):null;
   _emTab='form';_emTmplEdit=null;_emTmplPick=null;_emHold=null;_emTmplDates=new Set();
   _emOcc=(e&&e.repeat)?(occDate||e.date):null; // 繰り返し編集の対象回
@@ -5797,7 +5905,33 @@ function emCalToggle(mode){mode=mode||'start';_relOpen=null;
   emSyncTime();emRender();}
 function emEndClear(){_emEndDate='';_emCalOpen=false;emSyncTime();emRender();}
 /* ［📅 予定｜✔ タスク］の切り替え。入力中のタスク名・時間・メモはそのまま */
-function emKind(isTask){if(_emIsTask===!!isTask)return;_emIsTask=!!isTask;emSyncTime();emRender();
+/* ［📅 予定｜✔ タスク］：タスクを押したら「タスクの入力画面」へ、入れた内容を持って移る（タスクは1種類・v4.60） */
+let _emFromTask=null;
+function emKind(isTask){if(!isTask)return;emToTask();}
+function emToTask(){emSyncTime();
+  const c={title:$('#emTitle')?.value||'',memo:$('#emMemo')?.value||'',date:_emDate,end:_emEndDate,start:_emStart,endT:_emEnd,group:_emGroup,
+    rep:_emRepeat,days:_emRepDays.slice(),dom:_emRepDom,n:_emRepMonthN,nth:_emRepNth,until:_emUntil,rel:_emRel,links:editLinks.slice(),imgs:editImages.slice(),fromId:_emId};
+  dlgEnd();
+  taskModal(null,'',false,null,{date:c.date,start:c.start,end:c.endT});
+  _tfGroup=c.group||_tfGroup;_tfEnd=c.end&&c.end>c.date?c.end:'';
+  _tfRepeat=c.rep||'';_tfRepDays=c.days;_tfRepDom=c.dom;_tfRepMonthN=c.n||1;_tfRepNth=c.nth?{...c.nth}:null;_tfUntil=c.until||'';
+  if(c.rel){_tfRel={...c.rel};_tfWhen='dated';_tfDate=c.date;}
+  editLinks=c.links;editImages=c.imgs;_tfFromEv=c.fromId||null;
+  tfRender(true);
+  const t=$('#tmTitle');if(t)t.value=c.title;const m=$('#tmMemo');if(m)m.value=c.memo;
+  try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}}
+function tfToEvent(){tfSyncTime();
+  const d=tfDateOf()||(view==='cal'&&calDate)||todayStr();
+  const c={title:$('#tmTitle')?.value||'',memo:$('#tmMemo')?.value||'',date:d,end:_tfEnd,start:_tfStart,endT:_tfEndT,group:_tfGroup,
+    rep:_tfRepeat==='daily'?'weekly':_tfRepeat,days:_tfRepeat==='daily'?[0,1,2,3,4,5,6]:_tfRepDays.slice(),dom:_tfRepDom,n:_tfRepMonthN,nth:_tfRepNth,until:_tfUntil,
+    rel:_tfRel,links:editLinks.slice(),imgs:editImages.slice(),fromId:_tfId};
+  dlgEnd();
+  eventModal(null,c.date,c.start||'',null,c.endT||'');
+  _emGroup=c.group||_emGroup;_emEndDate=c.end&&c.end>c.date?c.end:'';
+  _emRepeat=c.rep||'';_emRepDays=c.days;_emRepDom=c.dom;_emRepMonthN=c.n||1;_emRepNth=c.nth?{...c.nth}:null;_emUntil=c.until||'';
+  _emRel=c.rel?{...c.rel}:null;editLinks=c.links;editImages=c.imgs;_emFromTask=c.fromId||null;
+  emRender(true);
+  const t=$('#emTitle');if(t)t.value=c.title;const m=$('#emMemo');if(m)m.value=c.memo;
   try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}}
 function emCalHtml(){const ws=S.settings.weekStart||0;
   const start=(new Date(_emCalY,_emCalX,1).getDay()-ws+7)%7,dim=new Date(_emCalY,_emCalX+1,0).getDate();
@@ -6054,6 +6188,7 @@ function applyRecur(scope){const p=_pendingEvt;if(!p)return;const orig=S.events.
 function applyEventSave(id,data,tmpl){snapUndo();
   if(id)Object.assign(S.events.find(e=>e.id===id),data);
   else S.events.push({id:uid(),...data});
+  if(_emFromTask){S.tasks=S.tasks.filter(x=>x.id!==_emFromTask);_emFromTask=null;} // タスク→予定に切り替えた
   if(tmpl)S.templates.push({id:uid(),title:data.title,groupId:data.groupId,start:data.start,end:data.end,memo:data.memo,links:data.links});
   _emStash=null;save();dlgEnd();closeModal();render();attachCellPress();flashUndo(id?'予定を更新しました':'予定を追加しました');}
 /* ---- 予定の完了（黒塗り＝その日のタスク運用）。繰り返しは日ごとに完了できる（v4.20） ---- */
@@ -7074,6 +7209,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.60（2026-09-29）タスクを1種類にまとめて、入れ方をそろえました</b><br>
+  ・これまでタスクは「タスクタブのタスク」と「カレンダーで✔タスクにした予定」の<b>2種類</b>があり、入れた場所によってできることや見え方が違っていました。<b>1種類にまとめました</b>（カレンダーで入れたタスクは自動で移してあります）<br>
+  ・<b>右下の＋・日付ポップの＋タスク・日カレンダーの＋・週カレンダーのドラッグ</b>のどこから入れても、<b>同じ入力画面</b>が開きます。カレンダーから入れたときは<b>その日付が入った状態</b>で開きます<br>
+  ・入力画面は予定と同じ並びです：<b>いつやる（今日・明日・📅日付・優先・通常）→ 日付〜終わりの日 → 時間 → グループ</b>。繰り返しは<b>毎日・毎週・隔週・毎月（日にち／第◯週の曜日）・終了日</b>まで選べます<br>
+  ・入力画面のいちばん上の<b>［📅 予定｜✔ タスク］で、入れた内容を持ったまま切り替え</b>られます（あとから予定⇄タスクに変えることもできます）<br>
+  ・どこから入れたタスクも、カレンダー（タスクの色）・タスクタブ・ふりかえり・タイマーにそろって出ます。繰り返しのタスクは、先の回がカレンダーにうすく出ます<br>
+  </div>
   <div class="mini"><b>v4.50（2026-09-29）予定は打ち消し線で残す・未完了タスクの見せ方・繰り返しタスク・予定が上・インスタ/ブログの予約日</b><br>
   ・<b>予定（タスクでないもの）は、完了しても月カレンダーから消えず打ち消し線</b>になります。タスクは今までどおり完了で消えます<br>
   ・日付をタップしたポップの下には、<b>その日より前で過ぎているタスク</b>と<b>日付が決まっていないタスク</b>だけが並びます（先の日付のものは出ません）。行をタップすると、その日にやることになります。繰り返しのタスクは<b>その回だけ</b>動きます<br>
