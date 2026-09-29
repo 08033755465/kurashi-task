@@ -714,7 +714,15 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #daypop .dpcarry.sel{border-style:solid;border-color:var(--accent);background:var(--ring);}
 #daypop .dpcd{flex:0 0 auto;font-size:10.5px;color:var(--danger);font-weight:700;font-variant-numeric:tabular-nums;}
 #daypop .dpct{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#daypop .dpcgo{flex:0 0 auto;font-size:10.5px;color:var(--accent);font-weight:700;white-space:nowrap;}
+#daypop .dpcgo{flex:0 0 auto;font-size:14px;color:var(--sub);font-weight:700;white-space:nowrap;padding:0 6px;}
+#daypop .dpcarry.open{border-style:solid;border-color:var(--accent);border-bottom-left-radius:0 !important;border-bottom-right-radius:0 !important;}
+#daypop.redraw .dpbox{animation:none;}
+#daypop .dpcdet{border:1px solid var(--accent);border-top:none;border-radius:0 0 10px 10px !important;padding:8px 10px 10px;background:var(--bg);}
+#daypop .dpcinfo{font-size:12px;color:var(--sub);line-height:1.5;}
+#daypop .dpcmemo{margin-top:4px;color:var(--ink);white-space:pre-wrap;word-break:break-word;}
+#daypop .dpcbtns{display:flex;gap:8px;margin-top:8px;}
+#daypop .dpcbtns button{min-height:40px;padding:0 12px;font-size:12.5px;border:1px solid var(--line);border-radius:10px !important;background:var(--bg);color:var(--ink);}
+#daypop .dpcbtns button.pri{flex:1;background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
 #daypop .dpced{flex:0 0 auto;font-size:12px;padding:8px 8px;margin:-4px 0;background:none;border:none;color:var(--sub);}
 #daypop .dpcarbtns{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
 #daypop .dpcarbtns button{padding:11px;border:1px solid var(--line);border-radius:10px !important;font-size:13px;font-weight:600;background:var(--bg);}
@@ -900,6 +908,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 /* ミニ画面（v4.70）：PCの小窓／スマホの ?mini=1 */
 body.minimode #app,body.minimode #nav,body.minimode #quickadd,body.minimode #fabmenu,body.minimode #safetop{display:none!important;}
 body.minimode{padding:0!important;}
+body:not(.minimode) #miniRoot{display:none;} /* ミニ画面を抜けたら隠す（残ると本体の上に被さる） */
 body.inpip{margin:0;background:var(--bg);color:var(--ink);overflow-y:auto;}
 .sqbtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mp{padding:max(12px,env(safe-area-inset-top)) 14px max(16px,env(safe-area-inset-bottom));max-width:520px;margin:0 auto;}
@@ -1653,7 +1662,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.70';
+const APP_VERSION='v4.71';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1759,7 +1768,8 @@ function hueOf(e){if(e&&e.isTask)return taskHue(); // タスク予定＝設定�
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
 /* 本体（付箋）＝そのグループの色。トーン設定（あざやか／標準／くすみ）を反映 */
-function evColor(e){return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
+function taskFill(){return HUE(taskHue()).v;} // タスク＝「タスクの色」の濃い方で塗る（既定＝すみ＝黒塗り・v4.71）
+function evColor(e){if(e&&e.isTask)return taskFill();return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
 /* 親（最上位グループ）の色＝縦ライン、子（その予定のグループ）の色＝本体 */
 function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(gid||'')%HUES12.length;
   let guard=0;while(g.parentId&&guard++<20){const p=S.groups.find(x=>x.id===g.parentId);if(!p)break;g=p;}
@@ -5271,6 +5281,7 @@ function renderCal(){
       if(i%7===6||i===days.length-1)cells+=wk.html+'</div>';}
     const gridAll=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     body=`<div id="calGrid" class="${gridAll?'allmode':''}" style="--mfs:${(MONTH_FONTS[S.settings.monthFont]||MONTH_FONTS.m).px}px;">${dows.map((w,i)=>`<div class="dow" style="color:${(i+ws)%7===0?'var(--sun)':(i+ws)%7===6?'var(--sat)':''}">${w}</div>`).join('')}${cells}</div>
+    ${extSummary()}
     <div class="mini">セルを<b>長押し</b>で色分け／タップで日表示。「月」をもう一度押すと<b>ALL</b>（全予定・縦スクロール）表示。下の<b>カレンダーを押すたびに 月→週→日</b>、<b>長押しでいつもの表示と今日に戻ります</b></div>
     ${periodNoteHtml('m:'+calY+'-'+pad(calX+1),`${calX+1}月のメモ`)}`;
   }else if(calMode==='week'){
@@ -5308,7 +5319,7 @@ function renderCal(){
       const wkItems=[...dd.timed,...dd.tt.map(o=>({__t:o.x,__sid:o.sl?o.sl.id:'',start:min2hm(o.s),end:min2hm(o.e)}))];
       const blocks=weekLayout(wkItems,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const w=100/o.lanes,l=o.lane*w;
         if(e.__t){const tc=evColor({isTask:true});
-          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:var(--ink);`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">✔ ${esc(e.__t.title)}</div></div>`;}
+          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">✔ ${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
         let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
         if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
@@ -5339,7 +5350,7 @@ function renderCal(){
   return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替${searchBtn()}</span></div>
   ${groupChipsHtml(calSel,'tglCalSel')}
   <div class="calbar"><div class="mv"><button onclick="calSlideNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calSlideNav(1)">›</button></div>
-    <div class="ym">${head}</div>${modeBtns}</div>${extSummary()}<div id="calpage">${body}</div>`;
+    <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>${calMode==='month'?'':extSummary()}`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 /* カレンダーの日から「＋タスク」＝その日を期限に“しない”（期限は自分で選ぶもの・v3.05） */
@@ -5575,16 +5586,26 @@ async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
   const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr)undoneTask(id);}
 /* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
 function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayTasksOn(dstr);
+  // 同じ日を描き直すとき（移動・「ほか◯件」・選択）は、スクロール位置をそのまま保つ
+  const _pe=$('#daypop'),_same=!!(_pe&&_pe.classList.contains('show')&&_pe.dataset.d===dstr),_keepY=_same?(_pe.querySelector('.dpbox')?.scrollTop||0):0;
   const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
   // 開いた日より前で過ぎてしまったタスク＋日付の決まっていないタスク（タップでこの日にやる／まとめて動かす）
-  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};}
+  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};_carryOpen='';}
   const cf=carriedFor(dstr);
   const crow=it=>{const sel=_moveSel&&_moveSel.has(it.tok);
-    return `<div class="dpcarry${sel?' sel':''}" data-ev="${it.id}" onpointerdown="event.stopPropagation()" onclick="${_dpMoveMode?`dpMoveTgl('${it.tok}','${dstr}')`:`dpMoveHere('${it.tok}','${dstr}')`}">
+    const op=!_dpMoveMode&&_carryOpen===it.tok;
+    const x=it.kind==='task'?S.tasks.find(v=>v.id===it.id):null;
+    const edit=`closeDayPopup();${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}`;
+    // タップ＝詳しく（開く・閉じる）。動かすのは中の「この日にやる」から（確認あり）＝うっかり動かない
+    return `<div class="dpcarry${sel?' sel':''}${op?' open':''}" data-ev="${it.id}" onpointerdown="event.stopPropagation()" onclick="${_dpMoveMode?`dpMoveTgl('${it.tok}','${dstr}')`:`dpCarryOpen('${it.tok}','${dstr}')`}">
       ${_dpMoveMode?`<span class="dpchk${sel?' sel':''}">${sel?'✓':''}</span>`:''}
       <span class="dpcd${it.date?'':' none'}">${it.date?fmtDateJa(it.date):'日付なし'}</span><span class="dpct">${it.kind==='task'?'':'<i class="evtk">✔</i>'}${esc(it.title)}${it.kind==='rep'?' 🔁':''}</span>
-      ${_dpMoveMode?'':`<span class="dpcgo">→ この日にやる</span><button class="dpced" onclick="event.stopPropagation();closeDayPopup();${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}" aria-label="編集">✎</button>`}</div>`;};
-  const cgroup=(key,title,list)=>{if(!list.length)return '';const open=_carryMore[key]||list.length<=5;const shown=open?list:list.slice(0,5);
+      ${_dpMoveMode?'':`<span class="dpcgo">${op?'▾':'›'}</span>`}</div>
+    ${op?`<div class="dpcdet" onpointerdown="event.stopPropagation()">
+      <div class="dpcinfo">${it.date?`${it.kind==='task'&&x&&!x.today&&x.due?'期限':'やる日'}：${fmtDateJa(it.date)}`:'日付：なし'}${x&&x.memo?`<div class="dpcmemo">${esc(x.memo)}</div>`:''}</div>
+      <div class="dpcbtns"><button class="pri" onclick="dpCarryMove('${it.tok}','${dstr}')">→ この日（${fmtDateJa(dstr)}）にやる</button>
+        <button onclick="${edit}">✎ 編集</button></div></div>`:''}`;};
+  const cgroup=(key,title,list)=>{if(!list.length)return '';const open=key==='late'||_carryMore[key]||list.length<=5;/* 過ぎているタスクは常に全件 */const shown=open?list:list.slice(0,5);
     return `<div class="dpcsub">${title}（${list.length}）</div>${shown.map(crow).join('')}
       ${open?'':`<button class="dpcmore" onpointerdown="event.stopPropagation()" onclick="_carryMore.${key}=true;openDayPopup('${dstr}')">ほか${list.length-5}件を見る</button>`}`;};
   const cN=cf.late.length+cf.none.length;
@@ -5596,6 +5617,7 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
       <button ${_moveSel&&_moveSel.size?'':'disabled'} onclick="dpMovePickDate()">📅 カレンダーで日付をえらぶ</button></div>`
     :''}`:'';
   let el=$('#daypop');if(!el){el=document.createElement('div');el.id='daypop';document.body.appendChild(el);}
+  el.dataset.d=dstr;el.classList.toggle('redraw',_same); // 同じ日の描き直しは、ポンと出る動きをしない
   el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpacts top">
@@ -5639,12 +5661,17 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
     <div class="dphint">長押しでこの日のページへ</div>
   </div>`;
   el.classList.add('show');
+  if(_keepY){const b=el.querySelector('.dpbox');if(b)b.scrollTop=_keepY;}
   el.onclick=e=>{if(e.target===el)closeDayPopup();};}
 function closeDayPopup(){$('#daypop')?.classList.remove('show');}
 /* ---- 日付ポップの「まだ終わっていないタスク」（v4.50）：基準＝タップして開いた日（dstr）
    ⏰ 過ぎている：日付があるのに dstr より前で未完了（カレンダーのタスク・繰り返しの回・通常タスク）
    📋 日付なし：通常タスクで やる日 も 期限 も無いもの。先の日付・当日のものは出さない ---- */
-let _carryDay='',_carryMore={late:false,none:false};
+let _carryDay='',_carryMore={late:false,none:false},_carryOpen='';
+function dpCarryOpen(tok,dstr){_carryOpen=_carryOpen===tok?'':tok;openDayPopup(dstr);}
+async function dpCarryMove(tok,dstr){const t=[...carriedFor(dstr).late,...carriedFor(dstr).none].find(v=>v.tok===tok);
+  if(!await uiConfirm(`「${t?t.title:'このタスク'}」を ${fmtDateJa(dstr)} にやることにしますか？`,'この日にやる'))return;
+  _carryOpen='';dpMoveHere(tok,dstr);}
 function repMissedOcc(e,dstr){for(let k=1;k<=14;k++){const d=shiftDs(dstr,-k);if(d<e.date)break;
     if(eventStartsOn(e,d)&&!evDone(e,d))return d;}return null;}
 function carriedFor(dstr){const late=[],none=[];
@@ -7268,6 +7295,14 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.71（2026-09-30）カレンダーのウィジェット・過ぎたタスクの動かし方・黒塗りタスク</b><br>
+  ・<b>iPhoneのウィジェットをもう1つ</b>：Scriptableのウィジェットの「Parameter」に<b>カレンダー</b>と入れると、<b>月カレンダー（大）／今週（中）／今月の日付（小）</b>を表示。タップで<b>アプリの月カレンダー</b>が開きます<br>
+  ・ミニ画面の<b>「詳しく入力」「アプリ全体を見る」で画面が切り替わらない</b>不具合を直しました<br>
+  ・カレンダーのタスクは<b>黒塗り</b>に（設定の「タスクの色」の濃い色で塗ります。既定＝すみ＝黒）<br>
+  ・インスタ・ブログの予約日の表示を<b>カレンダーの下</b>へ移しました<br>
+  ・日付ポップの<b>過ぎているタスク</b>：<b>いつも全件</b>表示。<b>タップで詳しく</b>（やる日・メモ）→<b>「この日にやる」→確認</b>で動かします（1タップでは動きません）<br>
+  ・日付ポップで動かしたり「ほか◯件」を開いても、<b>スクロール位置がそのまま</b>（上に戻りません・ポンと出る動きもしません）<br>
+  </div>
   <div class="mini"><b>v4.70（2026-09-30）小窓とホーム画面ウィジェット</b><br>
   ・<b>PC（Chrome・Edge）</b>：タスクタブの見出しの<b>小窓ボタン</b>を押すと、<b>ほかのアプリの上に常に浮く小さな窓</b>が出ます。中身は<b>ひと言入力（タスク／予定・今日／明日・時刻）</b>と<b>今日やるタスク・まだの予定</b>。チェックで完了、アプリ本体ともすぐ連動します<br>
   ・<b>iPhone</b>：Scriptable のウィジェットで、ホーム画面・ロック画面に<b>今日のまだの予定と今日やるタスク</b>を表示。タップすると同じ<b>ミニ画面</b>が開き、そのまま入力・チェックできます（ミニ画面から「詳しく入力」「アプリ全体を見る」も可）<br>
@@ -8295,15 +8330,17 @@ function miniShowDone(){MINI.showDone=!MINI.showDone;miniRender();}
 function miniTkDone(id){toggleTaskDone(id);miniPush();}
 function miniEvDone(id){toggleEvDone(id,todayStr());miniPush();}
 /* スマホのミニ画面から、いつもの入力画面へ（打ちかけの名前を引き継ぐ） */
-function miniDetail(){const v=(mq('#mpTitle')?.value||'').trim();if(mq('#mpTitle'))mq('#mpTitle').value=''; // 名前は入力画面へ引き継ぐconst d=MINI.day===null?null:shiftDs(todayStr(),MINI.day);
+function miniDetail(){const v=(mq('#mpTitle')?.value||'').trim();if(mq('#mpTitle'))mq('#mpTitle').value=''; // 名前は入力画面へ引き継ぐ
+  try{document.activeElement&&document.activeElement.blur();}catch(_){} // iPhoneはボタンを押してもキーボードが残り、入力画面が隠れるためconst d=MINI.day===null?null:shiftDs(todayStr(),MINI.day);
   if(MINI.kind==='task'){taskModal(null,'',false,null,d?{date:d}:undefined);setTimeout(()=>{const t=$('#tmTitle');if(t&&v)t.value=v;},0);}
   else{eventModal(null,d||todayStr());setTimeout(()=>{const t=$('#emTitle');if(t&&v)t.value=v;},0);}}
 function miniEnterMode(){MINI.mode=true;MINI.doc=document;document.body.classList.add('minimode');
   if(!$('#miniRoot')){const r=document.createElement('div');r.id='miniRoot';document.body.insertBefore(r,document.body.firstChild);}
   miniRender();}
-function miniExit(){MINI.mode=false;document.body.classList.remove('minimode');MINI.doc=MINI.pip?MINI.pip.document:null;
+function miniExit(){try{document.activeElement&&document.activeElement.blur();}catch(_){} // キーボードを閉じる
+  MINI.mode=false;document.body.classList.remove('minimode');MINI.doc=MINI.pip?MINI.pip.document:null;
   try{history.replaceState(null,'',location.pathname);}catch(_){}
-  switchView('tasks');}
+  switchView('tasks');window.scrollTo(0,0);}
 const MINI_FNS=['miniAdd','miniKey','miniKind','miniDay','miniTp','miniTpType','miniTpClear','miniTkDone','miniEvDone','miniShowDone'];
 function pipBtn(){if(MINI.mode||!('documentPictureInPicture' in window))return '';
   return `<button class="sqbtn${MINI.pip?' on':''}" onclick="${MINI.pip?'closeMiniPip()':'openMiniPip()'}" title="${MINI.pip?'小窓を閉じる':'小窓で出す（ほかのアプリの上に浮く）'}"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1" fill="currentColor" stroke="none"/></svg></button>`;}
@@ -8327,7 +8364,20 @@ function closeMiniPip(){try{MINI.pip&&MINI.pip.close();}catch(_){}}
 setInterval(()=>{if(MINI.pip||MINI.mode)miniRender();},60000); // 日付が変わったら「今日」を切り替える
 /* iPhoneウィジェット用：これから14日ぶんの「未完了の予定・今日やるタスク」をクラウドの行に一緒に載せる
    （ウィジェットは繰り返しの計算をしなくてよい＝アプリと同じ結果になる） */
+function buildCalSnap(){const t=parseDs(todayStr()),ws=S.settings.weekStart||0;
+  const first=new Date(t.getFullYear(),t.getMonth(),1),start=new Date(first);start.setDate(1-((first.getDay()-ws+7)%7));
+  const last=new Date(t.getFullYear(),t.getMonth()+2,0);const end=new Date(last);end.setDate(last.getDate()+((ws+6-last.getDay()+7)%7));
+  const days={};
+  for(let c=new Date(start);c<=end;c.setDate(c.getDate()+1)){const d=dsOf(c);
+    const ev=S.events.filter(e=>eventOccursOn(e,d)&&!e.markOnly).sort((a,b)=>(a.start||'').localeCompare(b.start||''))
+      .map(e=>({t:evTitle(e).slice(0,14),c:e.noFill?'':evColor(e),l:e.noFill?evLine(e):'',dn:evDone(e,d)?1:0}));
+    const tk=S.tasks.filter(x=>x.status!=='done'&&x.today&&(x.today===d||(x.endDate&&x.today<d&&d<=x.endDate)))
+      .map(x=>({t:(x.title||'').slice(0,14),c:taskFill(),k:1}));
+    const it=[...ev,...tk];const h=holidayName(c.getFullYear(),c.getMonth()+1,c.getDate());
+    if(it.length||h)days[d]={i:it.slice(0,6),n:it.length,h:h?1:0};}
+  return {ws,days};}
 function buildWidgetSnap(){const out={at:Date.now(),days:{},acc:(UITHEMES[S.settings.uiTheme]||UITHEMES.peach).acc};const t0=todayStr();
+  try{out.cal=buildCalSnap();}catch(_){}
   for(let i=0;i<14;i++){const d=shiftDs(t0,i);
     const ev=miniEventsOn(d).filter(e=>!evDone(e,d)),tk=miniTasksOn(d);
     out.days[d]={e:ev.slice(0,12).map(e=>({t:evTitle(e),s:e.start||''})),t:tk.slice(0,15).map(x=>({t:x.title||'',s:x.start||'',o:x.today<d?1:0})),en:ev.length,tn:tk.length};}
@@ -8336,7 +8386,9 @@ function buildWidgetSnap(){const out={at:Date.now(),days:{},acc:(UITHEMES[S.sett
 /* ========================= 起動 ========================= */
 load();save();
 switchView('tasks');
-if(new URLSearchParams(location.search).has('mini'))miniEnterMode(); // スマホのウィジェットから＝ミニ画面だけ
+{const qp=new URLSearchParams(location.search);
+  if(qp.has('mini'))miniEnterMode(); // スマホのウィジェットから＝ミニ画面だけ
+  else if(qp.get('view')==='cal'){switchView('cal');try{history.replaceState(null,'',location.pathname);}catch(_){}}} // カレンダーのウィジェットから
 applyUiTheme(); // テーマカラー（設定から切替できる）
 flowRestore();
 ttRestore(); // タスクタイマー（当日のみ復元＝リロードしても計測がつづく）
