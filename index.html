@@ -897,9 +897,14 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .nightsep.dnsep{color:var(--sub);}
 .wkev.evdn{opacity:.4;}
 .wkev.evdn .wkevt{text-decoration:line-through;}
-/* 予定フォームのヘッダー右上：削除（スクロール不要） */
-#dlg .tfh .tfhacts{display:flex;gap:2px;align-items:center;}
-#dlg .tfh .tfhdel{font-size:14px;padding:6px 10px;background:none;color:var(--danger);opacity:.85;}
+/* 編集画面の見出し：タイトルのすぐ横に［🗑 削除］［⧉ 複製］、✕は右端に離して置く（v4.61・押し間違い防止） */
+.hdl{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+.hdl>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.hdacts{display:flex;gap:6px;flex-shrink:0;margin-right:28px;}
+#dlg .tform .tfh .hdact,#modal .mh .hdact{font-size:12px;line-height:1;letter-spacing:0;padding:0 11px;height:32px;border:1px solid var(--line);border-radius:999px;color:var(--sub);background:var(--bg);white-space:nowrap;}
+#dlg .tform .tfh .hdact.del,#modal .mh .hdact.del{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);}
+#dlg .tform .tfh .hdact:active,#modal .mh .hdact:active{transform:scale(.95);background:var(--line2);}
+#dlg .tform .tfh .hdx,#modal .mh .hdx{min-width:40px;height:40px;margin-right:-8px;}
 /* 複製先えらび：複製元の日 */
 .dpgrid button.org{box-shadow:inset 0 0 0 2px var(--accent);}
 .mini .dporg{display:inline-block;width:12px;height:12px;border-radius:3px !important;box-shadow:inset 0 0 0 2px var(--accent);vertical-align:-1px;}
@@ -1181,7 +1186,7 @@ body.swiping .lpress{animation:none;}
 #toast{position:fixed;left:0;right:0;top:0;transform:translateY(-100%);background:var(--ink);color:#fff;
   padding:calc(7px + env(safe-area-inset-top)) 14px 7px;font-size:12.5px;font-weight:700;z-index:600;
   opacity:0;transition:opacity .26s,transform .26s;pointer-events:none;text-align:center;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+  white-space:normal;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;box-shadow:0 2px 10px rgba(0,0,0,.22);}
 #toast.show{opacity:1;transform:translateY(0);}
 #toast.under.show{transform:translateY(100%);} /* 「元に戻す」の帯と重ならないよう下へ */
 #flow .fmain{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;}
@@ -1608,7 +1613,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.60';
+const APP_VERSION='v4.61';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1863,6 +1868,19 @@ function migrate(){const st=S.settings;
     const y=shiftDs(todayStr(),-1);
     (S.tasks||[]).forEach(x=>{if(x.repeat&&!x.today&&!x.due&&x.status!=='done'){const d=nextTaskDate(y,x.repeat,x);if(d)x.today=d;}});
     S._repDateFix=1;}
+  if(!st._pastClear0929){ // v4.61：2026/9/29 時点で日付（やる日・期限）が過ぎて残っていたタスクの日付を一度だけ外す（ユーザー指示）。
+    // フラグは settings に置く＝同期でほかの端末にも伝わり、二重に走らない。繰り返しのタスクは日付を消すと回らなくなるので、今日以降の次の回へ送る
+    const cut='2026-09-29';
+    const hit=(S.tasks||[]).filter(x=>x.status!=='done'&&((x.today&&(x.endDate||x.today)<cut)||(!x.today&&x.due&&x.due<cut)));
+    st._pastClear0929=1; // 先に立てる＝下のバックアップから戻したとき、もう一度外されない
+    if(hit.length){try{backupLocal('過ぎたタスクの日付を外す前');}catch(_){}
+      let n=0,r=0;
+      hit.forEach(x=>{
+        if(x.repeat&&x.today){let d=x.today,g=0;const span=x.endDate?tSpan(x):0;
+          while(d&&d<cut&&g++<400)d=nextTaskDate(d,x.repeat,x);
+          if(d&&(!x.until||d<=x.until)){x.today=d;if(span)x.endDate=shiftDs(d,span);if(x.due&&x.due<cut)x.due=null;x.snooze=null;delete x.rel;r++;return;}}
+        x.today=null;delete x.endDate;x.due=null;delete x.start;delete x.end;x.snooze=null;delete x.rel;n++;});
+      setTimeout(()=>{try{save();render();}catch(_){}toast(`過ぎていたタスク${n}件の日付を外しました${r?`（繰り返し${r}件は次の回へ）`:''}`,6000);},1200);}}
   if(!S._sumiToTask){ // v4.40：これまで「黒塗り＝タスク」運用だった、すみ色の予定を一度だけタスクに変換
     (S.events||[]).forEach(e=>{if(e.hue===0&&!e.repeat)e.isTask=true;});
     S._sumiToTask=1;}
@@ -2740,7 +2758,7 @@ function addTodayLogAt(kind,mn){logEditor(null,kind,null,mn);}
 function logEditor(id,kind,taskId,presetMin){const t=todayStr();const logs=dayLogs(t);const g=id?logs.find(l=>l.id===id):null;
   const k=g?g.kind:(kind||'event');const isWork=k==='work';
   const tId=g?g.taskId:taskId;const task=tId?S.tasks.find(x=>x.id===tId):null;const wname=task?task.title:(g?.text||'');
-  openModal(`<div class="mh"><b>${g?'記録を編集':(isWork?'稼働を記録':'記録を追加')}</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead(g?'記録を編集':(isWork?'稼働を記録':'記録を追加'),g?[{del:1,fn:`delLog('${g.id}')`}]:[],'closeModal()')}</div>
    <div class="mbody">
      ${isWork
        ?`<input type="hidden" id="lgKind" value="work"><input type="hidden" id="lgTaskId" value="${tId||''}"><input type="hidden" id="lgText" value="${esc(wname)}">
@@ -2750,7 +2768,7 @@ function logEditor(id,kind,taskId,presetMin){const t=todayStr();const logs=dayLo
      <div class="frow f2"><div><label>時刻</label>${timeInput('lgAt', g?min2hm(g.at):(presetMin!=null?min2hm(presetMin):min2hm(curMin())))}</div>
        <div><label>${isWork?'稼働した時間':'かかった時間'}（分・任意）</label><input id="lgDur" type="number" inputmode="numeric" min="0" value="${g?.dur||(isWork?30:0)}"></div></div>
    </div>
-   <div class="mbtns">${g?`<button class="del" onclick="delLog('${g.id}')">削除</button>`:''}<button class="save" onclick="saveLog('${g?.id||''}')">保存</button></div>`);}
+   <div class="mbtns"><button class="save" onclick="saveLog('${g?.id||''}')">保存</button></div>`);}
 function saveLog(id){if(saveGuard())return;const t=todayStr();const logs=dayLogs(t);
   const kind=$('#lgKind').value;const text=($('#lgText').value||'').trim();
   const at=hm2min($('#lgAt').value||min2hm(curMin()));const dur=+$('#lgDur').value||0;
@@ -2759,7 +2777,7 @@ function saveLog(id){if(saveGuard())return;const t=todayStr();const logs=dayLogs
   if(id){Object.assign(logs.find(l=>l.id===id),{kind,text,at,dur,taskId});}
   else logs.push({id:uid(),kind,text,at,dur,taskId});
   save();closeModal();render();}
-function delLog(id){const logs=dayLogs(todayStr());const i=logs.findIndex(l=>l.id===id);if(i>=0)logs.splice(i,1);save();closeModal();render();}
+async function delLog(id){if(!await uiConfirm('この記録を削除しますか？','削除'))return;const logs=dayLogs(todayStr());const i=logs.findIndex(l=>l.id===id);if(i>=0)logs.splice(i,1);save();closeModal();render();}
 function logWork(tok){logEditor(null,'work',tok.slice(2));}
 async function endTaskToday(tok){const id=tok.slice(2);const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const v=await uiPrompt('今日の稼働時間（分）を記録して、残りを明日へ繰り越します。\n（空欄なら記録なしで繰り越し）','','数字');
@@ -3198,7 +3216,7 @@ const chkTaskSort=(a,b)=>{
   const cr=pastelRank(a)-pastelRank(b);if(cr)return cr;             // ①色の並び順
   const pa=(a.priority||2),pb=(b.priority||2);if(pa!==pb)return pa-pb; // ②優先度（高が上）
   const pk=pickedTime(b)-pickedTime(a);if(pk)return pk;             // ③最近選んだものが上
-  const nd=(b.createdAt||'').localeCompare(a.createdAt||'');if(nd)return nd; // 新しい日のものが上
+  const nd=String(b.createdAt||'').localeCompare(String(a.createdAt||''));if(nd)return nd; // 新しい日のものが上
   return (a.torder??1e9)-(b.torder??1e9);};                          // 手動並び
 /* ▲▼で並び替え＝タスクタブの「手動」順にも連動 */
 function moveChecklistTask(id,dir){const t=todayStr();
@@ -4201,7 +4219,7 @@ function renderTasks(){
   // 区分の中の並び：手動で決めた順（torder）→ 決めていないものは新しく入れた順
   const inSec=(a,b)=>((a.torder??1e9)-(b.torder??1e9))
     ||(pickedTime(b)-pickedTime(a))
-    ||(b.createdAt||'').localeCompare(a.createdAt||'')
+    ||String(b.createdAt||'').localeCompare(String(a.createdAt||''))
     ||((b.order||0)-(a.order||0));
   const body=WHENS.map(([w,label])=>{
     const ts=open.filter(x=>taskWhen(x)===w).sort(inSec);
@@ -4423,7 +4441,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
   const prio=+(keep.prio??src?.priority??2);
   const prevScroll=fresh?0:(document.querySelector('#dlg .tform')?.scrollTop||0); // ボタンを押すたび上に戻らないように
   $('#dlg').innerHTML=`<div class="dm tform">
-    <div class="tfh"><b>${tmpl?(_tfTmplEdit?'テンプレを編集':'テンプレを作る'):(x?'タスクを編集':'タスクを追加')}</b><button type="button" onclick="dlgEnd()">✕</button></div>
+    <div class="tfh">${hdHead(tmpl?(_tfTmplEdit?'テンプレを編集':'テンプレを作る'):(x?'タスクを編集':'タスクを追加'),x&&!tmpl?[{del:1,fn:`delTask('${x.id}')`},{fn:`dupTask('${x.id}')`}]:[],'dlgEnd()')}</div>
     ${tmpl?'':`<div class="frow"><div class="seg emkind"><button type="button" onclick="tfToEvent()">📅 予定</button><button type="button" class="on">✔ タスク</button></div></div>`}
     ${tmpl?'':(x?'':tfTabsHtml())}
     <div class="frow"><label>タスク名</label><input id="tmTitle" value="${esc(keep.title??src?.title??'')}" placeholder="例）書類を出す、洗車 など"></div>
@@ -4454,7 +4472,6 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     <div class="frow"><label>メモ</label><textarea id="tmMemo" rows="2">${esc(keep.memo??src?.memo??'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     ${tmpl?'':`<div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>`}
-    ${x&&!tmpl?`<div class="frow tfsub"><button type="button" onclick="dupTask('${x.id}')">⧉ 複製</button><button type="button" class="del" onclick="delTask('${x.id}')">🗑 削除</button></div>`:''}
   </div>
   ${tmpl?`<div class="db"><button onclick="_tfTmplEdit=null;_tfTab='tmpl';tfRender()">‹ テンプレ一覧</button><button class="ok" onclick="saveTaskTmpl()">テンプレを保存</button></div>`
     :`<div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`}`;
@@ -5285,6 +5302,9 @@ function renderCal(){
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
 /* カレンダーの日から「＋タスク」＝その日を期限に“しない”（期限は自分で選ぶもの・v3.05） */
+/* 編集画面の見出しに置く操作ボタン（削除・複製）。✕とは離して、タイトルのすぐ横に並べる */
+function hdHead(title,acts,closeFn){acts=(acts||[]).filter(Boolean);
+  return `<span class="hdl"><b>${title}</b>${acts.length?`<span class="hdacts">${acts.map(o=>`<button type="button" class="hdact${o.del?' del':''}" onclick="${o.fn}">${o.del?'🗑 削除':(o.label||'⧉ 複製')}</button>`).join('')}</span>`:''}</span><button type="button" class="hdx" onclick="${closeFn}" aria-label="閉じる">✕</button>`;}
 function taskModalWithDue(d){taskModal(null,'',false,null,{date:d});} // v4.60：カレンダーから＝その日にやるタスク（期限ではなく“やる日”）
 /* タスクの繰り返し：完了したら次回の日付へ送る（今日の記録に完了を残す） */
 /* 次回日付：毎週は指定の曜日、毎月は指定の日。指定が無ければ今まで通り7日後／1か月後 */
@@ -5860,7 +5880,7 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
       ${emTabsHtml()}${_emTmplPick?emTmplPickHtml():emTmplListHtml()}</div>`;
     $('#dlgWrap').classList.add('show');return;}
   $('#dlg').innerHTML=`<div class="dm tform">
-    <div class="tfh"><b>${tmplEd?(_emTmplEdit?'テンプレを編集':'テンプレを作る'):(e?'予定を編集':'予定を追加')}</b><span class="tfhacts">${e&&!tmplEd?`<button type="button" class="tfhdel" onclick="delEvent('${e.id}'${_emOcc?`,'${_emOcc}'`:''})">🗑</button>`:''}<button type="button" onclick="dlgEnd()">✕</button></span></div>
+    <div class="tfh">${hdHead(tmplEd?(_emTmplEdit?'テンプレを編集':'テンプレを作る'):(e?'予定を編集':'予定を追加'),e&&!tmplEd?[{del:1,fn:`delEvent('${e.id}'${_emOcc?`,'${_emOcc}'`:''})`},{fn:`dlgEnd();dupEventPick('${e.id}')`}]:[],'dlgEnd()')}</div>
     ${tmplEd?'':(e?'':emTabsHtml())}
     ${tmplEd?'':`<div class="frow"><div class="seg emkind"><button type="button" class="${_emIsTask?'':'on'}" onclick="emKind(false)">📅 予定</button><button type="button" class="${_emIsTask?'on':''}" onclick="emKind(true)">✔ タスク</button></div></div>`}
     <div class="frow"><label>${_emIsTask?'タスク名':'予定名'}</label><input id="emTitle" value="${esc(keep.title??src?.title??'')}" placeholder="${_emIsTask?'例）書類を出す、洗車 など':'例）通院、打合せ など'}"></div>
@@ -5884,7 +5904,6 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
     <div class="frow"><label>メモ</label><textarea id="emMemo" rows="2">${esc(keep.memo??src?.memo??'')}</textarea></div>
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     ${tmplEd?'':`<div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>`}
-    ${e&&!tmplEd?`<div class="frow tfsub"><button type="button" onclick="dupEventPick('${e.id}')">⧉ 複製</button><button type="button" class="del" onclick="delEvent('${e.id}')">🗑 削除</button></div>`:''}
   </div>
   ${tmplEd?`<div class="db"><button onclick="_emTmplEdit=null;_emTab='tmpl';emRender()">‹ テンプレ一覧</button><button class="ok" onclick="saveEvTmpl()">テンプレを保存</button></div>`
     :`<div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveEvent('${_emId||''}')">保存</button></div>`}`;
@@ -6377,7 +6396,7 @@ function routineModal(id,presetSlot,presetFolder){
   editLinks=(r?.links||[]).map(l=>({...l}));editImages=(r?.images||[]).slice();
   const days=r&&r.days?[...r.days]:[0,1,2,3,4,5,6];
   window._rdays=days;window._rnths=r&&r.nths?JSON.parse(JSON.stringify(r.nths)):[];window._rnthWd=null;
-  openModal(`<div class="mh"><b>${r?'ルーティン編集':'ルーティン追加'}</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead(r?'ルーティン編集':'ルーティン追加',r?[{del:1,fn:`delRoutine('${r.id}')`},{fn:`dupRoutine('${r.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="rmTitle" value="${esc(r?.title||'')}"></div>
     <div class="frow"><label>フォルダ（既存から選ぶ／新規作成）</label>
@@ -6417,7 +6436,6 @@ function routineModal(id,presetSlot,presetFolder){
     ${r?.stats?.n?`<div class="mini" style="padding:0;">これまで${r.stats.n}回実行・平均${fmtMin(r.stats.total/r.stats.n/60)}</div>`:''}
   </div>
   <div class="mbtns">
-    ${r?`<button class="del" onclick="delRoutine('${r.id}')">削除</button><button onclick="dupRoutine('${r.id}')">複製</button>`:''}
     <button class="save" onclick="saveRoutine('${r?.id||''}')">保存</button>
   </div>`);rNthRefresh();
   window._rmIcon=r?.mark||'';window._rmCat=(r?.mark&&ICONS[r.mark]?ICONS[r.mark].c:'家事');rmIconRefresh();}
@@ -6598,7 +6616,7 @@ function habitDetail(id,resetWeek){const h=S.habits.find(x=>x.id===id);if(!h)ret
   const st=habitStreak(h);
   const wks=[...Array(8)].map((_,i)=>habitWeekCount(h,7-i)); // 8週前→今週
   const maxWk=Math.max(1,...wks);
-  openModal(`<div class="mh"><b>${esc(h.title)}</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead(esc(h.title),[{del:1,fn:`delHabit('${h.id}')`}],'closeModal()')}</div>
   <div class="mbody">
     <div class="hstats"><div><b>${s.today}</b><span>今日</span></div><div><b>${s.week}</b><span>今週</span></div><div><b>${s.month}</b><span>今月</span></div><div><b>${s.total}</b><span>累計</span></div></div>
     <div class="mini" style="padding:6px 0 2px;">${st.cur?`🔥 <b>${st.cur}日連続</b>`:(st.todayDone?'':'今日やると連続がつながります')}${st.best>1?`　これまでの最長 <b>${st.best}日</b>`:''}</div>
@@ -6619,12 +6637,12 @@ function habitDetail(id,resetWeek){const h=S.habits.find(x=>x.id===id);if(!h)ret
       <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div>
     ${h.logs.length?`<button class="addlink" style="margin-top:8px;" onclick="habitUndo('${h.id}')">直近の記録を取り消す</button>`:''}
   </div>
-  <div class="mbtns"><button class="del" onclick="delHabit('${h.id}')">削除</button><button onclick="habitModal('${h.id}')">編集</button></div>`);
+  <div class="mbtns"><button onclick="habitModal('${h.id}')">✎ 編集</button></div>`);
   if(keepScroll)$('#modal').scrollTop=keepScroll;}
 function habitUndo(id){const h=S.habits.find(x=>x.id===id);if(!h||!h.logs.length)return;h.logs.pop();save();habitDetail(id);}
 function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
   editLinks=(h?.links||[]).map(l=>({...l}));
-  openModal(`<div class="mh"><b>${h?'習慣を編集':'習慣を追加'}</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead(h?'習慣を編集':'習慣を追加',h?[{del:1,fn:`delHabit('${h.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="hmName" value="${esc(h?.title||'')}" placeholder="例）ストレッチ"></div>
     <div class="frow"><label>コース（例：運動コース・勉強コース。同じコースでまとまって表示されます）</label>
@@ -6635,7 +6653,7 @@ function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
       <button data-c="" class="none ${h?.color==null?'on':''}" style="grid-column:auto;" onclick="$$('#hmColor button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">なし</button></div></div>
     <div class="frow"><label>リンク（動画・サイトなど。カードからすぐ開けます）</label>${linksEditorHtml()}</div>
   </div>
-  <div class="mbtns">${h?`<button class="del" onclick="delHabit('${h.id}')">削除</button>`:''}<button class="save" onclick="saveHabit('${h?.id||''}')">保存</button></div>`);}
+  <div class="mbtns"><button class="save" onclick="saveHabit('${h?.id||''}')">保存</button></div>`);}
 function saveHabit(id){if(saveGuard())return;const name=$('#hmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
   const csel=$('#hmColor button.on');const color=(csel&&csel.dataset.c!=='')?+csel.dataset.c:null;
   const course=($('#hmCourse')?.value||'').trim();
@@ -7004,14 +7022,14 @@ function shopPick(btn,id){_shPick=(_shPick===id?'':id);
   [...btn.parentElement.querySelectorAll('button')].forEach(b=>b.classList.remove('on'));
   if(_shPick)btn.classList.add('on');}
 function shopEdit(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
-  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>買うものを編集</b><button type="button" onclick="dlgEnd()">✕</button></div>
+  $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh">${hdHead('買うものを編集',[{del:1,fn:`shopDel('${id}')`}],'dlgEnd()')}</div>
     <div class="frow"><label>なにを買う？</label><input id="shName" value="${esc(x.name)}"></div>
     <div class="frow"><label>お店</label>${shopPickHtml('shShop',x.shopId)}</div>
     <div class="frow f2"><div><label>いくつ</label><input id="shQty" type="text" inputmode="numeric" value="${+x.qty||1}"></div>
       <div><label>だいたいの金額（円）</label><input id="shPlan" type="text" inputmode="numeric" value="${x.plan||''}" placeholder="任意"></div></div>
     ${x.boughtAt?`<div class="frow"><label>実際に払った金額（円）</label><input id="shPaidE" type="text" inputmode="numeric" value="${x.paid||''}"></div>`:''}
     <div class="frow"><label>メモ</label><textarea id="shMemo" rows="2">${esc(x.memo||'')}</textarea></div>
-    <div class="frow tfsub"><button type="button" class="del" onclick="shopDel('${id}')">🗑 削除</button></div></div>
+    </div>
     <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopSave('${id}')">保存</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function shopSave(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
@@ -7209,6 +7227,13 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.61（2026-09-29）編集画面の削除・複製を上に／過ぎたタスクの日付を整理</b><br>
+  ・<b>タスク・予定・ルーティン・習慣・買い物・グループ・リンク・誕生日・マーク・記録</b>の編集画面で、<b>［🗑 削除］［⧉ 複製］がいちばん上</b>（タイトルのすぐ横）に並びます。下までスクロールしなくてOK<br>
+  ・<b>✕（閉じる）は右端に離して</b>置き、削除と押し間違えないようにしました。削除は今までどおり確認が出ます（記録の削除にも確認を追加）<br>
+  ・予定の編集画面から「複製」を押すと、日付えらびが<b>編集画面の裏に隠れてしまう</b>不具合を直しました<br>
+  ・9/29 の時点で<b>日付（やる日・期限）が過ぎて残っていたタスクは、日付を外して</b>「優先・通常」に入れました。繰り返しのタスクだけは、日付を消すと回らなくなるので<b>今日以降の次の回</b>へ送っています（外す前の状態は 設定→データ のバックアップに残っています）<br>
+  ・お知らせの帯が長いときは<b>2行で全部表示</b>されるようにしました<br>
+  </div>
   <div class="mini"><b>v4.60（2026-09-29）タスクを1種類にまとめて、入れ方をそろえました</b><br>
   ・これまでタスクは「タスクタブのタスク」と「カレンダーで✔タスクにした予定」の<b>2種類</b>があり、入れた場所によってできることや見え方が違っていました。<b>1種類にまとめました</b>（カレンダーで入れたタスクは自動で移してあります）<br>
   ・<b>右下の＋・日付ポップの＋タスク・日カレンダーの＋・週カレンダーのドラッグ</b>のどこから入れても、<b>同じ入力画面</b>が開きます。カレンダーから入れたときは<b>その日付が入った状態</b>で開きます<br>
@@ -7895,12 +7920,12 @@ function linkList(){openModal(`<div class="mh"><b>よく使うリンク</b><butt
     <div class="mini" style="padding:8px 0 0;">※Googleブックマークの一括取り込みは今後の対応予定です（今は手動で追加）。</div>
   </div>`);}
 function linkModal(id){const l=id?S.links.find(x=>x.id===id):null;
-  openModal(`<div class="mh"><b>リンク</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead('リンク',l?[{del:1,fn:`delLink('${l.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="lkLabel" value="${esc(l?.label||'')}" placeholder="例）勤怠フォーム"></div>
     <div class="frow"><label>URL</label><input id="lkUrl" value="${esc(l?.url||'')}" placeholder="https://…"></div>
   </div>
-  <div class="mbtns">${l?`<button class="del" onclick="delLink('${l.id}')">削除</button>`:''}
+  <div class="mbtns">
     <button class="save" onclick="saveLink('${l?.id||''}')">保存</button></div>`);}
 function saveLink(id){const url=$('#lkUrl').value.trim();if(!url){uiAlert('URLを入力してください');return;}
   const label=$('#lkLabel').value.trim()||url.replace(/^https?:\/\//,'').slice(0,24);
@@ -7965,7 +7990,7 @@ function glColorHtml(){
     `;}
 function bdayModal(id){
   const b=id?S.birthdays.find(x=>x.id===id):null;
-  openModal(`<div class="mh"><b>誕生日</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead('誕生日',b?[{del:1,fn:`delBday('${b.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="bmName" value="${esc(b?.name||'')}" placeholder="例）たろう"></div>
     <div class="frow f2"><div><label>月</label><input id="bmM" type="number" inputmode="numeric" min="1" max="12" value="${b?.month||''}"></div>
@@ -7975,7 +8000,7 @@ function bdayModal(id){
     <div class="frow"><label>強調色</label><div class="colorsel" id="bmColor">
       ${HUES12.map((_,i)=>{const c=HUE(i).v;return `<button data-c="${c}" class="${(b?.color||HUE(0).v)===c?'on':''}" style="background:${c}" title="${esc(hueLabel(i)||HUE(i).n)}" onclick="$$('#bmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`;}).join('')}</div></div>
   </div>
-  <div class="mbtns">${b?`<button class="del" onclick="delBday('${b.id}')">削除</button>`:''}
+  <div class="mbtns">
     <button class="save" onclick="saveBday('${b?.id||''}')">保存</button></div>`);}
 async function delBday(id){if(!await uiConfirm('この誕生日を削除しますか？','削除'))return;
   S.birthdays=S.birthdays.filter(x=>x.id!==id);save();bdayList();render();}
@@ -7990,7 +8015,7 @@ function saveBday(id){
 function markModal(id){
   const k=id?S.marks.find(x=>x.id===id):null;
   window._mIcon=k?.icon||'gift';window._mCat=(ICONS[window._mIcon]||{}).c||'イベント';
-  openModal(`<div class="mh"><b>マーク付きの日</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead('マーク付きの日',k?[{del:1,fn:`delMark('${k.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="kmName" value="${esc(k?.name||'')}" placeholder="例）結婚記念日"></div>
     <div class="frow f2"><div><label>月</label><input id="kmM" type="number" inputmode="numeric" min="1" max="12" value="${k?.month||''}"></div>
@@ -8001,7 +8026,7 @@ function markModal(id){
     <div class="frow"><label>色</label><div class="colorsel" id="kmColor">
       ${HUES12.map((_,i)=>{const c=HUE(i).v;return `<button data-c="${c}" class="${(k?.color||HUE(1).v)===c?'on':''}" style="background:${c}" title="${esc(hueLabel(i)||HUE(i).n)}" onclick="$$('#kmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`;}).join('')}</div></div>
   </div>
-  <div class="mbtns">${k?`<button class="del" onclick="delMark('${k.id}')">削除</button>`:''}
+  <div class="mbtns">
     <button class="save" onclick="saveMark('${k?.id||''}')">保存</button></div>`);
   kmRefresh();}
 function kmRefresh(){
@@ -8022,7 +8047,7 @@ function saveMark(id){
 function groupModal(id,presetParent){
   const g=id?S.groups.find(x=>x.id===id):null;
   const curHue=g?(g.hue??groupHue(g.id)):firstUnusedHue();const parent=g?g.parentId:(presetParent||null);
-  openModal(`<div class="mh"><b>${g?'グループ編集':'グループ追加'}</b><button onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mh">${hdHead(g?'グループ編集':'グループ追加',g?[{del:1,fn:`delGroup('${g.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="gmName" value="${esc(g?.name||'')}" placeholder="例）ままの予定 / 子供 / 仕事"></div>
     <div class="frow"><label>親グループ（階層）</label><select id="gmParent">
@@ -8033,7 +8058,7 @@ function groupModal(id,presetParent){
       <div class="mini" style="padding:4px 0 0;">各色の<b>カテゴリ名</b>（設定→カラーパレットで付与）や使用中のグループを表示。同じ色を複数で使ってもOK。</div></div>
     ${g&&g.parentId?`<div class="mini" style="padding:0 0 8px;">マークの見え方：<span class="gmark" style="width:14px;height:14px;${markCss(g.id)}"></span>（親の色＋自分の色）</div>`:''}
   </div>
-  <div class="mbtns">${g?`<button class="del" onclick="delGroup('${g.id}')">削除</button>`:''}
+  <div class="mbtns">
     <button class="save" onclick="saveGroup('${g?.id||''}')">保存</button></div>`);}
 function saveGroup(id){
   const name=$('#gmName').value.trim();if(!name){uiAlert('名前を入力してください');return;}
