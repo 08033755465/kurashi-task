@@ -150,39 +150,39 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 /* 月タップ→その日の予定ポップ */
 #daypop{position:fixed;inset:0;background:rgba(21,23,26,.35);z-index:120;display:none;align-items:center;justify-content:center;padding:24px;}
 #daypop.show{display:flex;}
-#daypop .dpbox{background:var(--card,#fff);width:100%;max-width:340px;max-height:76vh;overflow-y:auto;border-radius:16px !important;box-shadow:0 12px 40px rgba(0,0,0,.3);transform-origin:center;animation:evpopin .16s cubic-bezier(.34,1.4,.64,1);}
-#daypop .dph{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card,#fff);}
-#daypop .dph b{font-size:15px;}
-#daypop .dph button{font-size:18px;color:var(--sub);}
-#daypop .dpbody{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
-#daypop .dpev{padding:7px 10px;border-radius:8px !important;display:flex;flex-direction:column;gap:4px;}
+:is(#daypop,.dlpage) .dpbox{background:var(--card,#fff);width:100%;max-width:340px;max-height:76vh;overflow-y:auto;border-radius:16px !important;box-shadow:0 12px 40px rgba(0,0,0,.3);transform-origin:center;animation:evpopin .16s cubic-bezier(.34,1.4,.64,1);}
+:is(#daypop,.dlpage) .dph{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card,#fff);z-index:6;}
+:is(#daypop,.dlpage) .dph b{font-size:15px;}
+:is(#daypop,.dlpage) .dph button{font-size:18px;color:var(--sub);}
+:is(#daypop,.dlpage) .dpbody{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+:is(#daypop,.dlpage) .dpev{padding:7px 10px;border-radius:8px !important;display:flex;flex-direction:column;gap:4px;}
 /* 「色は文字だけ」「マークのみ」は日ポップでも塗らない */
-#daypop .dpev.plain,#daypop .dpev.mkonly{background:none !important;padding:5px 10px;box-shadow:none;}
-#daypop .dpevrow{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
-#daypop .dpevmemo{font-size:11px;line-height:1.45;opacity:.92;word-break:break-word;}
-#daypop .dpevt{font-size:13px;font-weight:600;overflow:hidden;white-space:nowrap;}
-#daypop .dpevm{font-size:11px;opacity:.85;white-space:nowrap;font-variant-numeric:tabular-nums;}
-#daypop .dpmk{font-size:12.5px;display:flex;align-items:center;gap:6px;}
-#daypop .dpdue{font-size:12px;color:var(--sub);}
-#daypop .dpempty{font-size:12.5px;color:var(--sub);padding:6px 2px;}
-#daypop .dpacts{display:flex;gap:6px;padding:4px 12px 10px;}
-#daypop .dpacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:9px 4px;font-size:12.5px;}
+:is(#daypop,.dlpage) .dpev.plain,:is(#daypop,.dlpage) .dpev.mkonly{background:none !important;padding:5px 10px;box-shadow:none;}
+:is(#daypop,.dlpage) .dpevrow{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
+:is(#daypop,.dlpage) .dpevmemo{font-size:11px;line-height:1.45;opacity:.92;word-break:break-word;}
+:is(#daypop,.dlpage) .dpevt{font-size:13px;font-weight:600;overflow:hidden;white-space:nowrap;}
+:is(#daypop,.dlpage) .dpevm{font-size:11px;opacity:.85;white-space:nowrap;font-variant-numeric:tabular-nums;}
+:is(#daypop,.dlpage) .dpmk{font-size:12.5px;display:flex;align-items:center;gap:6px;}
+:is(#daypop,.dlpage) .dpdue{font-size:12px;color:var(--sub);}
+:is(#daypop,.dlpage) .dpempty{font-size:12.5px;color:var(--sub);padding:6px 2px;}
+:is(#daypop,.dlpage) .dpacts{display:flex;gap:6px;padding:4px 12px 10px;}
+:is(#daypop,.dlpage) .dpacts button{flex:1;border:1px solid var(--line);border-radius:8px !important;padding:9px 4px;font-size:12.5px;}
 /* 入力ボタンは一番上（v4.50）：＋予定・＋タスクを大きく、色分けはアイコンだけ */
-#daypop .dpacts.top{padding:2px 12px 8px;display:grid;grid-template-columns:1fr 1fr 1fr 44px;gap:6px;}
-#daypop .dpacts.top button{min-height:44px;font-size:13px;font-weight:600;border-radius:12px !important;white-space:nowrap;}
-#daypop .dpacts.top button.pri{background:var(--ink);color:#fff;border-color:var(--ink);}
-#daypop .dpacts.top button.ic{padding:0;font-size:16px;}
-#daypop .dpext{margin:0 12px 6px;padding:7px 10px;font-size:11.5px;font-weight:600;color:var(--ink);background:var(--ring);border-radius:10px !important;line-height:1.6;}
+:is(#daypop,.dlpage) .dpacts.top{padding:2px 12px 8px;display:grid;grid-template-columns:1fr 1fr 1fr 44px;gap:6px;}
+:is(#daypop,.dlpage) .dpacts.top button{min-height:44px;font-size:13px;font-weight:600;border-radius:12px !important;white-space:nowrap;}
+:is(#daypop,.dlpage) .dpacts.top button.pri{background:var(--ink);color:#fff;border-color:var(--ink);}
+:is(#daypop,.dlpage) .dpacts.top button.ic{padding:0;font-size:16px;}
+:is(#daypop,.dlpage) .dpext{margin:0 12px 6px;padding:7px 10px;font-size:11.5px;font-weight:600;color:var(--ink);background:var(--ring);border-radius:10px !important;line-height:1.6;}
 .dayhead .dpext{margin:6px 0 0;padding:6px 10px;font-size:12px;font-weight:600;background:var(--ring);border-radius:10px !important;display:inline-block;}
 .cell .marks .extb{font-size:10px;line-height:12px;}
 .wkhcell .wkext{font-size:9px;line-height:1;}
 .extsum{display:flex;gap:10px;flex-wrap:nowrap;overflow:hidden;padding:0 16px 6px;font-size:10.5px;color:var(--sub);white-space:nowrap;cursor:pointer;}
 .extsum b{color:var(--ink);}
-#daypop .dpsublab{font-size:10px;font-weight:700;color:var(--sub);padding:8px 2px 2px;letter-spacing:.08em;}
-#daypop .dpcsub{font-size:10.5px;font-weight:700;color:var(--sub);padding:8px 2px 0;}
-#daypop .dpcd.none{color:var(--sub);font-weight:600;}
-#daypop .dpcmore{display:block;width:100%;margin-top:5px;padding:9px;font-size:12px;color:var(--accent);border:1px dashed var(--line);border-radius:10px !important;background:var(--bg);}
-#daypop .dphint{text-align:center;font-size:10.5px;color:var(--sub);padding:0 0 10px;}
+:is(#daypop,.dlpage) .dpsublab{font-size:10px;font-weight:700;color:var(--sub);padding:8px 2px 2px;letter-spacing:.08em;}
+:is(#daypop,.dlpage) .dpcsub{font-size:10.5px;font-weight:700;color:var(--sub);padding:8px 2px 0;}
+:is(#daypop,.dlpage) .dpcd.none{color:var(--sub);font-weight:600;}
+:is(#daypop,.dlpage) .dpcmore{display:block;width:100%;margin-top:5px;padding:9px;font-size:12px;color:var(--accent);border:1px dashed var(--line);border-radius:10px !important;background:var(--bg);}
+:is(#daypop,.dlpage) .dphint{text-align:center;font-size:10.5px;color:var(--sub);padding:0 0 10px;}
 .evpoph{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;font-size:12.5px;line-height:1.3;}
 .evpoph b{font-weight:700;}
 .evpoph button{font-size:15px;flex:0 0 auto;}
@@ -501,7 +501,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .cev{position:relative;padding:5px 8px 6px;margin-bottom:4px;display:flex;flex-direction:column;gap:2px;border-radius:7px !important;}
 .cev.imp{font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.16);}
 /* 親子の色分け廃止後の「重要」＝色ではなく太字＋うっすら影で表現 */
-.tlev.imp,#daypop .dpev.imp{font-weight:700;box-shadow:0 1px 5px rgba(0,0,0,.18);}
+.tlev.imp,:is(#daypop,.dlpage) .dpev.imp{font-weight:700;box-shadow:0 1px 5px rgba(0,0,0,.18);}
 .wkev.imp{font-weight:800;box-shadow:0 1px 5px rgba(0,0,0,.2);}
 /* マークのみ表示：付箋（カラー帯）を出さず線画だけ */
 .cev.mkonly{background:none !important;border-left:none !important;box-shadow:none !important;padding:3px 8px 4px 2px;}
@@ -696,46 +696,46 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .titem.evrow .evtag{font-size:9.5px;padding:2px 7px;border-radius:999px !important;white-space:nowrap;align-self:center;}
 .titem.evrow .meta .evlate{color:var(--danger);font-weight:600;}
 /* 日付ポップの並び替え */
-#daypop .dpgrip{flex:0 0 auto;font-size:15px;font-weight:700;letter-spacing:-3px;opacity:.6;padding:10px 8px 10px 2px;margin:-10px 0 -10px -4px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
-#daypop .dpgrip:active{opacity:1;}
-#daypop .dpsort.dragging{user-select:none;-webkit-user-select:none;}
-#daypop .dpev.dpdragging{position:relative;z-index:5;box-shadow:0 8px 22px rgba(60,40,90,.22) !important;opacity:.96;}
-#daypop .dpev.dpdragging .dpgrip{opacity:1;cursor:grabbing;}
-#daypop .dpsort{display:flex;flex-direction:column;gap:6px;}
-#daypop .dpsorthint{font-size:10px;color:var(--sub);opacity:.8;padding:2px 2px 0;}
-#daypop .dptask{border:none;}
-#daypop .dptask .dpevt{font-weight:500;}
-#daypop .dpchk.round{border-radius:50% !important;}
+:is(#daypop,.dlpage) .dpgrip{flex:0 0 auto;font-size:15px;font-weight:700;letter-spacing:-3px;opacity:.6;padding:10px 8px 10px 2px;margin:-10px 0 -10px -4px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
+:is(#daypop,.dlpage) .dpgrip:active{opacity:1;}
+:is(#daypop,.dlpage) .dpsort.dragging{user-select:none;-webkit-user-select:none;}
+:is(#daypop,.dlpage) .dpev.dpdragging{position:relative;z-index:5;box-shadow:0 8px 22px rgba(60,40,90,.22) !important;opacity:.96;}
+:is(#daypop,.dlpage) .dpev.dpdragging .dpgrip{opacity:1;cursor:grabbing;}
+:is(#daypop,.dlpage) .dpsort{display:flex;flex-direction:column;gap:6px;}
+:is(#daypop,.dlpage) .dpsorthint{font-size:10px;color:var(--sub);opacity:.8;padding:2px 2px 0;}
+:is(#daypop,.dlpage) .dptask{border:none;}
+:is(#daypop,.dlpage) .dptask .dpevt{font-weight:500;}
+:is(#daypop,.dlpage) .dpchk.round{border-radius:50% !important;}
 /* その日より前の未完了タスク（日付ポップの下段） */
-#daypop .dpcarh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:700;color:var(--sub);padding:10px 2px 2px;border-top:1px dashed var(--line);margin-top:8px;}
-#daypop .dpcarsel{font-size:11px;padding:5px 10px;border:1px solid var(--line);border-radius:999px !important;color:var(--accent);background:var(--bg);font-weight:600;}
-#daypop .dpcarsel.on{background:var(--ink);color:#fff;border-color:var(--ink);}
-#daypop .dpcarry{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 4px 4px 8px;margin-top:5px;border:1px solid var(--line);border-radius:10px !important;cursor:pointer;background:var(--bg);}
-#daypop .dpcarry:active{background:var(--ring);}
-#daypop .dpcarry.sel{border-style:solid;border-color:var(--accent);background:var(--ring);}
-#daypop .dpcd{flex:0 0 auto;font-size:10.5px;color:var(--danger);font-weight:700;font-variant-numeric:tabular-nums;}
-#daypop .dpct{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#daypop .dpcgo{flex:0 0 auto;font-size:14px;color:var(--sub);font-weight:700;white-space:nowrap;padding:0 6px;}
-#daypop .dpcarry.open{border-style:solid;border-color:var(--accent);border-bottom-left-radius:0 !important;border-bottom-right-radius:0 !important;}
+:is(#daypop,.dlpage) .dpcarh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:700;color:var(--sub);padding:10px 2px 2px;border-top:1px dashed var(--line);margin-top:8px;}
+:is(#daypop,.dlpage) .dpcarsel{font-size:11px;padding:5px 10px;border:1px solid var(--line);border-radius:999px !important;color:var(--accent);background:var(--bg);font-weight:600;}
+:is(#daypop,.dlpage) .dpcarsel.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+:is(#daypop,.dlpage) .dpcarry{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 4px 4px 8px;margin-top:5px;border:1px solid var(--line);border-radius:10px !important;cursor:pointer;background:var(--bg);}
+:is(#daypop,.dlpage) .dpcarry:active{background:var(--ring);}
+:is(#daypop,.dlpage) .dpcarry.sel{border-style:solid;border-color:var(--accent);background:var(--ring);}
+:is(#daypop,.dlpage) .dpcd{flex:0 0 auto;font-size:10.5px;color:var(--danger);font-weight:700;font-variant-numeric:tabular-nums;}
+:is(#daypop,.dlpage) .dpct{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+:is(#daypop,.dlpage) .dpcgo{flex:0 0 auto;font-size:14px;color:var(--sub);font-weight:700;white-space:nowrap;padding:0 6px;}
+:is(#daypop,.dlpage) .dpcarry.open{border-style:solid;border-color:var(--accent);border-bottom-left-radius:0 !important;border-bottom-right-radius:0 !important;}
 #daypop.redraw .dpbox{animation:none;}
-#daypop .dpcdet{border:1px solid var(--accent);border-top:none;border-radius:0 0 10px 10px !important;padding:8px 10px 10px;background:var(--bg);}
-#daypop .dpcinfo{font-size:12px;color:var(--sub);line-height:1.5;}
-#daypop .dpcmemo{margin-top:4px;color:var(--ink);white-space:pre-wrap;word-break:break-word;}
-#daypop .dpcbtns{display:flex;gap:8px;margin-top:8px;}
-#daypop .dpcbtns button{min-height:40px;padding:0 12px;font-size:12.5px;border:1px solid var(--line);border-radius:10px !important;background:var(--bg);color:var(--ink);}
-#daypop .dpcbtns button.pri{flex:1;background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
+:is(#daypop,.dlpage) .dpcdet{border:1px solid var(--accent);border-top:none;border-radius:0 0 10px 10px !important;padding:8px 10px 10px;background:var(--bg);}
+:is(#daypop,.dlpage) .dpcinfo{font-size:12px;color:var(--sub);line-height:1.5;}
+:is(#daypop,.dlpage) .dpcmemo{margin-top:4px;color:var(--ink);white-space:pre-wrap;word-break:break-word;}
+:is(#daypop,.dlpage) .dpcbtns{display:flex;gap:8px;margin-top:8px;}
+:is(#daypop,.dlpage) .dpcbtns button{min-height:40px;padding:0 12px;font-size:12.5px;border:1px solid var(--line);border-radius:10px !important;background:var(--bg);color:var(--ink);}
+:is(#daypop,.dlpage) .dpcbtns button.pri{flex:1;background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
 /* その日のタスク行：タップで下にアクションを開く（v4.80） */
-#daypop .dpev.dptask.open{box-shadow:inset 0 0 0 1.5px var(--accent);}
-#daypop .dpact{display:flex;gap:6px;padding:4px 8px 8px;}
-#daypop .dpact{flex-wrap:wrap;}
-#daypop .dpact button{flex:1;min-height:38px;font-size:11.5px;white-space:nowrap;border:1px solid var(--line);border-radius:9px !important;background:var(--bg);color:var(--ink);}
-#daypop .dpact button.pri{background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
-#daypop .dpact .dpdanger{flex:0 0 46px;color:var(--danger);}
-#daypop .dpced{flex:0 0 auto;font-size:12px;padding:8px 8px;margin:-4px 0;background:none;border:none;color:var(--sub);}
-#daypop .dpcarbtns{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
-#daypop .dpcarbtns button{padding:11px;border:1px solid var(--line);border-radius:10px !important;font-size:13px;font-weight:600;background:var(--bg);}
-#daypop .dpcarbtns button.pri{background:var(--ink);color:#fff;border-color:var(--ink);}
-#daypop .dpcarbtns button[disabled]{opacity:.4;}
+:is(#daypop,.dlpage) .dpev.dptask.open{box-shadow:inset 0 0 0 1.5px var(--accent);}
+:is(#daypop,.dlpage) .dpact{display:flex;gap:6px;padding:4px 8px 8px;}
+:is(#daypop,.dlpage) .dpact{flex-wrap:wrap;}
+:is(#daypop,.dlpage) .dpact button{flex:1;min-height:38px;font-size:11.5px;white-space:nowrap;border:1px solid var(--line);border-radius:9px !important;background:var(--bg);color:var(--ink);}
+:is(#daypop,.dlpage) .dpact button.pri{background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
+:is(#daypop,.dlpage) .dpact .dpdanger{flex:0 0 46px;color:var(--danger);}
+:is(#daypop,.dlpage) .dpced{flex:0 0 auto;font-size:12px;padding:8px 8px;margin:-4px 0;background:none;border:none;color:var(--sub);}
+:is(#daypop,.dlpage) .dpcarbtns{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+:is(#daypop,.dlpage) .dpcarbtns button{padding:11px;border:1px solid var(--line);border-radius:10px !important;font-size:13px;font-weight:600;background:var(--bg);}
+:is(#daypop,.dlpage) .dpcarbtns button.pri{background:var(--ink);color:#fff;border-color:var(--ink);}
+:is(#daypop,.dlpage) .dpcarbtns button[disabled]{opacity:.4;}
 /* 週表示＝Googleカレンダー方式 */
 .wkcal{border-top:1px solid var(--line2);}
 .wkrow{display:flex;}
@@ -885,6 +885,15 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .emicons .ipall{font-size:11.5px;color:var(--accent);border-style:dashed;white-space:nowrap;}
 .seg.rmlead{display:flex;width:100%;margin:0;box-sizing:border-box;}
 .seg.rmlead button{flex:1;padding:7px 0;}
+/* 1日の一覧を画面に置くとき（日表示・タスクタブ・v5.00） */
+.dlpage{display:flex;flex-direction:column;gap:6px;padding:4px 12px 10px;}
+:is(#daypop,.dlpage) .dpev.dptask.nopaint{background:var(--card,#fff);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--tkc,var(--ink));box-shadow:none;}
+:is(#daypop,.dlpage) .dpev.dptask.nopaint.open{border-color:var(--accent);border-left-color:var(--tkc,var(--ink));}
+:is(#daypop,.dlpage) .dpactbr{flex-basis:100%;height:0;}
+.dlacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px 4px;}
+.dlacts button{min-height:44px;font-size:13.5px;font-weight:700;border-radius:12px !important;background:var(--ink);color:#fff;}
+.tsech small{font-weight:600;font-size:11px;color:var(--sub);letter-spacing:0;}
+.tsech .tsecadd{margin-left:auto;font-size:18px;line-height:1;color:var(--accent);padding:2px 8px;}
 /* 完了日をえらぶPOP（v4.90） */
 #pickpop{position:fixed;inset:0;background:rgba(21,23,26,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:14px;}
 #pickpop.show{display:flex;}
@@ -945,15 +954,15 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #calpage{will-change:transform;touch-action:pan-y;}
 /* 予定の完了（黒塗り＝タスク運用） */
 .cell .evdonen{font-size:8.5px;color:var(--sub);opacity:.8;line-height:1.3;font-variant-numeric:tabular-nums;}
-#daypop .dpchk{width:19px;height:19px;flex:0 0 19px;border:1.5px solid currentColor;border-radius:6px !important;opacity:.8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;background:none;color:inherit;box-sizing:border-box;position:relative;}
-#daypop .dpchk::after{content:'';position:absolute;inset:-10px;}/* 当たり判定を44px相当に */
-#daypop .dpdel{flex:0 0 auto;font-size:13px;opacity:.75;padding:8px 6px;margin:-8px -2px;background:none;border:none;color:inherit;position:relative;}
-#daypop .dpevt{flex:1;min-width:0;text-overflow:ellipsis;}
-#daypop .dpevrow{gap:7px;}
-#daypop .dpev.evdn{opacity:.55;}
-#daypop .dpev.evdn .dpevt{text-decoration:line-through;}
-#daypop .dpdones{font-size:10.5px;color:var(--sub);padding:4px 2px 0;font-weight:700;}
-#daypop .dpdones span{font-weight:400;opacity:.8;}
+:is(#daypop,.dlpage) .dpchk{width:19px;height:19px;flex:0 0 19px;border:1.5px solid currentColor;border-radius:6px !important;opacity:.8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;background:none;color:inherit;box-sizing:border-box;position:relative;}
+:is(#daypop,.dlpage) .dpchk::after{content:'';position:absolute;inset:-10px;}/* 当たり判定を44px相当に */
+:is(#daypop,.dlpage) .dpdel{flex:0 0 auto;font-size:13px;opacity:.75;padding:8px 6px;margin:-8px -2px;background:none;border:none;color:inherit;position:relative;}
+:is(#daypop,.dlpage) .dpevt{flex:1;min-width:0;text-overflow:ellipsis;}
+:is(#daypop,.dlpage) .dpevrow{gap:7px;}
+:is(#daypop,.dlpage) .dpev.evdn{opacity:.55;}
+:is(#daypop,.dlpage) .dpev.evdn .dpevt{text-decoration:line-through;}
+:is(#daypop,.dlpage) .dpdones{font-size:10.5px;color:var(--sub);padding:4px 2px 0;font-weight:700;}
+:is(#daypop,.dlpage) .dpdones span{font-weight:400;opacity:.8;}
 .dcev .evchk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.5px solid currentColor;border-radius:5px !important;margin-right:7px;vertical-align:-3px;font-size:11px;font-weight:700;opacity:.75;cursor:pointer;position:relative;}
 .dcev .evchk::after{content:'';position:absolute;inset:-12px;}
 .dcev.evdn{opacity:.55;}
@@ -1015,11 +1024,11 @@ body.inpip{margin:0;background:var(--bg);color:var(--ink);overflow-y:auto;}
 .mini .dporg{display:inline-block;width:12px;height:12px;border-radius:3px !important;box-shadow:inset 0 0 0 2px var(--accent);vertical-align:-1px;}
 /* 繰り返し範囲えらびの説明つきボタン */
 .scopebtns button i{display:block;font-style:normal;font-size:10.5px;color:var(--sub);margin-top:3px;font-weight:400;}
-#daypop .dpchk,.dcev .evchk{transition:transform .12s ease;}
-#daypop .dpchk:active,.dcev .evchk:active{transform:scale(1.28);}
+:is(#daypop,.dlpage) .dpchk,.dcev .evchk{transition:transform .12s ease;}
+:is(#daypop,.dlpage) .dpchk:active,.dcev .evchk:active{transform:scale(1.28);}
 .evland{animation:evlandK .34s cubic-bezier(.34,1.56,.64,1);}
 @keyframes evlandK{0%{transform:scale(.92);opacity:.4;}60%{transform:scale(1.03);}100%{transform:scale(1);opacity:1;}}
-@media (prefers-reduced-motion: reduce){.evland{animation:none;}#daypop .dpchk,.dcev .evchk{transition:none;}}
+@media (prefers-reduced-motion: reduce){.evland{animation:none;}:is(#daypop,.dlpage) .dpchk,.dcev .evchk{transition:none;}}
 /* 長押しシートの優先度ボタン */
 #colorSheet .sw.prio button{font-size:13px;font-weight:600;align-items:center;padding-bottom:0;color:var(--ink);}
 #colorSheet .sw.prio button.on{border:2px solid var(--ink);font-weight:800;}
@@ -1266,7 +1275,7 @@ body.swiping .tchkr:active,body.swiping .ditem:active,body.swiping .titem:active
 @keyframes lpFire{0%{transform:scale(1);}42%{transform:scale(.962);}100%{transform:scale(1);}}
 .lpfire{animation:lpFire .24s ease-out;}
 body.swiping .lpress{animation:none;}
-#daypop .dpev:active,#daypop .dpevrow:active{background:var(--line2);}
+:is(#daypop,.dlpage) .dpev:active,:is(#daypop,.dlpage) .dpevrow:active{background:var(--line2);}
 #colorSheet .actsheet button:active{background:var(--line2);}
 /* 日ビューの中身も横スワイプがテキスト選択に奪われないよう抑止 */
 .daycols,.daycol,.dcev,.cev,.drec,.dch,.dayhead,.pnote,.pnline{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
@@ -1720,7 +1729,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.90';
+const APP_VERSION='v5.00';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -4343,32 +4352,30 @@ function evTaskRow(e,occ){occ=typeof occ==='string'?occ:e.date;const t=todayStr(
     <div class="body"><div class="tt ${dn?'done':''}">${esc(evTitle(e))}${e.repeat?`<span class="repb">🔁${esc(evRepText(e))}</span>`:''}</div>
       <div class="meta"><span class="${late?'evlate':''}">📅 ${fmtDateJa(occ)}${evSpan(e)?'〜':''}${e.start?' '+e.start:''}${late?'（すぎています）':''}</span>${e.groupId&&S.groups.some(g=>g.id===e.groupId)?`<span>${esc(group(e.groupId).name)}</span>`:''}</div></div>
     <div class="right"><span class="evtag" style="background:${evColor(e)};color:${evTextColor(evColor(e))}">✔ カレンダー</span></div></div>`;}
-function renderTasks(){
-  let list=S.tasks.filter(x=>taskGroupMatch(x));
-  let tevs=S.events.filter(e=>e.isTask&&(!taskGroupSel||taskGroupSel==='__none'?(taskGroupSel==='__none'?!e.groupId:true):(()=>{const ids=visibleGroups(new Set([taskGroupSel]));return !!(e.groupId&&ids&&ids.has(e.groupId));})()));
-  if(taskQuery.trim()){const q=taskQuery.trim().toLowerCase();
-    list=list.filter(x=>(x.title||'').toLowerCase().includes(q)||(x.memo||'').toLowerCase().includes(q));
-    tevs=tevs.filter(e=>(e.title||'').toLowerCase().includes(q)||(e.memo||'').toLowerCase().includes(q));}
-  // 単発はその日、繰り返しは「いま片付けるべき回」を1行（完了すると次の回に進む）
-  const openEvs=tevs.map(e=>({e,occ:e.repeat?repNextOpenOcc(e):e.date})).filter(o=>o.occ&&(o.e.repeat||!evDone(o.e,o.occ)))
-    .sort((a,b)=>a.occ.localeCompare(b.occ));
-  const closedEvs=tevs.filter(e=>!e.repeat&&evDone(e,e.date)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const open=list.filter(x=>x.status!=='done'), closed=list.filter(x=>x.status==='done');
-  // 区分の中の並び：手動で決めた順（torder）→ 決めていないものは新しく入れた順
-  const inSec=(a,b)=>((a.torder??1e9)-(b.torder??1e9))
-    ||(pickedTime(b)-pickedTime(a))
-    ||String(b.createdAt||'').localeCompare(String(a.createdAt||''))
-    ||((b.order||0)-(a.order||0));
-  const body=WHENS.map(([w,label])=>{
-    const ts=open.filter(x=>taskWhen(x)===w).sort(inSec);
-    const es=openEvs.filter(o=>evTaskWhen(o.e,o.occ)===w);
-    return `<div class="tsec" data-when="${w}">
-      <div class="tsech">${label}<span class="n">${ts.length+es.length}</span></div>
-      <div class="tsecb">${(ts.length||es.length)?ts.map(x=>taskRow(x,{tabAction:true,drag:true})).join('')+es.map(o=>evTaskRow(o.e,o.occ)).join('')
-        :'<div class="tsecempty">なし</div>'}</div></div>`;}).join('');
+function renderTasks(){ // v5.00：今日・明日は日付ポップと同じ一覧（予定も・同じ並び）。タスクは塗らない
+  const q=taskQuery.trim().toLowerCase();
+  const qm=o=>!q||(o.title||'').toLowerCase().includes(q)||(o.memo||'').toLowerCase().includes(q);
+  const tf=x=>taskGroupMatch(x)&&qm(x);
+  const ef=e=>qm(e)&&(!taskGroupSel?true:taskGroupSel==='__none'?!e.groupId:(()=>{const ids=visibleGroups(new Set([taskGroupSel]));return !!(e.groupId&&ids&&ids.has(e.groupId));})());
+  const t=todayStr(),tm=tomorrowStr();
+  const open=S.tasks.filter(x=>x.status!=='done'&&tf(x));
+  const inSec=(a,b)=>((a.torder??1e9)-(b.torder??1e9))||(pickedTime(b)-pickedTime(a))||String(b.createdAt||'').localeCompare(String(a.createdAt||''))||((b.order||0)-(a.order||0));
+  const undP=open.filter(x=>!x.today&&x.priority===1).sort(inSec),undN=open.filter(x=>!x.today&&x.priority!==1).sort(inSec);
+  const later=open.filter(x=>x.today&&x.today>tm).sort((a,b)=>a.today.localeCompare(b.today)||inSec(a,b));
+  const nToday=open.filter(x=>x.today&&x.today<=t).length,nTm=open.filter(x=>x.today===tm).length;
+  const dl=ds=>{const d=parseDs(ds);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;};
+  const sec=(cls,label,n,inner,add)=>`<div class="tsec ${cls}"><div class="tsech">${label}<span class="n">${n}</span>${add||''}</div><div class="tsecb">${inner}</div></div>`;
+  const add=ds=>`<button class="tsecadd" onclick="taskModalWithDue('${ds}')" aria-label="タスクを追加">＋</button>`;
+  const undRows=(arr,key)=>arr.length?`<div class="dlpage"><div class="dpsort" data-torder="${key}">${arr.map(x=>dlTaskRow(x,'','tab',{acts:'und',lab:x.due?'期限 '+fmtDateJa(x.due):''})).join('')}</div></div>`:'<div class="tsecempty">なし</div>';
+  const body=sec('tday',`☀ 今日 <small>${dl(t)}</small>`,nToday,`<div class="dlpage dlwrap" data-d="${t}">${dayListHtml(t,'tab',{tf,ef})}</div>`,add(t))
+    +sec('ttm',`➡ 明日 <small>${dl(tm)}</small>`,nTm,`<div class="dlpage dlwrap" data-d="${tm}">${dayListHtml(tm,'tab2',{tf,ef})}</div>`,add(tm))
+    +sec('tpri','★ 優先',undP.length,undRows(undP,'p'))
+    +sec('tnor','通常',undN.length,undRows(undN,'n'))
+    +(later.length?sec('tlater','📅 これから',later.length,`<div class="dlpage">${later.map(x=>dlTaskRow(x,'','tab',{acts:'und',nosort:1,lab:fmtDateJa(x.today)})).join('')}</div>`):'');
+  const closed=S.tasks.filter(x=>x.status==='done'&&tf(x)&&x.doneAt!==t).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
   const total=open.reduce((s,x)=>s+(+x.estMin||0),0);
   return `
-  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length+openEvs.length}件${total?' ・ 合計'+fmtMin(total):''}${pipBtn()}${searchBtn()}</span></div>
+  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件${total?' ・ 合計'+fmtMin(total):''}${pipBtn()}${searchBtn()}</span></div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   <div class="tgfil">${taskGroupFilterHtml()}</div>
   ${rvHintHtml()}
@@ -4378,9 +4385,9 @@ function renderTasks(){
     <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ タスクを追加</button>
   </div>
   ${body}
-  <div class="mini" style="padding:8px 16px 0;">行を<b>長押しすると持ち上がり</b>、そのまま指を動かして<b>好きな場所・別の区分へ</b>運べます。</div>
-  ${(closed.length||closedEvs.length)?`<div class="sec-h">完了済み（${closed.length+closedEvs.length}）${closed.length?`<button class="act" onclick="clearDone()">完了を一括削除</button>`:''}</div>
-    ${closed.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,30).map(x=>taskRow(x)).join('')}${closedEvs.slice(0,20).map(e=>evTaskRow(e,e.date)).join('')}`:''}
+  <div class="mini" style="padding:8px 16px 0;">行をタップすると<b>できること</b>が開きます。<b>⋮⋮</b> を押したまま上下で並び替え（今日・明日の並びは<b>月カレンダーと同じ</b>順番です）。</div>
+  ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act" onclick="clearDone()">完了を一括削除</button></div>
+    <div class="dlpage">${closed.slice(0,30).map(x=>dlDoneTaskRow(x,x.doneAt||t,'tab')).join('')}</div>`:''}
   <div style="height:60px;"></div>`;
 }
 /* 4つの箱の操作 */
@@ -5306,7 +5313,7 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
     let st=`left:calc(${g.c0} * 100% / 7 + 1px);width:calc(${g.c1-g.c0+1} * 100% / 7 - 2px);top:calc(var(--mtop) + ${g.lane} * var(--mbh));`;
     let cls='mbar'+(g.hl?' hl':'')+(g.hr?' hr':'')+(e.important?' imp':'')+(g.dn?' evdn':'');
     if(mo||nf){cls+=' plain';st+=`color:${evLine(e)};border-color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
-    const tap=opts.tap?(g.task?` onclick="event.stopPropagation();taskModal('${e.id}')"`:` onclick="event.stopPropagation();eventTap('${e.id}','${g.os}',event)"`):'';
+    const tap=opts.tap?(g.task?` onclick="event.stopPropagation();wkTaskOpen('${e.id}','${g.os<todayStr()&&todayStr()<=g.task.endDate?todayStr():g.os}')"`:` onclick="event.stopPropagation();eventTap('${e.id}','${g.os}',event)"`):'';
     return `<div class="${cls}" style="${st}"${tap}>${g.hl?'':'<i class="mcont">‹</i>'}${g.task?(tkMk(e)||'<i class="evtk">✔</i>')+esc(e.title):evLabel(e)}${g.hr?'':'<i class="mcont r">›</i>'}</div>`;}).join('');
   return {shown:cap,hid,spacer:cap?`<div class="mlanes" style="height:calc(${cap} * var(--mbh))"></div>`:'',
     html:bars?`<div class="mbars${opts.tap?' tap':''}">${bars}</div>`:''};}
@@ -5400,7 +5407,7 @@ function renderCal(){
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}',event)">${esc(evTitle(e))}</span>`),
-        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();taskModal('${x.id}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;})];
+        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();wkTaskOpen('${x.id}','${dd.dstr}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;})];
       // 月で付けた「その日の色」を週の終日欄にも反映（編集は月カレンダーだけ）
       const dayBg=S.dayColors[dd.dstr]!==undefined?PASTELS[S.dayColors[dd.dstr]].c:'';
       return `<div class="wkad${dayBg?' hascol':''}${dd.dstr===todayS?' today':''}${dd.hol||dd.dow===0?' sun':''}${dd.dow===6?' sat':''}${ci%2?' alt':''}" ${dayBg?`style="background:${dayBg}"`:''} onclick="eventModal(null,'${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
@@ -5410,7 +5417,7 @@ function renderCal(){
       const wkItems=[...dd.timed,...dd.tt.map(o=>({__t:o.x,__sid:o.sl?o.sl.id:'',start:min2hm(o.s),end:min2hm(o.e)}))];
       const blocks=weekLayout(wkItems,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const w=100/o.lanes,l=o.lane*w;
         if(e.__t){const tc=taskFillOf(e.__t);
-          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">${tkMk(e.__t)||'✔ '}${esc(e.__t.title)}</div></div>`;}
+          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskOpen('${e.__t.id}','${dd.dstr}')"><div class="wkevt">${tkMk(e.__t)||'✔ '}${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
         let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
         if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
@@ -5628,7 +5635,7 @@ function doneDateRender(){const x=S.tasks.find(v=>v.id===_pk.id);if(!x)return;
 function pkPick(ds,jump){_pk.sel=ds;if(jump){const d=parseDs(ds);_pk.y=d.getFullYear();_pk.x=d.getMonth();}doneDateRender();}
 function pkNav(k){_pk.x+=k;if(_pk.x<0){_pk.x=11;_pk.y--;}if(_pk.x>11){_pk.x=0;_pk.y++;}doneDateRender();}
 function pickpopClose(){$('#pickpop')?.classList.remove('show');}
-function doneDateOk(){const {id,sel,ret}=_pk;pickpopClose();_dpActOpen='';_carryOpen='';completeTaskOn(id,sel);if(ret)openDayPopup(ret);}
+function doneDateOk(){const {id,sel}=_pk;pickpopClose();_dpActOpen='';_carryOpen='';completeTaskOn(id,sel);dlRedraw();}
 /* 完了＝このタスクはもう出さない */
 function fullyCompleteTask(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo();
   x.status='done';x.doneAt=todayStr();x.doneMin=curMin();
@@ -5678,28 +5685,9 @@ function routineUndoneTap(id,anchor,ev){const r=S.routines.find(v=>v.id===id);if
     <button onclick="cpClose();delRoutine('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
     <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_rundo',rowSel:'.ritem[data-lp^="r_"],.ditem[data-lp^="r_"]'});}
-function dayScheduleHtml(dstr){
-  const evs=eventsOn(dstr);
-  const wake=dstr===todayStr()?dayWake(dstr):S.settings.wakeDef;
-  const dAt=(S.dayLog[dstr]||{}).at||{}; // 時間を決めたタスクは時刻順に上へ
-  const dtasks=S.tasks.filter(x=>x.due===dstr||x.today===dstr).sort((a,b)=>(a.status==='done')-(b.status==='done')
-    ||((dAt['t_'+a.id]??99999)-(dAt['t_'+b.id]??99999))||a.priority-b.priority);
-  const evsPlan=evs.filter(e=>!e.isTask),evsTask=evs.filter(e=>e.isTask);
-  const tl=scheduleListHtml(evsPlan,wake,dstr);
-  const tke=evsTask.map(e=>{const dn=evDone(e,dstr);return `<div class="dtask evtask${dn?' done':''}" data-ev="${e.id}">
-    <div class="cb" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${dn?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
-    <div class="dtb" onclick="eventTap('${e.id}','${dstr}',event)"><div class="dtn">${e.start?`<b class="dtat">${e.start}</b> `:''}${esc(evTitle(e))}${e.repeat?' 🔁':''}</div>
-    <div class="dtm"><span class="gmark" style="background:${evColor(e)}"></span> カレンダーのタスク${evSpan(e)?'・'+evDayTag(e,dstr):''}</div></div></div>`;}).join('');
-  const tk=dtasks.map(x=>`<div class="dtask ${x.status==='done'?'done':''}" data-lp="t_${x.id}">
-    <div class="cb" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
-    <div class="dtb" onclick="dayTaskTap('${x.id}',event)"><div class="dtn">${dAt['t_'+x.id]!=null&&x.status!=='done'?`<b class="dtat">${min2hm(dAt['t_'+x.id])}</b> `:''}${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${repBadgeT(x)}</div>
-    <div class="dtm"><span class="gmark" style="background:${taskLineC(x)||'var(--line2)'}"></span>${x.estMin?' '+fmtMin(x.estMin):''}${x.due===dstr?' ・期限':''}${x.status==='wait'?' ・相手待ち':''}${x.status==='done'?' ・'+doneLabel(x,dstr):''}</div></div></div>`).join('');
-  return `<div class="daycols">
-    <div class="daycol"><div class="dch"><b>予定</b><button onclick="eventModal(null,'${dstr}')">＋</button></div>
-      ${evsPlan.length?tl:'<div class="dempty">予定なし</div>'}</div>
-    <div class="daycol"><div class="dch"><b>タスク</b><span style="display:flex;gap:8px;align-items:center;"><button onclick="switchView('tasks')" style="font-size:11px;">一覧▸</button><button onclick="taskModalWithDue('${dstr}')">＋</button></span></div>
-      ${(evsTask.length||dtasks.length)?tke+tk:'<div class="dempty">タスクなし</div>'}</div>
-  </div>${dayRecordHtml(dstr)}`;}
+function dayScheduleHtml(dstr){ // v5.00：日付ポップと同じ1列（予定→タスク→完了→過ぎている・日付なし）
+  return `<div class="dlacts"><button onclick="eventModal(null,'${dstr}')">＋ 予定</button><button onclick="taskModalWithDue('${dstr}')">＋ タスク</button></div>
+  <div class="dlpage dlwrap" data-d="${dstr}">${dayListHtml(dstr,'day')}</div>${dayRecordHtml(dstr)}`;}
 /* その日の記録・流れ（予定・記録・完了タスク/ルーティンを時系列で） */
 function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=dstr===todayStr();
   eventsOn(dstr).forEach(e=>{if(e.start)items.push({at:hm2min(e.start),icon:'📅',text:evTitle(e),sub:evTimeText(e),c:evColor(e)});});
@@ -5718,39 +5706,116 @@ async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
   if(type==='r'){undoneRoutine(id,dstr);return;}
   const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr)undoneTask(id);}
 /* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
-function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayTasksOn(dstr);
-  // 同じ日を描き直すとき（移動・「ほか◯件」・選択）は、スクロール位置をそのまま保つ
-  const _pe=$('#daypop'),_same=!!(_pe&&_pe.classList.contains('show')&&_pe.dataset.d===dstr),_keepY=_same?(_pe.querySelector('.dpbox')?.scrollTop||0):0;
-  const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
-  // 開いた日より前で過ぎてしまったタスク＋日付の決まっていないタスク（タップでこの日にやる／まとめて動かす）
-  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};_carryOpen='';_dpActOpen='';}
-  const cf=carriedFor(dstr);
+/* ===== 1日の一覧（v5.00）：日付ポップ・日表示・タスクタブで同じ行・同じ並び（S.dayOrder）・同じ操作 =====
+   ctx：'pop'＝月の日付ポップ／'day'＝日表示／'tab'＝タスクタブの今日（過ぎたタスク枠あり）／'tab2'＝タスクタブの明日
+   o.tf／o.ef：タスク・予定のしぼり込み（タスクタブの検索・グループ） */
+function dlRedraw(){const p=$('#daypop');if(p&&p.classList.contains('show'))openDayPopup(p.dataset.d);else render();}
+function dlPre(dstr,ctx){return ctx==='pop'?`_dpReturn='${dstr}';closeDayPopup();`:'';} // ポップから編集へ行くときは、終わったらポップへ戻す
+function dlEvRow(e,dstr,ctx,done){const pre=dlPre(dstr,ctx);const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e);
+  const tc=(mo||nf)?evLine(e):evTextColor(bg);
+  const st=(mo||nf)?`color:${tc};`:`background:${bg};color:${tc};`;
+  const sortable=!done&&!evSpan(e);
+  return `<div class="dpev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}${done?' evdn':''}${evSpan(e)?' dpspan':''}" data-ev="${e.id}"${sortable?` data-tok="e_${e.id}"`:''} style="${st}" onpointerdown="event.stopPropagation()">
+    <div class="dpevrow" onclick="${pre}eventModal('${e.id}',null,null,'${dstr}')">
+      ${sortable?`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`:''}
+      <span class="dpchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>
+      <span class="dpevt">${evLabel(e)}</span><span class="dpevm">${evSpan(e)?evDayTag(e,dstr):evTimeText(e)}</span>
+      <button class="dpdel" onclick="event.stopPropagation();${pre}delEvent('${e.id}','${dstr}')">🗑</button></div>
+    ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}
+/* タスクの行：ポップ・日表示は塗り、タスクタブは塗らない（左に色の線）。タップ＝まず下にアクション（いきなり編集しない） */
+function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='t_'+x.id;const tb=taskFillOf(x);
+  const paint=!String(ctx).startsWith('tab');
+  const st=paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`;
+  let btns;
+  if(o.acts==='und'){ // 日付なし・先の日付（タスクタブ）
+    btns=`<button type="button" class="pri" onclick="dlSetWhen('${x.id}','today')">☀ 今日やる</button>
+      <button type="button" onclick="dlSetWhen('${x.id}','tomorrow')">➡ 明日やる</button>
+      ${!x.today?`<button type="button" onclick="dlSetWhen('${x.id}','${x.priority===1?'normal':'priority'}')">${x.priority===1?'通常へ':'★ 優先へ'}</button>`:''}
+      <span class="dpactbr"></span>
+      <button type="button" onclick="_dpActOpen='';completeTaskOn('${x.id}',todayStr());dlRedraw()">✅ 完了</button>
+      <button type="button" onclick="doneDatePop('${x.id}','')">📅 日付を選んで完了</button>
+      <button type="button" onclick="taskModal('${x.id}')">✎ 編集</button>
+      <button type="button" class="dpdanger" onclick="delTask('${x.id}')">🗑</button>`;}
+  else btns=`<button type="button" class="pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ この日で完了</button>
+      <button type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 日付を選ぶ</button>
+      <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
+      <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}')">🗑</button>`;
+  const chk=ctx==='pop'?`closeDayPopup();taskCompleteTap('${x.id}')`:`taskCompleteTap('${x.id}',this.closest('.dpev'))`;
+  return `<div class="dpev dptask${paint?'':' nopaint'}${op?' open':''}" data-tok="t_${x.id}" style="${st}" onpointerdown="event.stopPropagation()">
+    <div class="dpevrow" onclick="dpTaskTap('t_${x.id}')">
+      ${o.nosort?'':`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`}
+      <span class="dpchk round" onclick="event.stopPropagation();${chk}"></span>
+      <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.repeat?' 🔁':''}${x.rel?' 🔗':''}</span><span class="dpevm">${op?'▾':(o.lab||'')}</span></div>
+    ${op?`<div class="dpact">${btns}</div>`:''}</div>`;}
+/* その日に終わったタスク（☑で未完了に戻す） */
+function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
+  return `<div class="dpev dptask evdn${paint?'':' nopaint'}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
+    <div class="dpevrow" onclick="${pre}taskModal('${x.id}')">
+      <span class="dpchk round" onclick="event.stopPropagation();undoneTask('${x.id}');dlRedraw()">✓</span>
+      <span class="dpevt">${tkMk(x)}${esc(x.title)}</span><span class="dpevm">完了${ctx==='tab'||ctx==='tab2'?'':''}</span></div></div>`;}
+function dlSetWhen(id,w){_dpActOpen='';moveTaskWhen(id,w);}
+function dayListHtml(dstr,ctx,o={}){const tf=o.tf||(()=>true),ef=o.ef||(()=>true);
+  const evs=eventsOn(dstr).filter(ef);
+  const d=parseDs(dstr);const mks=ctx==='day'?[]:marksOn(d.getMonth()+1,d.getDate());
+  const und=evs.filter(e=>!evDone(e,dstr)),dn=evs.filter(e=>evDone(e,dstr));
+  const tdn=S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr&&tf(x));
+  const dts=dayTasksOn(dstr).filter(q=>tf(q.x));
+  // 連日のタスク（やる日〜終わりの日）もその日の一覧に出す
+  const spanT=S.tasks.filter(x=>x.status!=='done'&&tSpan(x)&&x.today<=dstr&&dstr<=x.endDate&&tf(x));
+  const isTab=String(ctx).startsWith('tab');
+  const lab=q=>q.kind==='due'?'期限':q.kind==='time'?q.time:(isTab?'':'この日のタスク');
+  const spans=und.filter(e=>evSpan(e));
+  const plans=sortByDayOrder(dstr,und.filter(e=>!evSpan(e)&&!e.isTask).map(e=>({tok:'e_'+e.id,h:()=>dlEvRow(e,dstr,ctx,false)})),v=>v.tok);
+  const tasks=sortByDayOrder(dstr,[...und.filter(e=>!evSpan(e)&&e.isTask).map(e=>({tok:'e_'+e.id,h:()=>dlEvRow(e,dstr,ctx,false)})),
+    ...dts.map(q=>({tok:'t_'+q.x.id,h:()=>dlTaskRow(q.x,dstr,ctx,{lab:lab(q)})})),
+    ...spanT.map(x=>({tok:'t_'+x.id,h:()=>dlTaskRow(x,dstr,ctx,{lab:`〜${fmtDateJa(x.endDate)}`})}))],v=>v.tok);
+  const n=plans.length+tasks.length;
+  const empty=ctx==='tab'?'今日の予定・タスクはありません':ctx==='tab2'?'予定・タスクはありません':'予定はありません';
+  let h=mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')
+    +spans.map(e=>dlEvRow(e,dstr,ctx,false)).join('')
+    +(plans.length?`<div class="dpsort">${plans.map(v=>v.h()).join('')}</div>`:'')
+    +(tasks.length?`${plans.length||spans.length?'<div class="dpsublab">タスク</div>':''}<div class="dpsort">${tasks.map(v=>v.h()).join('')}</div>`:'')
+    +(n>1&&ctx!=='tab2'?`<div class="dpsorthint">⋮⋮ を押したまま上下で並び替え（予定は予定、タスクはタスクの中で。${isTab?'月カレンダー・日付ポップと同じ順番になります':'月のセル・タスクタブも同じ順番になります'}）</div>`:'')
+    +(n||mks.length||dn.length||spans.length||tdn.length?'':`<div class="dpempty">${empty}</div>`)
+    +((dn.length||tdn.length)?`<div class="dpdones">✓ 完了（${dn.length+tdn.length}）　<span>☑で戻す</span></div>`+dn.map(e=>dlEvRow(e,dstr,ctx,true)).join('')+tdn.map(x=>dlDoneTaskRow(x,dstr,ctx)).join(''):'');
+  if(ctx!=='tab2')h+=dlCarryHtml(dstr,ctx,tf);
+  return h;}
+/* 過ぎているタスク・日付なしのタスク（タップで詳しく→この日にやる／完了）。タスクタブは「日付なし」を下の区分で出すので過ぎた分だけ */
+function dlCarryHtml(dstr,ctx,tf){const pre=dlPre(dstr,ctx);const d=parseDs(dstr);const m=d.getMonth()+1,dd=d.getDate();
+  const cf=carriedFor(dstr);const okT=it=>it.kind!=='task'||tf(S.tasks.find(v=>v.id===it.id)||{});
+  cf.late=cf.late.filter(okT);cf.none=String(ctx).startsWith('tab')?[]:cf.none.filter(okT);
   const crow=it=>{const sel=_moveSel&&_moveSel.has(it.tok);
     const op=!_dpMoveMode&&_carryOpen===it.tok;
     const x=it.kind==='task'?S.tasks.find(v=>v.id===it.id):null;
-    const edit=`_dpReturn='${dstr}';closeDayPopup();${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}`;
-    // タップ＝詳しく（開く・閉じる）。動かすのは中の「この日にやる」から（確認あり）＝うっかり動かない
+    const edit=`${pre}${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}`;
     return `<div class="dpcarry${sel?' sel':''}${op?' open':''}" data-ev="${it.id}" onpointerdown="event.stopPropagation()" onclick="${_dpMoveMode?`dpMoveTgl('${it.tok}','${dstr}')`:`dpCarryOpen('${it.tok}','${dstr}')`}">
       ${_dpMoveMode?`<span class="dpchk${sel?' sel':''}">${sel?'✓':''}</span>`:''}
-      <span class="dpcd${it.date?'':' none'}">${it.date?fmtDateJa(it.date):'日付なし'}</span><span class="dpct">${it.kind==='task'?'':'<i class="evtk">✔</i>'}${esc(it.title)}${it.kind==='rep'?' 🔁':''}</span>
+      <span class="dpcd${it.date?'':' none'}">${it.date?fmtDateJa(it.date):'日付なし'}</span><span class="dpct">${it.kind==='task'?tkMk(x):'<i class="evtk">✔</i>'}${esc(it.title)}${it.kind==='rep'?' 🔁':''}</span>
       ${_dpMoveMode?'':`<span class="dpcgo">${op?'▾':'›'}</span>`}</div>
     ${op?`<div class="dpcdet" onpointerdown="event.stopPropagation()">
       <div class="dpcinfo">${it.date?`${it.kind==='task'&&x&&!x.today&&x.due?'期限':'やる日'}：${fmtDateJa(it.date)}`:'日付：なし'}${x&&x.memo?`<div class="dpcmemo">${esc(x.memo)}</div>`:''}</div>
       <div class="dpcbtns"><button class="pri" onclick="dpCarryMove('${it.tok}','${dstr}')">→ この日（${fmtDateJa(dstr)}）にやる</button>
         <button onclick="${edit}">✎ 編集</button></div>
-      ${it.kind==='task'?`<div class="dpcbtns"><button onclick="_carryOpen='';completeTaskOn('${it.id}','${it.date||dstr}');openDayPopup('${dstr}')">✅ ${it.date?fmtDateJa(it.date):'この日'}で完了</button>
-        <button onclick="doneDatePop('${it.id}','${it.date||dstr}','${dstr}')">📅 日付を選んで完了</button></div>`:''}</div>`:''}`;};
-  const cgroup=(key,title,list)=>{if(!list.length)return '';const open=key==='late'||_carryMore[key]||list.length<=5;/* 過ぎているタスクは常に全件 */const shown=open?list:list.slice(0,5);
+      ${it.kind==='task'?`<div class="dpcbtns"><button onclick="_carryOpen='';completeTaskOn('${it.id}','${it.date||dstr}');dlRedraw()">✅ ${it.date?fmtDateJa(it.date):'この日'}で完了</button>
+        <button onclick="doneDatePop('${it.id}','${it.date||dstr}')">📅 日付を選んで完了</button></div>`:''}</div>`:''}`;};
+  const cgroup=(key,title,list)=>{if(!list.length)return '';const open=key==='late'||_carryMore[key]||list.length<=5;const shown=open?list:list.slice(0,5);
     return `<div class="dpcsub">${title}（${list.length}）</div>${shown.map(crow).join('')}
-      ${open?'':`<button class="dpcmore" onpointerdown="event.stopPropagation()" onclick="_carryMore.${key}=true;openDayPopup('${dstr}')">ほか${list.length-5}件を見る</button>`}`;};
-  const cN=cf.late.length+cf.none.length;
-  const carryHtml=cN?`<div class="dpcarh">まだ終わっていないタスク
+      ${open?'':`<button class="dpcmore" onpointerdown="event.stopPropagation()" onclick="_carryMore.${key}=true;dlRedraw()">ほか${list.length-5}件を見る</button>`}`;};
+  if(!(cf.late.length+cf.none.length))return '';
+  return `<div class="dpcarh">${String(ctx).startsWith('tab')?'前の日から残っているタスク':'まだ終わっていないタスク'}
       <button onpointerdown="event.stopPropagation()" class="dpcarsel${_dpMoveMode?' on':''}" onclick="dpMoveToggleMode('${dstr}')">${_dpMoveMode?'✕ やめる':'まとめて動かす'}</button></div>
     ${cgroup('late','⏰ 過ぎているタスク',cf.late)}${cgroup('none','📋 日付が決まっていないタスク',cf.none)}
     ${_dpMoveMode?`<div class="dpcarbtns">
       <button class="pri" ${_moveSel&&_moveSel.size?'':'disabled'} onclick="moveTasksTo('${dstr}');closeDayPopup()">✓ この日（${m}/${dd}）にまとめて${_moveSel&&_moveSel.size?`（${_moveSel.size}件）`:''}</button>
-      <button ${_moveSel&&_moveSel.size?'':'disabled'} onclick="dpMovePickDate()">📅 カレンダーで日付をえらぶ</button></div>`
-    :''}`:'';
+      ${ctx==='pop'?`<button ${_moveSel&&_moveSel.size?'':'disabled'} onclick="dpMovePickDate()">📅 カレンダーで日付をえらぶ</button>`:''}</div>`
+    :''}`;}
+/* 月の日付ポップ：中身は dayListHtml と共通。opt.act＝開いたときにアクションを開いておくタスク（週カレンダーから） */
+function openDayPopup(dstr,opt){clearPrime();
+  // 同じ日を描き直すとき（移動・「ほか◯件」・選択）は、スクロール位置をそのまま保つ
+  const _pe=$('#daypop'),_same=!!(_pe&&_pe.classList.contains('show')&&_pe.dataset.d===dstr),_keepY=_same?(_pe.querySelector('.dpbox')?.scrollTop||0):0;
+  const d=parseDs(dstr);const m=d.getMonth()+1,dd=d.getDate();
+  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};_carryOpen='';_dpActOpen='';}
+  if(opt&&opt.act)_dpActOpen=opt.act;
   let el=$('#daypop');if(!el){el=document.createElement('div');el.id='daypop';document.body.appendChild(el);}
   el.dataset.d=dstr;el.classList.toggle('redraw',_same); // 同じ日の描き直しは、ポンと出る動きをしない
   el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
@@ -5761,57 +5826,22 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 日を開く</button>
       <button class="ic" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')" aria-label="色分け">🎨</button></div>
     ${extDayLine(dstr)}
-    <div class="dpbody">
-      ${mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')}
-      ${(()=>{const und=evs.filter(e=>!evDone(e,dstr)),dn=evs.filter(e=>evDone(e,dstr));
-        const row=(e,done)=>{const mo=!!e.markOnly,nf=!!e.noFill;const bg=evColor(e);
-          const tc=(mo||nf)?evLine(e):evTextColor(bg);
-          const st=(mo||nf)?`color:${tc};`:`background:${bg};color:${tc};`;
-          const sortable=!done&&!evSpan(e);
-          return `<div class="dpev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}${done?' evdn':''}${evSpan(e)?' dpspan':''}" data-ev="${e.id}"${sortable?` data-tok="e_${e.id}"`:''} style="${st}" onpointerdown="event.stopPropagation()">
-          <div class="dpevrow" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal('${e.id}',null,null,'${dstr}')">
-            ${sortable?`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`:''}
-            <span class="dpchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>
-            <span class="dpevt">${e.isTask?'<i class="evtk">✔</i>':''}${evLabel(e)}</span><span class="dpevm">${evSpan(e)?evDayTag(e,dstr):evTimeText(e)}</span>
-            <button class="dpdel" onclick="event.stopPropagation();_dpReturn='${dstr}';closeDayPopup();delEvent('${e.id}','${dstr}')">🗑</button></div>
-          ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;};
-        const trow=o=>{const x=o.x;const lab=o.kind==='due'?'期限':o.kind==='time'?o.time:'この日のタスク';
-          const op=_dpActOpen==='t_'+x.id; // タップ＝まずアクションを開く（いきなり編集しない・v4.80）
-          const tb=taskFillOf(x);
-          return `<div class="dpev dptask${op?' open':''}" data-tok="t_${x.id}" style="background:${tb};color:${evTextColor(tb)};" onpointerdown="event.stopPropagation()">
-          <div class="dpevrow" onclick="dpTaskTap('t_${x.id}','${dstr}')">
-            <span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>
-            <span class="dpchk round" onclick="event.stopPropagation();closeDayPopup();taskCompleteTap('${x.id}')"></span>
-            <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.rel?' 🔗':''}</span><span class="dpevm">${op?'▾':lab}</span></div>
-          ${op?`<div class="dpact"><button type="button" class="pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ この日で完了</button>
-            <button type="button" onclick="doneDatePop('${x.id}','${dstr}','${dstr}')">📅 日付を選ぶ</button>
-            <button type="button" onclick="_dpReturn='${dstr}';closeDayPopup();taskModal('${x.id}')">✎ 編集</button>
-            <button type="button" class="dpdanger" onclick="_dpReturn='${dstr}';closeDayPopup();delTask('${x.id}')">🗑</button></div>`:''}</div>`;};
-        const spans=und.filter(e=>evSpan(e));
-        const plans=sortByDayOrder(dstr,und.filter(e=>!evSpan(e)&&!e.isTask).map(e=>({tok:'e_'+e.id,h:()=>row(e,false)})),v=>v.tok);
-        const tasks=sortByDayOrder(dstr,[...und.filter(e=>!evSpan(e)&&e.isTask).map(e=>({tok:'e_'+e.id,h:()=>row(e,false)})),...dts.map(o=>({tok:'t_'+o.x.id,h:()=>trow(o)}))],v=>v.tok);
-        const n=plans.length+tasks.length;
-        return spans.map(e=>row(e,false)).join('')
-          +(plans.length?`<div class="dpsort">${plans.map(v=>v.h()).join('')}</div>`:'')
-          +(tasks.length?`${plans.length||spans.length?'<div class="dpsublab">タスク</div>':''}<div class="dpsort">${tasks.map(v=>v.h()).join('')}</div>`:'')
-          +(n>1?'<div class="dpsorthint">⋮⋮ を押したまま上下で並び替え（予定は予定、タスクはタスクの中で。月のセルの順番になります）</div>':'')
-          +(n||mks.length||dn.length||spans.length?'':'<div class="dpempty">予定はありません</div>')
-          +(dn.length?`<div class="dpdones">✓ 完了（${dn.length}）　<span>タップで開く・☑で戻す</span></div>`+dn.map(e=>row(e,true)).join(''):'');})()}
-      ${carryHtml}
-    </div>
+    <div class="dpbody dlwrap" data-d="${dstr}">${dayListHtml(dstr,'pop')}</div>
     <div class="dphint">長押しでこの日のページへ</div>
   </div>`;
   el.classList.add('show');
   if(_keepY){const b=el.querySelector('.dpbox');if(b)b.scrollTop=_keepY;}
+  if(opt&&opt.act){const r=el.querySelector(`[data-tok="${opt.act}"]`);if(r)setTimeout(()=>r.scrollIntoView({block:'center'}),30);}
   el.onclick=e=>{if(e.target===el)closeDayPopup();};}
 function closeDayPopup(){$('#daypop')?.classList.remove('show');}
 /* ---- 日付ポップの「まだ終わっていないタスク」（v4.50）：基準＝タップして開いた日（dstr）
    ⏰ 過ぎている：日付があるのに dstr より前で未完了（カレンダーのタスク・繰り返しの回・通常タスク）
    📋 日付なし：通常タスクで やる日 も 期限 も無いもの。先の日付・当日のものは出さない ---- */
 let _carryDay='',_carryMore={late:false,none:false},_carryOpen='';
-function dpCarryOpen(tok,dstr){_carryOpen=_carryOpen===tok?'':tok;openDayPopup(dstr);}
-function dpTaskTap(tok,dstr){_dpActOpen=_dpActOpen===tok?'':tok;openDayPopup(dstr);} // タスク行タップ＝アクションの開閉
-function dpTaskDone(id,dstr){_dpActOpen='';completeTaskOn(id,dstr);openDayPopup(dstr);} // その日（ポップの日）で完了。繰り返しは次の回へ
+function wkTaskOpen(id,d){openDayPopup(d,{act:'t_'+id});} // 週・連日バーのタスク＝日付ポップと同じ操作で（v5.00）
+function dpCarryOpen(tok,dstr){_carryOpen=_carryOpen===tok?'':tok;dlRedraw();}
+function dpTaskTap(tok){_dpActOpen=_dpActOpen===tok?'':tok;dlRedraw();} // タスク行タップ＝アクションの開閉
+function dpTaskDone(id,dstr){_dpActOpen='';completeTaskOn(id,dstr);dlRedraw();} // その日で完了。繰り返しは次の回へ
 async function dpCarryMove(tok,dstr){const t=[...carriedFor(dstr).late,...carriedFor(dstr).none].find(v=>v.tok===tok);
   if(!await uiConfirm(`「${t?t.title:'このタスク'}」を ${fmtDateJa(dstr)} にやることにしますか？`,'この日にやる'))return;
   _carryOpen='';dpMoveHere(tok,dstr);}
@@ -5841,14 +5871,14 @@ function moveTokTo(tok,dstr){
 function dpMoveHere(tok,dstr){snapUndo();const nid=moveTokTo(tok,dstr);if(!nid)return;
   save();render();attachCellPress();
   try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}
-  openDayPopup(dstr);
+  dlRedraw();
   setTimeout(()=>{document.querySelectorAll(`[data-ev="${nid}"],[data-tok="t_${nid}"]`).forEach(el=>{el.classList.add('evland');setTimeout(()=>el.classList.remove('evland'),380);});},30);
   flashUndo(`${fmtDateJa(dstr)} にやることにしました`);}
 /* まとめて動かす：選択モード→この日へ／または月カレンダーの日付をタップ */
 let _dpMoveMode=false,_moveSel=null;
 let _dpReturn=null,_dpActOpen=''; // 日付ポップから開いた入力の戻り先／タスク行のアクション展開（v4.80）
-function dpMoveToggleMode(dstr){_dpMoveMode=!_dpMoveMode;_moveSel=_dpMoveMode?new Set():null;openDayPopup(dstr);}
-function dpMoveTgl(id,dstr){if(!_moveSel)return;_moveSel.has(id)?_moveSel.delete(id):_moveSel.add(id);openDayPopup(dstr);}
+function dpMoveToggleMode(dstr){_dpMoveMode=!_dpMoveMode;_moveSel=_dpMoveMode?new Set():null;dlRedraw();}
+function dpMoveTgl(id,dstr){if(!_moveSel)return;_moveSel.has(id)?_moveSel.delete(id):_moveSel.add(id);dlRedraw();}
 function cancelMoveSel(){_dpMoveMode=false;_moveSel=null;const b=$('#multibar');if(b&&b._move){b.classList.remove('show');b._move=false;}}
 function dpMovePickDate(){if(!_moveSel||!_moveSel.size)return;closeDayPopup();_dpMoveMode=false;
   const bar=$('#multibar');bar._move=true;
@@ -5884,10 +5914,15 @@ function dpDragStart(ev,dstr){if(ev.pointerType==='mouse'&&ev.button!==0)return;
   const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);
     row.style.transition='transform .18s cubic-bezier(.2,.8,.3,1.1)';row.style.transform='';
     row.classList.remove('dpdragging');list.classList.remove('dragging');
-    const order=[...document.querySelectorAll('#daypop .dpsort [data-tok]')].map(r=>r.dataset.tok);
-    const prev=((S.dayOrder||{})[dstr]||[]).join(',');
-    if(order.join(',')!==prev){snapUndo();S.dayOrder=S.dayOrder||{};S.dayOrder[dstr]=order;save();render();attachCellPress();
-      flashUndo('並び順を変えました');}
+    if(list.dataset.torder){ // タスクタブの「優先」「通常」＝区分の中の順番（torder）
+      const ids=rows().map(r=>r.dataset.tok.slice(2));const prevT=ids.map(id=>(S.tasks.find(t=>t.id===id)||{}).torder).join(',');
+      snapUndo();ids.forEach((id,i)=>{const t=S.tasks.find(v=>v.id===id);if(t)t.torder=i;});
+      if(ids.map((_,i)=>i).join(',')!==prevT){save();render();flashUndo('並び順を変えました');}}
+    else{const wrap=list.closest('.dlwrap')||$('#daypop');
+      const order=[...wrap.querySelectorAll('.dpsort:not([data-torder]) [data-tok]')].map(r=>r.dataset.tok);
+      const prev=((S.dayOrder||{})[dstr]||[]).join(',');
+      if(order.join(',')!==prev){snapUndo();S.dayOrder=S.dayOrder||{};S.dayOrder[dstr]=order;save();render();attachCellPress();
+        flashUndo('並び順を変えました');}}
     setTimeout(()=>{row.style.transition='';others0.forEach(r=>{r.style.transition='';});},220);};
   document.addEventListener('pointermove',mv,{passive:false});document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);}
 let _dpPress=null;
@@ -7437,6 +7472,14 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.00（2026-10-01）タスクの見せ方を「日付ポップ」に統一</b><br>
+  ・いちばん使いやすい<b>月カレンダーの日付ポップの作り</b>を、<b>タスクタブ・日表示・週表示</b>にも広げました<br>
+  ・<b>タスクタブ</b>：「☀ 今日」「➡ 明日」は日付ポップと同じ一覧（<b>予定が上・タスクが下</b>・完了・前の日から残っているタスク）。<b>並び順も月カレンダー・日付ポップと共通</b>で、どこで並べ替えても同じ順番になります。タスクは塗らずに、左に色の線で表示します<br>
+  ・タスクタブの「優先」「通常」「これから」も同じ行の形に。タップすると［今日やる／明日やる／優先へ・通常へ／完了／日付を選んで完了／編集／削除］が開きます。⋮⋮で並び替え<br>
+  ・<b>日表示</b>：日付ポップと同じ1列（予定→タスク→完了→過ぎている・日付なし）に作り替えました<br>
+  ・<b>週表示</b>：タスクをタップすると、その日のポップが<b>そのタスクの操作を開いた状態</b>で出ます<br>
+  ・ミニ画面・ウィジェットの「今日やるタスク」も同じ並び順に。連日のタスクもその日の一覧に出るようになりました<br>
+  </div>
   <div class="mini"><b>v4.90（2026-10-01）時刻のメール通知・日付を選んで完了・タスクの点線をやめる・リンク欄を上へ</b><br>
   ・<b>タスクの時刻にメールでお知らせ</b>：時刻を決めたタスクを、その時刻（または5〜30分前）にGmailへ。アプリを閉じていても届きます。設定→時間関連設定で「いつ知らせる」「予定も知らせる」を選べます（はじめにGoogleのしくみを1回だけ設定）。タスクごとに「🔕 知らせない」も選べます<br>
   ・<b>日付を選んで完了</b>：まだのタスクを、過ぎた日やほかの日付で完了にできます。日付は<b>今日の印・その日の予定が見えるカレンダー</b>から選べます（チェックのメニュー／日付ポップのタスク／過ぎているタスクから）<br>
@@ -8420,8 +8463,8 @@ async function checkDayRollover(){const today=todayStr();const last=S.lastActive
    小窓は別の document なので DOM は MINI.doc から探す。ボタンの関数は小窓の window にも渡している（MINI_FNS） */
 const MINI={doc:null,pip:null,mode:false,kind:'task',day:0,time:'',showDone:false,flash:'',flashT:0};
 const mq=sel=>(MINI.doc||document).querySelector(sel);
-function miniTasksOn(d){return S.tasks.filter(x=>x.status!=='done'&&x.today&&x.today<=d)
-  .sort((a,b)=>(a.start||'99').localeCompare(b.start||'99')||((a.torder??1e9)-(b.torder??1e9))||((b.pickedAt||0)-(a.pickedAt||0)));}
+function miniTasksOn(d){return sortByDayOrder(d,S.tasks.filter(x=>x.status!=='done'&&x.today&&x.today<=d)
+  .sort((a,b)=>(a.start||'99').localeCompare(b.start||'99')||((a.torder??1e9)-(b.torder??1e9))||((b.pickedAt||0)-(a.pickedAt||0))),x=>'t_'+x.id);} // 並びは日付ポップ・タスクタブと同じ（v5.00）
 function miniEventsOn(d){return S.events.filter(e=>eventOccursOn(e,d)).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 function miniHtml(){const d=todayStr(),dt=parseDs(d),isT=MINI.kind==='task';
   const evs=miniEventsOn(d),evOpen=evs.filter(e=>!evDone(e,d)),evDn=evs.filter(e=>evDone(e,d));
