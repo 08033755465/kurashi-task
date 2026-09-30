@@ -529,7 +529,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .drecadd{width:calc(100% - 32px);margin:8px 16px 2px;padding:8px 0;border:1px dashed var(--line);color:var(--accent);font-size:12px;}
 .cki{width:11px;height:11px;flex:0 0 11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px;}
 .cevrep .cki{width:12px;height:12px;}
-.evmk{display:inline-flex;width:13px;height:13px;vertical-align:-2px;margin-right:3px;}
+.evmk{display:inline-flex;width:1.2em;height:1.2em;vertical-align:-.2em;margin-right:1px;}
 .evmk svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .rfilter{display:flex;gap:5px;padding:2px 16px 8px;overflow-x:auto;}
 .rfold{margin:2px 0 12px;}
@@ -624,7 +624,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .cell .marks{position:absolute;top:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;justify-content:flex-end;max-width:46%;z-index:1;}
 .cell .marks svg{width:12px;height:12px;stroke-width:1.6;fill:none;}
 /* 予定名は1行。…での省略はせず、枠のギリギリまで表示（余白は最小） */
-.evbar{font-size:var(--mfs,9.5px);line-height:1.45;padding:0 1px 0 3px;margin-top:1px;color:#fff;
+.evbar{font-size:var(--mfs,9.5px);line-height:1.45;padding:0 1px 0 2px;margin-top:1px;color:#fff;letter-spacing:0;
   white-space:nowrap;overflow:hidden;text-overflow:clip;}
 .evbar.due{background:none;border:1px dashed var(--sub);color:var(--sub);padding-left:2px;} /* タスク。色つきはインラインでパステル背景 */
 /* 付箋カラーなし＝色文字だけ */
@@ -637,6 +637,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 .evbar.evdn{opacity:.42;text-decoration:line-through;}
 .evbar.due.ghost{opacity:.5;border-style:dotted;}
+.mbar{letter-spacing:0;}
 /* 連日の予定＝週ごとの行の上に、つながったバーを重ねる（v4.30） */
 .mweek{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);position:relative;
   --mtop:24px;--mbh:calc(var(--mfs,9.5px) * 1.45 + 2px);}
@@ -723,6 +724,12 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #daypop .dpcbtns{display:flex;gap:8px;margin-top:8px;}
 #daypop .dpcbtns button{min-height:40px;padding:0 12px;font-size:12.5px;border:1px solid var(--line);border-radius:10px !important;background:var(--bg);color:var(--ink);}
 #daypop .dpcbtns button.pri{flex:1;background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
+/* その日のタスク行：タップで下にアクションを開く（v4.80） */
+#daypop .dpev.dptask.open{box-shadow:inset 0 0 0 1.5px var(--accent);}
+#daypop .dpact{display:flex;gap:6px;padding:4px 8px 8px;}
+#daypop .dpact button{flex:1;min-height:38px;font-size:12px;border:1px solid var(--line);border-radius:9px !important;background:var(--bg);color:var(--ink);}
+#daypop .dpact button.pri{background:var(--gradA,var(--accent));border-color:transparent;color:#fff;font-weight:700;}
+#daypop .dpact .dpdanger{flex:0 0 46px;color:var(--danger);}
 #daypop .dpced{flex:0 0 auto;font-size:12px;padding:8px 8px;margin:-4px 0;background:none;border:none;color:var(--sub);}
 #daypop .dpcarbtns{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
 #daypop .dpcarbtns button{padding:11px;border:1px solid var(--line);border-radius:10px !important;font-size:13px;font-weight:600;background:var(--bg);}
@@ -761,7 +768,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .wkev.wktask{background:var(--bg);color:var(--sub);border:1px dashed var(--sub);box-shadow:none;opacity:.95;}
 .wkev.wktask .wkevt{font-weight:600;}
 .wkev{position:absolute;overflow:hidden;border-radius:4px !important;padding:1px 3px;box-shadow:0 1px 2px rgba(0,0,0,.12);cursor:pointer;}
-.wkev .wkevt{font-size:8.5px;font-weight:700;line-height:1.15;white-space:normal;word-break:break-word;overflow:hidden;}
+.wkev .wkevt{font-size:8.5px;font-weight:700;line-height:1.15;white-space:normal;word-break:break-word;overflow:hidden;letter-spacing:0;}
 .wkev .wkevm{font-size:7.5px;opacity:.82;line-height:1.2;margin-top:1px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums;}
 .wkev .wkevm .cki{width:7px;height:7px;vertical-align:-1px;margin-right:1px;}
 .wkev.mkonly,.wkev.plain{background:none !important;box-shadow:none;}
@@ -861,6 +868,20 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .icongrid button.on{border-color:var(--ink);background:var(--bg2);}
 .icongrid svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;}
 .gmark{display:inline-block;width:9px;height:9px;flex:0 0 9px;}
+/* アイコン選択の共通POP（v4.80）：フォーム(#dlg z400)の上に出す */
+#iconpop{position:fixed;inset:0;background:rgba(21,23,26,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:18px;}
+#iconpop.show{display:flex;}
+#iconpop .ipbox{background:var(--bg);width:100%;max-width:360px;max-height:78vh;display:flex;flex-direction:column;border-radius:16px !important;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.3);}
+#iconpop .iph{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px;border-bottom:1px solid var(--line2);flex:0 0 auto;}
+#iconpop .iph b{font-size:14px;letter-spacing:.06em;}
+#iconpop .iph button{font-size:20px;color:var(--sub);padding:0 6px;line-height:1;}
+#iconpop .ipbody{padding:10px 14px 14px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#iconpop .ipcat{font-size:11px;font-weight:700;color:var(--sub);margin:11px 0 5px;letter-spacing:.06em;}
+#iconpop .ipnone{width:100%;padding:10px 0;font-size:12.5px;border:1px solid var(--line);color:var(--sub);border-radius:8px !important;background:var(--bg);}
+#iconpop .ipnone.on{border-color:var(--ink);border-width:2px;color:var(--ink);font-weight:700;}
+#iconpop .icongrid button{border-radius:8px !important;background:var(--bg);}
+/* フォーム内のマーク欄：なし＋最近つかった＋すべて▸ */
+.emicons .ipall{font-size:11.5px;color:var(--accent);border-style:dashed;white-space:nowrap;}
 /* テンキー対応タイムピッカー */
 .tp{display:flex;align-items:center;gap:2px;}
 .tp-col{display:flex;flex-direction:column;align-items:center;}
@@ -1279,9 +1300,9 @@ body.swiping .lpress{animation:none;}
 #dlg .db button.dngr{color:var(--danger);font-weight:700;}
 /* タスクの追加・編集フォーム（追加と編集は同じ画面）。余白は詰めて、閉じるは指の届く下に */
 #dlg .tform{padding:0 14px 8px;white-space:normal;max-height:74vh;overflow:auto;-webkit-overflow-scrolling:touch;}
-#dlg .tform .tfh{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);padding:12px 0 8px;margin-bottom:2px;border-bottom:1px solid var(--line2);z-index:2;}
+#dlg .tform .tfh{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);padding:9px 0 6px;margin-bottom:2px;border-bottom:1px solid var(--line2);z-index:2;}
 /* フォーム内のタブ（入力／テンプレート） */
-#dlg .tftabs{display:flex;border-bottom:1px solid var(--line);margin:0 0 10px;}
+#dlg .tftabs{display:flex;border-bottom:1px solid var(--line);margin:0 0 7px;}
 #dlg .tftabs button{flex:1;padding:9px 0;font-size:13px;color:var(--sub);border-bottom:2px solid transparent;}
 #dlg .tftabs button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink);}
 /* テンプレのカード：中身が見える・タップで使う */
@@ -1322,9 +1343,9 @@ body.swiping .lpress{animation:none;}
 #dlg .tmfoot button{flex:1;font-size:12.5px;padding:10px 6px;border:1px dashed var(--line);border-radius:10px !important;color:var(--accent);background:var(--bg);white-space:nowrap;}
 #dlg .tform .tfh b{font-size:14px;letter-spacing:.06em;}
 #dlg .tform .tfh button{font-size:20px;color:var(--sub);padding:0 4px;line-height:1;}
-#dlg .tform .frow{margin-bottom:9px;}
-#dlg .tform label{margin-bottom:3px;}
-#dlg .tform input,#dlg .tform textarea,#dlg .tform select{margin-top:0;}
+#dlg .tform .frow{margin-bottom:6px;}
+#dlg .tform label{margin-bottom:1px;font-size:11px;}
+#dlg .tform input,#dlg .tform textarea,#dlg .tform select{margin-top:0;padding-top:7px;padding-bottom:7px;}
 #dlg .tform .tfchk{display:flex;align-items:center;gap:8px;}
 #dlg .tform .tfchk input{width:20px;height:20px;flex:none;}
 #dlg .tform .tfchk span{font-size:13px;}
@@ -1349,7 +1370,9 @@ body.swiping .lpress{animation:none;}
 .emtw{color:var(--sub);font-size:13px;flex:none;}
 .emallday{flex:none;padding:9px 11px;border:1px solid var(--line);font-size:12px;color:var(--sub);border-radius:8px !important;}
 .emallday.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;}
-.emprev{padding:7px 10px;border-radius:6px !important;font-size:13px;margin-bottom:7px;min-height:32px;display:flex;align-items:center;gap:5px;}
+.emprev{padding:6px 10px;border-radius:6px !important;font-size:13px;margin-bottom:0;min-height:30px;display:flex;align-items:center;gap:5px;flex:0 1 auto;max-width:60%;overflow:hidden;white-space:nowrap;}
+.emlook1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;}
+.emlook1 .emhuenow{margin-bottom:0;flex:1;min-width:130px;}
 .emprev svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
 #dlg .cpsw.emsw{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;flex-wrap:nowrap;}
 #dlg .cpsw.emsw button{flex:0 0 30px;height:30px;border:1px solid var(--line);border-radius:50% !important;position:relative;}
@@ -1662,7 +1685,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v4.72';
+const APP_VERSION='v4.80';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1763,13 +1786,16 @@ function toneHex(hex,tone){if(!tone||tone==='pastel'||!COLOR_TONES[tone])return 
 function HUE(i){const d=HUES12[i]||{n:'',p:'#CCCCCC',v:'#888888'};const o=(S.settings.hueColors||[])[i]||{};
   return {n:d.n,p:o.p||d.p,v:o.v||d.v};}
 function taskHue(){const h=S.settings.taskHue;return (h!=null&&HUES12[h])?h:0;} // タスク予定の色（既定＝すみ（黒））
-function hueOf(e){if(e&&e.isTask)return taskHue(); // タスク予定＝設定の色で統一（ひと目でタスクと分かる）
+function hueOf(e){if(e&&e.isTask)return (e.hue!=null&&HUES12[e.hue])?e.hue:taskHue(); // タスク＝個別の色 or 設定の色（v4.80）
   if(e&&e.hue!=null&&HUES12[e.hue])return e.hue;
   if(e&&e.groupId)return groupHue(e.groupId);
   return hashStr((e&&e.id)||'')%HUES12.length;}
 /* 本体（付箋）＝そのグループの色。トーン設定（あざやか／標準／くすみ）を反映 */
 function taskFill(){return HUE(taskHue()).v;} // タスク＝「タスクの色」の濃い方で塗る（既定＝すみ＝黒塗り・v4.71）
-function evColor(e){if(e&&e.isTask)return taskFill();return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
+function taskFillOf(x){return (x&&x.hue!=null&&HUES12[x.hue])?HUE(x.hue).v:taskFill();} // タスクごとの色（v4.80・未設定＝既定）
+function tkMk(x){return x&&x.mark&&ICONS[x.mark]?`<span class="evmk">${icSvg(x.mark)}</span>`:'';} // タスクのマーク
+function tkLabel(x){return tkMk(x)+esc(x.title||'');}
+function evColor(e){if(e&&e.isTask)return taskFillOf(e);return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
 /* 親（最上位グループ）の色＝縦ライン、子（その予定のグループ）の色＝本体 */
 function rootHueOf(gid){let g=S.groups.find(x=>x.id===gid);if(!g)return hashStr(gid||'')%HUES12.length;
   let guard=0;while(g.parentId&&guard++<20){const p=S.groups.find(x=>x.id===g.parentId);if(!p)break;g=p;}
@@ -1854,6 +1880,31 @@ const ICONS={
  beach:{c:'遊び',s:'<path d="M4 19h16M12 19V9M4 9a8 8 0 0 1 16 0zM8 9c0-3 1.5-5 4-5s4 2 4 5"/>'},
  coffee:{c:'遊び',s:'<path d="M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 9h2a2.5 2.5 0 0 1 0 5h-2"/>'}};
 function icSvg(k){const i=ICONS[k]||ICONS.star;return `<svg viewBox="0 0 24 24">${i.s}</svg>`;}
+/* ===== アイコン選択（v4.80）：最近つかった履歴＋全カテゴリを縦に並べたPOP。予定・タスク・ルーティン・マーク付きの日で共通 ===== */
+function pushRecentMark(k){if(!k||!ICONS[k])return;const a=(S.settings.recentMarks||[]).filter(v=>v!==k);a.unshift(k);S.settings.recentMarks=a.slice(0,10);save();}
+let _iconCb=null;
+function iconPickPop(cur,cbName){_iconCb=cbName;
+  let el=$('#iconpop');if(!el){el=document.createElement('div');el.id='iconpop';document.body.appendChild(el);
+    el.onclick=e=>{if(e.target===el)iconPopClose();};}
+  const rec=(S.settings.recentMarks||[]).filter(k=>ICONS[k]);
+  const grid=keys=>`<div class="icongrid">${keys.map(k=>`<button type="button" class="${cur===k?'on':''}" onclick="iconPopPick('${k}')">${icSvg(k)}</button>`).join('')}</div>`;
+  el.innerHTML=`<div class="ipbox">
+    <div class="iph"><b>アイコンをえらぶ</b><button type="button" onclick="iconPopClose()">✕</button></div>
+    <div class="ipbody">
+      <button type="button" class="ipnone${cur?'':' on'}" onclick="iconPopPick('')">アイコンなし</button>
+      ${rec.length?`<div class="ipcat">🕘 最近つかった</div>${grid(rec)}`:''}
+      ${ICON_CATS.map(c=>`<div class="ipcat">${c}</div>${grid(Object.entries(ICONS).filter(([,v])=>v.c===c).map(([k])=>k))}`).join('')}
+    </div></div>`;
+  el.classList.add('show');}
+function iconPopClose(){$('#iconpop')?.classList.remove('show');}
+function iconPopPick(k){pushRecentMark(k);iconPopClose();const f=window[_iconCb];_iconCb=null;if(f)f(k);}
+function mkQuick(fn,k){pushRecentMark(k);const f=window[fn];if(f)f(k);}
+/* フォーム内のマーク欄：[なし][最近つかった〜5個][⊞ すべて ▸]。pickFn はグローバル関数名 */
+function markFieldHtml(cur,pickFn){const rec=(S.settings.recentMarks||[]).filter(k=>ICONS[k]);
+  const quick=[...new Set([...(cur&&ICONS[cur]?[cur]:[]),...rec])].slice(0,5);
+  return `<div class="emicons mkfield"><button type="button" class="${!cur?'on':''}" onclick="${pickFn}('')">なし</button>
+    ${quick.map(k=>`<button type="button" class="${cur===k?'on':''}" onclick="mkQuick('${pickFn}','${k}')">${icSvg(k)}</button>`).join('')}
+    <button type="button" class="ipall" onclick="iconPickPop('${cur||''}','${pickFn}')">⊞ すべて ▸</button></div>`;}
 let S=null;
 function defaultState(){
   const gHome={id:'g_home',name:'家庭',color:'#5B9E6F',parentId:null};
@@ -2634,7 +2685,7 @@ function calTabUp(){clearTimeout(_calLongT);_calLongT=null;}
 function calTabMove(ev){if(_calLongT&&Math.abs(ev.clientY-_calLongY)>10)calTabUp();}
 function switchView(v){
   if(v==='today')v='tasks'; // 「今日」タブは廃止（v4.00）。バーチカルは一旦しまってある
-  cpClose();if(typeof closeDayPopup==='function')closeDayPopup();if(typeof cancelMoveSel==='function')cancelMoveSel(); // タブを替えたらポップ・選択は置いていかない
+  cpClose();if(typeof closeDayPopup==='function')closeDayPopup();if(typeof cancelMoveSel==='function')cancelMoveSel();try{_dpReturn=null;_dpActOpen='';}catch(_){} // タブを替えたらポップ・選択・戻り先は置いていかない
   if(v==='cal'&&view==='cal'){ // 押すたびに 月 → 週 → 日（いつもの表示に戻すのは長押し）
     if(_calLongFired){_calLongFired=false;return;} // 長押しで戻した直後のタップは無視
     calMonthAll=false;
@@ -3800,7 +3851,7 @@ function taskRow(x,o={}){
     <div class="bar" style="background:var(--line2);"></div>
     <div class="chk" onclick="event.stopPropagation();${x.status==='done'?`taskUndoneTap('${x.id}',null,event)`:`taskCompleteTap('${x.id}',null,event)`}">${x.status==='done'?'<svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg>':''}</div>
     <div class="body">
-      <div class="tt ${x.status==='done'?'done':''} ${x.repeat?'cont':''}">${esc(x.title)}${repBadgeT(x)}</div>
+      <div class="tt ${x.status==='done'?'done':''} ${x.repeat?'cont':''}">${tkMk(x)}${esc(x.title)}${repBadgeT(x)}</div>
       <div class="meta">
         ${x.today&&((x.today>todayStr()&&x.today!==tomorrowStr())||tSpan(x))?`<span style="color:var(--accent);font-weight:700;">${fmtDateJa(x.today)}${tSpan(x)?'〜'+fmtDateJa(x.endDate):''}</span>`:''}
         ${x.start?`<span>🕐 ${x.start}${x.end?'〜'+x.end:''}</span>`:''}
@@ -4288,10 +4339,8 @@ function renderTasks(){
   <div style="display:flex;justify-content:flex-end;align-items:center;padding:0 16px 2px;gap:10px;">
     <button class="act" onclick="reviewOpen()">🌙 ふりかえる</button>
     <button class="act" onclick="switchView('tstats')">⏱ 記録</button>
-    <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ 詳しく追加</button>
+    <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ タスクを追加</button>
   </div>
-  <div class="qadd"><input id="qaTask" placeholder="タスク名を入力してEnterで追加" onkeydown="if(event.key==='Enter'&&!event.isComposing)quickAddTask()">
-    <button onclick="quickAddTask()">追加</button></div>
   ${body}
   <div class="mini" style="padding:8px 16px 0;">行を<b>長押しすると持ち上がり</b>、そのまま指を動かして<b>好きな場所・別の区分へ</b>運べます。</div>
   ${(closed.length||closedEvs.length)?`<div class="sec-h">完了済み（${closed.length+closedEvs.length}）${closed.length?`<button class="act" onclick="clearDone()">完了を一括削除</button>`:''}</div>
@@ -4300,11 +4349,6 @@ function renderTasks(){
 }
 /* 4つの箱の操作 */
 let taskAnchorId=null;
-function quickAddTask(){const v=$('#qaTask').value.trim();if(!v)return;
-  const id=uid();
-  // 新しいタスクの既定は「優先」（priority=1・日付なし）
-  S.tasks.push({id,title:v,groupId:lastTaskGroupId(),estMin:15,priority:1,status:'todo',links:[],due:'',today:null,memo:'',snooze:null,order:Date.now(),createdAt:todayStr(),pickedAt:Date.now()});
-  save();render();}
 /* ===== タスクタブ「手動」並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
 let taskReorder=false,taskRSel=[];
 function enterTaskReorder(){taskReorder=true;taskRSel=[];render();}
@@ -4422,6 +4466,7 @@ function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
 let _tfDate='',_tfRel=null,_tfRelDue=null,_tfCalFor='due';
 let _tfEnd='',_tfStart='',_tfEndT='',_tfRepNth=null,_tfUntil='',_tfFromEv=null; // 連日・時間・第◯週・終了日・予定からの切替（v4.60）
+let _tfHue=null,_tfMark=''; // タスクごとの色（濃い色・null=既定のタスク色）とマーク（v4.80）
 /* いま選んでいる「やる日」（今日／明日／日付） */
 function tfDateOf(){return _tfWhen==='today'?todayStr():_tfWhen==='tomorrow'?tomorrowStr():(_tfWhen==='dated'?_tfDate:'');} // やる日（日付指定）／基準の予定（v4.30）
 let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfWhen='priority',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
@@ -4442,6 +4487,7 @@ function taskModal(id,presetDue,presetToday,place,opts){tmplReset();opts=opts||{
   editLinks=(x?.links||[]).map(l=>({...l}));editImages=(x?.images||[]).slice();
   _tfId=id||null;
   _tfColor=x?(x.color??null):null; // 色＝ぱっと見の目印（v2.75）／グループ＝分類（v3.06）
+  _tfHue=x?(x.hue??null):null;_tfMark=x?.mark||''; // 見た目（v4.80）
   _tfGroup=x?(x.groupId||''):lastTaskGroupId();
   _tfStash=null;
   _tfDue=x?.due||presetDue||'';
@@ -4513,6 +4559,11 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     <input type="hidden" id="tmPrio" value="${prio}">
     ${_tfDueOpen&&!tmpl&&_tfCalFor==='due'?`<div class="frow">${tfDueCalHtml()}</div>`:''}
     ${_relOpen==='tfdue'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
+    ${tmpl?'':`<div class="frow"><label>見た目</label>
+      <div class="emhuenow">${_tfHue!=null?`色：<b>${esc(hueLabel(_tfHue)||HUE(_tfHue).n)}</b><button type="button" class="emback" onclick="tfPickHue(null)">↩ タスクの色に戻す</button>`:`色：<b>タスクの色（${esc(hueLabel(taskHue())||HUE(taskHue()).n)}）</b>`}</div>
+      <div class="cpsw emsw"><button type="button" class="${_tfHue==null?'on':''}" style="background:${taskFill()};" onclick="tfPickHue(null)" title="タスクの色（既定）"><i class="emg" style="color:rgba(255,255,255,.85);">既</i></button>
+        ${HUES12.map((_,i)=>`<button type="button" class="${_tfHue===i?'on':''}" style="background:${HUE(i).v}" onclick="tfPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}">${hueLabel(i)?`<i class="emhl" style="color:rgba(255,255,255,.85);">${esc(hueLabel(i).slice(0,3))}</i>`:''}</button>`).join('')}</div>
+      <label style="margin:7px 0 1px;">マーク</label>${markFieldHtml(_tfMark,'tfIconPick')}</div>`}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??src?.estMin??15)}</div>
     ${tmpl?`<div class="frow"><label>呼び出したとき</label><div class="btnrow"><button type="button" class="${_tfKeepEst?'on':''}" onclick="_tfKeepEst=!_tfKeepEst;tfRender()">かかる時間も入れる</button></div></div>`:''}
     <div class="frow"><label>繰り返し</label>${tfRepeatHtml()}</div>
@@ -4530,8 +4581,9 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
   const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;
   gtabsSync($('#dlg'));
   if(focus&&!_tfId&&!tmpl){const el=$('#tmTitle');if(el)el.focus();}} // ＋を押した流れのままフォーカス＝すぐ入力できる
-/* 色＝1タップで決定（長押しの色シートと同じ6色） */
-function tfPickColor(i){_tfColor=i;tfRender();}
+/* 見た目（v4.80）：色は濃い12色から。マークは共通のアイコン欄 */
+function tfPickHue(i){_tfHue=i;tfSyncTime();tfRender();}
+function tfIconPick(k){_tfMark=k;tfSyncTime();tfRender();}
 /* 階層ボタンは横スクロールなので、選んでいるものが画面外にならないよう寄せる */
 function gtabsSync(root){(root||document).querySelectorAll('.gtabs').forEach(box=>{
   const on=box.querySelector('button.on');if(!on)return;
@@ -4734,7 +4786,8 @@ function saveTask(id){
     repNth:_tfRepeat==='monthly'&&_tfRepNth?{..._tfRepNth}:null,until:_tfRepeat&&_tfUntil?_tfUntil:undefined,
     start:today?_tfStart:'',end:today?_tfEndT:'',endDate:(today&&_tfEnd&&_tfEnd>today)?_tfEnd:undefined,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
-    today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),};
+    today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
+    hue:(_tfHue!=null?_tfHue:undefined),mark:_tfMark||undefined,};
   let savedId=id;
   if(id){const old=S.tasks.find(t=>t.id===id);
     Object.assign(old,data);
@@ -4841,7 +4894,7 @@ function weekLayout(evs,minMin,PXM){
   items.forEach(it=>{if(cluster.length&&it.s>=clusterEnd){flush();clusterEnd=-1;}cluster.push(it);clusterEnd=Math.max(clusterEnd,it.en);});
   flush();
   return res.map(it=>({e:it.e,top:(it.s-minMin)*PXM,h:Math.max(15,(it.en-it.s)*PXM),lane:it.lane,lanes:it.lanes}));}
-function calGoto(dstr){clearPrime();closeDayPopup();calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
+function calGoto(dstr){clearPrime();closeDayPopup();_dpReturn=null;_dpActOpen='';calDate=dstr;calMode='day';const d=parseDs(dstr);calY=d.getFullYear();calX=d.getMonth();render();toTop();}
 /* ===== 週カレンダー：長押ししてからタテになぞると時間の範囲をえらべる =====
    すぐ動かした指は今まで通り「スクロール」。指を少し止める（長押し）と範囲えらびに切り替わる。
    1回タップ＝その1時間をえらぶ／すばやく2回＝その日をひらく。刻みは1時間 */
@@ -5206,7 +5259,7 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
   S.tasks.forEach(x=>{const sp=tSpan(x);if(!sp||x.status==='done')return;
     const os=x.today,oe=x.endDate;if(oe<wkS||os>wkE)return;
     const a=os<wkS?wkS:os,b=oe>wkE?wkE:oe;
-    segs.push({e:{id:x.id,title:x.title,isTask:true,start:x.start||''},task:x,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn:false});});
+    segs.push({e:{id:x.id,title:x.title,isTask:true,hue:x.hue,mark:x.mark,start:x.start||''},task:x,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn:false});});
   segs.sort((x,y)=>x.c0-y.c0||(y.c1-y.c0)-(x.c1-x.c0)||(x.e.start||'').localeCompare(y.e.start||''));
   const ends=[];segs.forEach(g=>{let l=ends.findIndex(v=>v<g.c0);if(l<0){l=ends.length;ends.push(-1);}ends[l]=g.c1;g.lane=l;});
   const n=ends.length,cap=Math.min(n,opts.cap==null?99:opts.cap);
@@ -5216,7 +5269,7 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
     let cls='mbar'+(g.hl?' hl':'')+(g.hr?' hr':'')+(e.important?' imp':'')+(g.dn?' evdn':'');
     if(mo||nf){cls+=' plain';st+=`color:${evLine(e)};border-color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
     const tap=opts.tap?(g.task?` onclick="event.stopPropagation();taskModal('${e.id}')"`:` onclick="event.stopPropagation();eventTap('${e.id}','${g.os}',event)"`):'';
-    return `<div class="${cls}" style="${st}"${tap}>${g.hl?'':'<i class="mcont">‹</i>'}${g.task?'<i class="evtk">✔</i>'+esc(e.title):evLabel(e)}${g.hr?'':'<i class="mcont r">›</i>'}</div>`;}).join('');
+    return `<div class="${cls}" style="${st}"${tap}>${g.hl?'':'<i class="mcont">‹</i>'}${g.task?(tkMk(e)||'<i class="evtk">✔</i>')+esc(e.title):evLabel(e)}${g.hr?'':'<i class="mcont r">›</i>'}</div>`;}).join('');
   return {shown:cap,hid,spacer:cap?`<div class="mlanes" style="height:calc(${cap} * var(--mbh))"></div>`:'',
     html:bars?`<div class="mbars${opts.tap?' tap':''}">${bars}</div>`:''};}
 function renderCal(){
@@ -5254,8 +5307,8 @@ function renderCal(){
       const nightM=hm2min(S.settings.nightStart||'18:00');
       const evItem=e=>({tok:'e_'+e.id,t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly,nf:!!e.noFill,dn:evDone(e,dstr),ni:!!(e.start&&hm2min(e.start)>=nightM)});
       const items=[...sortByDayOrder(dstr,evs.filter(e=>!e.isTask).map(evItem),it=>it.tok),
-                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,t:o.x.title,c:'',due:1,tk:o.kind!=='due',time:o.time,imp:0}))],it=>it.tok),
-                   ...(allHere?tDone.map(x=>({tok:'t_'+x.id,t:x.title,due:1,tk:1,dn:1,time:''})):[]),
+                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,t:o.x.title,c:'',due:1,tk:o.kind!=='due',tc:taskFillOf(o.x),lbl2:tkLabel(o.x),time:o.time,imp:0}))],it=>it.tok),
+                   ...(allHere?tDone.map(x=>({tok:'t_'+x.id,t:x.title,due:1,tk:1,dn:1,tc:taskFillOf(x),lbl2:tkLabel(x),time:''})):[]),
                    ...(ghosts[dstr]||[]).filter(x=>x.today!==dstr).map(x=>({tok:'g_'+x.id,t:x.title,due:1,gh:1,time:x.start||''}))];
       const evMode=MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark';
       const allMode=calMonthAll||evMode==='all';const showTime=allMode||evMode==='time';
@@ -5270,11 +5323,11 @@ function renderCal(){
         ${(mks.length||extBadges(dstr))?`<div class="marks">${extBadges(dstr)}${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(showTime&&it.time)?monthEvTime(it.time):'';
           let cls='evbar'+(it.ni?' night':'')+(it.dn?' evdn':''),st='';
-          if(it.due){cls+=' due'+(it.gh?' ghost':'');if(it.tk&&!it.gh)st=`style="background:${tkBg};border-color:transparent;color:${tkFg};"`;} // タスク＝設定の「タスクの色」／期限だけ＝点線／先の回＝うすい点線
+          if(it.due){cls+=' due'+(it.gh?' ghost':'');if(it.tk&&!it.gh){const b=it.tc||tkBg;st=`style="background:${b};border-color:transparent;color:${evTextColor(b)};"`;}} // タスク＝設定の「タスクの色」／期限だけ＝点線／先の回＝うすい点線
           else if(it.mo){cls+=' mkonly';st=`style="color:${it.line};"`;}
           else if(it.nf){cls+=' plain';st=`style="color:${it.line};"`;}
           else{st=`style="background:${it.c};color:${evTextColor(it.c)};"`;}
-          return `<div class="${cls}" ${st}>${tf}${it.due?esc(it.t):it.lbl}</div>`;}).join('')}
+          return `<div class="${cls}" ${st}>${tf}${it.due?(it.lbl2||esc(it.t)):it.lbl}</div>`;}).join('')}
         ${hidN>0?`<div class="evmore">+${hidN}</div>`:''}
         ${evDoneN?`<div class="evdonen">✓${evDoneN}</div>`:''}
       </div>`;
@@ -5309,7 +5362,7 @@ function renderCal(){
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();eventTap('${e.id}','${dd.dstr}',event)">${esc(evTitle(e))}</span>`),
-        ...dd.dues.map(x=>`<span class="wkadchip" style="${x.today===dd.dstr?`background:${evColor({isTask:true})};color:${evTextColor(evColor({isTask:true}))};`:'border:1px dashed var(--sub);color:var(--sub);'}" onclick="event.stopPropagation();taskModal('${x.id}')">✔${esc(x.title)}</span>`)];
+        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="${x.today===dd.dstr?`background:${b};color:${evTextColor(b)};`:'border:1px dashed var(--sub);color:var(--sub);'}" onclick="event.stopPropagation();taskModal('${x.id}')">${tkMk(x)||'✔'}${esc(x.title)}</span>`;})];
       // 月で付けた「その日の色」を週の終日欄にも反映（編集は月カレンダーだけ）
       const dayBg=S.dayColors[dd.dstr]!==undefined?PASTELS[S.dayColors[dd.dstr]].c:'';
       return `<div class="wkad${dayBg?' hascol':''}${dd.dstr===todayS?' today':''}${dd.hol||dd.dow===0?' sun':''}${dd.dow===6?' sat':''}${ci%2?' alt':''}" ${dayBg?`style="background:${dayBg}"`:''} onclick="eventModal(null,'${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
@@ -5318,8 +5371,8 @@ function renderCal(){
       // 予定とタスクを同じレーン計算に通す（重ならず、どちらも読める）
       const wkItems=[...dd.timed,...dd.tt.map(o=>({__t:o.x,__sid:o.sl?o.sl.id:'',start:min2hm(o.s),end:min2hm(o.e)}))];
       const blocks=weekLayout(wkItems,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const w=100/o.lanes,l=o.lane*w;
-        if(e.__t){const tc=evColor({isTask:true});
-          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">✔ ${esc(e.__t.title)}</div></div>`;}
+        if(e.__t){const tc=taskFillOf(e.__t);
+          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskTap('${e.__t.id}','${dd.dstr}','${e.__sid}',event)"><div class="wkevt">${tkMk(e.__t)||'✔ '}${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
         let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
         if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
@@ -5590,12 +5643,12 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
   const _pe=$('#daypop'),_same=!!(_pe&&_pe.classList.contains('show')&&_pe.dataset.d===dstr),_keepY=_same?(_pe.querySelector('.dpbox')?.scrollTop||0):0;
   const d=parseDs(dstr);const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();const mks=marksOn(m,dd);
   // 開いた日より前で過ぎてしまったタスク＋日付の決まっていないタスク（タップでこの日にやる／まとめて動かす）
-  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};_carryOpen='';}
+  if(_carryDay!==dstr){_carryDay=dstr;_carryMore={late:false,none:false};_carryOpen='';_dpActOpen='';}
   const cf=carriedFor(dstr);
   const crow=it=>{const sel=_moveSel&&_moveSel.has(it.tok);
     const op=!_dpMoveMode&&_carryOpen===it.tok;
     const x=it.kind==='task'?S.tasks.find(v=>v.id===it.id):null;
-    const edit=`closeDayPopup();${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}`;
+    const edit=`_dpReturn='${dstr}';closeDayPopup();${it.kind==='task'?`taskModal('${it.id}')`:`eventModal('${it.id}',null,null,'${it.date}')`}`;
     // タップ＝詳しく（開く・閉じる）。動かすのは中の「この日にやる」から（確認あり）＝うっかり動かない
     return `<div class="dpcarry${sel?' sel':''}${op?' open':''}" data-ev="${it.id}" onpointerdown="event.stopPropagation()" onclick="${_dpMoveMode?`dpMoveTgl('${it.tok}','${dstr}')`:`dpCarryOpen('${it.tok}','${dstr}')`}">
       ${_dpMoveMode?`<span class="dpchk${sel?' sel':''}">${sel?'✓':''}</span>`:''}
@@ -5621,8 +5674,8 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
   el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
     <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
     <div class="dpacts top">
-      <button class="pri" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
-      <button class="pri" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
+      <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
+      <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 日を開く</button>
       <button class="ic" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')" aria-label="色分け">🎨</button></div>
     ${extDayLine(dstr)}
@@ -5634,18 +5687,22 @@ function openDayPopup(dstr){clearPrime();const evs=eventsOn(dstr);const dts=dayT
           const st=(mo||nf)?`color:${tc};`:`background:${bg};color:${tc};`;
           const sortable=!done&&!evSpan(e);
           return `<div class="dpev${e.important?' imp':''}${mo?' mkonly':(nf?' plain':'')}${done?' evdn':''}${evSpan(e)?' dpspan':''}" data-ev="${e.id}"${sortable?` data-tok="e_${e.id}"`:''} style="${st}" onpointerdown="event.stopPropagation()">
-          <div class="dpevrow" onclick="closeDayPopup();eventModal('${e.id}',null,null,'${dstr}')">
+          <div class="dpevrow" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal('${e.id}',null,null,'${dstr}')">
             ${sortable?`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`:''}
             <span class="dpchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>
             <span class="dpevt">${e.isTask?'<i class="evtk">✔</i>':''}${evLabel(e)}</span><span class="dpevm">${evSpan(e)?evDayTag(e,dstr):evTimeText(e)}</span>
-            <button class="dpdel" onclick="event.stopPropagation();closeDayPopup();delEvent('${e.id}','${dstr}')">🗑</button></div>
+            <button class="dpdel" onclick="event.stopPropagation();_dpReturn='${dstr}';closeDayPopup();delEvent('${e.id}','${dstr}')">🗑</button></div>
           ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;};
         const trow=o=>{const x=o.x;const lab=o.kind==='due'?'期限':o.kind==='time'?o.time:'この日のタスク';
-          return `<div class="dpev dptask" data-tok="t_${x.id}" onpointerdown="event.stopPropagation()">
-          <div class="dpevrow" onclick="closeDayPopup();taskModal('${x.id}')">
+          const op=_dpActOpen==='t_'+x.id; // タップ＝まずアクションを開く（いきなり編集しない・v4.80）
+          return `<div class="dpev dptask${op?' open':''}" data-tok="t_${x.id}" onpointerdown="event.stopPropagation()">
+          <div class="dpevrow" onclick="dpTaskTap('t_${x.id}','${dstr}')">
             <span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>
             <span class="dpchk round" onclick="event.stopPropagation();closeDayPopup();taskCompleteTap('${x.id}')"></span>
-            <span class="dpevt">${esc(x.title)}${x.rel?' 🔗':''}</span><span class="dpevm">${lab}</span></div></div>`;};
+            <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.rel?' 🔗':''}</span><span class="dpevm">${op?'▾':lab}</span></div>
+          ${op?`<div class="dpact"><button type="button" class="pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ 完了にする</button>
+            <button type="button" onclick="_dpReturn='${dstr}';closeDayPopup();taskModal('${x.id}')">✎ 編集</button>
+            <button type="button" class="dpdanger" onclick="_dpReturn='${dstr}';closeDayPopup();delTask('${x.id}')">🗑</button></div>`:''}</div>`;};
         const spans=und.filter(e=>evSpan(e));
         const plans=sortByDayOrder(dstr,und.filter(e=>!evSpan(e)&&!e.isTask).map(e=>({tok:'e_'+e.id,h:()=>row(e,false)})),v=>v.tok);
         const tasks=sortByDayOrder(dstr,[...und.filter(e=>!evSpan(e)&&e.isTask).map(e=>({tok:'e_'+e.id,h:()=>row(e,false)})),...dts.map(o=>({tok:'t_'+o.x.id,h:()=>trow(o)}))],v=>v.tok);
@@ -5669,6 +5726,8 @@ function closeDayPopup(){$('#daypop')?.classList.remove('show');}
    📋 日付なし：通常タスクで やる日 も 期限 も無いもの。先の日付・当日のものは出さない ---- */
 let _carryDay='',_carryMore={late:false,none:false},_carryOpen='';
 function dpCarryOpen(tok,dstr){_carryOpen=_carryOpen===tok?'':tok;openDayPopup(dstr);}
+function dpTaskTap(tok,dstr){_dpActOpen=_dpActOpen===tok?'':tok;openDayPopup(dstr);} // タスク行タップ＝アクションの開閉
+function dpTaskDone(id,dstr){_dpActOpen='';fullyCompleteTask(id);openDayPopup(dstr);}
 async function dpCarryMove(tok,dstr){const t=[...carriedFor(dstr).late,...carriedFor(dstr).none].find(v=>v.tok===tok);
   if(!await uiConfirm(`「${t?t.title:'このタスク'}」を ${fmtDateJa(dstr)} にやることにしますか？`,'この日にやる'))return;
   _carryOpen='';dpMoveHere(tok,dstr);}
@@ -5703,6 +5762,7 @@ function dpMoveHere(tok,dstr){snapUndo();const nid=moveTokTo(tok,dstr);if(!nid)r
   flashUndo(`${fmtDateJa(dstr)} にやることにしました`);}
 /* まとめて動かす：選択モード→この日へ／または月カレンダーの日付をタップ */
 let _dpMoveMode=false,_moveSel=null;
+let _dpReturn=null,_dpActOpen=''; // 日付ポップから開いた入力の戻り先／タスク行のアクション展開（v4.80）
 function dpMoveToggleMode(dstr){_dpMoveMode=!_dpMoveMode;_moveSel=_dpMoveMode?new Set():null;openDayPopup(dstr);}
 function dpMoveTgl(id,dstr){if(!_moveSel)return;_moveSel.has(id)?_moveSel.delete(id):_moveSel.add(id);openDayPopup(dstr);}
 function cancelMoveSel(){_dpMoveMode=false;_moveSel=null;const b=$('#multibar');if(b&&b._move){b.classList.remove('show');b._move=false;}}
@@ -6065,21 +6125,18 @@ function emLookHtml(){
   const gh=_emGroup?groupHue(_emGroup):null;                       // 選んでいるグループの色
   const gname=_emGroup?(S.groups.find(g=>g.id===_emGroup)||{}).name||'' : '';
   const curLab=_emHue>=0?(hueLabel(_emHue)||HUE(_emHue).n):(gh!=null?(hueLabel(gh)||HUE(gh).n):'');
-  return `<div class="emprev" style="${prevStyle}${_emImp?'font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.18);':''}">${evLabel(fake)}</div>
-    <div class="emhuenow">いまの色：<b>${esc(curLab||'—')}</b>${_emHue<0?`<span class="tagx">グループ「${esc(gname||'なし')}」に合わせています</span>`
-      :`<button type="button" class="emback" onclick="emPickHue(-1)">↩ グループの色に戻す</button>`}</div>
+  return `<div class="emlook1"><div class="emprev" style="${prevStyle}${_emImp?'font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.18);':''}">${evLabel(fake)}</div>
+    <div class="emhuenow">色：<b>${esc(curLab||'—')}</b>${_emHue<0?`<span class="tagx">グループ「${esc(gname||'なし')}」に合わせています</span>`
+      :`<button type="button" class="emback" onclick="emPickHue(-1)">↩ グループの色に戻す</button>`}</div></div>
     <div class="cpsw emsw">
       <button type="button" class="${_emHue<0?'on':''}" style="${gh!=null?`background:${HUE(gh).p};box-shadow:inset 0 0 0 2px ${HUE(gh).v};`:'background:repeating-linear-gradient(45deg,#eee 0 5px,#fff 5px 10px);'}" onclick="emPickHue(-1)" title="グループの色に合わせる"><i class="emg">G</i></button>
       ${HUES12.map((_,i)=>`<button type="button" class="${_emHue===i?'on':''}" style="background:${HUE(i).p}" onclick="emPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}">${hueLabel(i)?`<i class="emhl">${esc(hueLabel(i).slice(0,3))}</i>`:''}</button>`).join('')}</div>
-    <div class="gtabs emcat">${ICON_CATS.map(c=>`<button type="button" class="${_emCat===c?'on':''}" onclick="emIconTab('${c}')">${c}</button>`).join('')}</div>
-    <div class="emicons"><button type="button" class="${!_emMark?'on':''}" onclick="emIconPick('')">なし</button>
-      ${Object.entries(ICONS).filter(([,v])=>v.c===_emCat).map(([k])=>`<button type="button" class="${_emMark===k?'on':''}" onclick="emIconPick('${k}')">${icSvg(k)}</button>`).join('')}</div>
+    <label style="margin:7px 0 1px;">マーク</label>${markFieldHtml(_emMark,'emIconPick')}
     <div class="btnrow emopt">
       <button type="button" class="${_emImp?'on':''}" onclick="emTgl('imp')">★ 重要</button>
       <button type="button" class="${_emMarkOnly?'on':''}" onclick="emTgl('mo')">マークだけ</button>
       <button type="button" class="${_emNoFill?'on':''}" onclick="emTgl('nf')">色は文字だけ</button></div>`;}
 function emPickHue(i){_emHue=i;emSyncTime();emRender();}
-function emIconTab(c){_emCat=c;emSyncTime();emRender();}
 function emIconPick(k){_emMark=k;if(k&&ICONS[k])_emCat=ICONS[k].c;emSyncTime();emRender();}
 function emTgl(w){if(w==='imp')_emImp=!_emImp;else if(w==='mo')_emMarkOnly=!_emMarkOnly;else _emNoFill=!_emNoFill;
   emSyncTime();emRender();}
@@ -6473,9 +6530,7 @@ function routineModal(id,presetSlot,presetFolder){
         <input type="hidden" id="rmFolder" value="${esc(cur)}">`;})()}</div>
     <div class="frow"><label>目安時間（分）</label>${minPicker('rmEst',r?.estMin??15)}</div>
     <div class="frow"><label>マーク（頭に表示する線画・任意）</label>
-      <div class="icontabs" id="rmIconTabs"></div>
-      <div class="icongrid" id="rmIconGrid"></div>
-      <div style="margin-top:6px;"><button type="button" class="inlineadd" onclick="rmIconPick('')">マークなし</button></div></div>
+      <div id="rmIconField"></div></div>
     <div class="frow"><label>繰り返し</label>
       <select id="rmFreq" onchange="rSetFreq(this.value)">
         <option value="weekly" ${(r?.freq||'weekly')==='weekly'?'selected':''}>毎週（曜日で指定）</option>
@@ -6506,12 +6561,9 @@ function routineModal(id,presetSlot,presetFolder){
   <div class="mbtns">
     <button class="save" onclick="saveRoutine('${r?.id||''}')">保存</button>
   </div>`);rNthRefresh();
-  window._rmIcon=r?.mark||'';window._rmCat=(r?.mark&&ICONS[r.mark]?ICONS[r.mark].c:'家事');rmIconRefresh();}
-function rmIconRefresh(){const tabs=$('#rmIconTabs'),grid=$('#rmIconGrid');if(!tabs)return;
-  tabs.innerHTML=ICON_CATS.map(c=>`<button type="button" class="${window._rmCat===c?'on':''}" onclick="rmIconTab('${c}')">${c}</button>`).join('');
-  grid.innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._rmCat).map(([key])=>`<button type="button" class="${window._rmIcon===key?'on':''}" onclick="rmIconPick('${key}')">${icSvg(key)}</button>`).join('');}
-function rmIconTab(c){window._rmCat=c;rmIconRefresh();}
-function rmIconPick(key){window._rmIcon=key;if(key&&ICONS[key])window._rmCat=ICONS[key].c;rmIconRefresh();}
+  window._rmIcon=r?.mark||'';rmIconRefresh();}
+function rmIconRefresh(){const f=$('#rmIconField');if(!f)return;f.innerHTML=markFieldHtml(window._rmIcon,'rmIconPick');}
+function rmIconPick(key){window._rmIcon=key;rmIconRefresh();}
 async function rmFolderChange(sel){if(sel.value==='__new__'){const nv=await uiPrompt('新しいフォルダ名','');const nm=(nv||'').trim();
     if(!nm){sel.value=$('#rmFolder').value;return;}
     const opt=document.createElement('option');opt.value=nm;opt.textContent=nm;sel.insertBefore(opt,sel.querySelector('option[value="__new__"]'));sel.value=nm;$('#rmFolder').value=nm;
@@ -7295,6 +7347,15 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.80（2026-10-01）入力画面すっきり・タスクに色とマーク・日付ポップの戻り改善</b><br>
+  ・<b>入力画面の余白を詰めました</b>：予定・タスクとも、スクロールが少なく全体が見渡せます<br>
+  ・<b>タスクにも「見た目」</b>：予定と同じように<b>色（12色・濃い塗り）とマーク</b>を選べます。未設定は今までどおり設定の「タスクの色」です<br>
+  ・<b>アイコンはPOPで選ぶ</b>方式に：予定・タスク・ルーティン・マーク付きの日で共通。<b>最近つかったアイコン</b>が記録され、フォーム内で1タップで選べます（「⊞ すべて ▸」で全アイコン）<br>
+  ・カレンダーのバーで<b>アイコンと文字の間を詰め</b>、1行に入る文字が増えました<br>
+  ・タスクタブの<b>簡易入力（1行入力）は廃止</b>し、「＋ タスクを追加」に一本化しました<br>
+  ・<b>日付ポップから入力・編集したあと、同じ日のポップに戻る</b>ようになりました（保存・やめる・削除のどれでも。今までは月カレンダーに戻っていました）<br>
+  ・日付ポップで<b>タスクをタップすると、まず［✅完了にする／✎編集／🗑削除］</b>が開きます。いきなり編集画面には行きません<br>
+  </div>
   <div class="mini"><b>v4.72（2026-09-30）PCの小窓が真っ白になる不具合を修正</b><br>
   ・v4.71 の変更で、PCの小窓の中身が隠れて真っ白になっていたのを直しました<br>
   </div>
@@ -8098,26 +8159,20 @@ function saveBday(id){
   save();bdayList();render();}
 function markModal(id){
   const k=id?S.marks.find(x=>x.id===id):null;
-  window._mIcon=k?.icon||'gift';window._mCat=(ICONS[window._mIcon]||{}).c||'イベント';
+  window._mIcon=k?.icon||'gift';
   openModal(`<div class="mh">${hdHead('マーク付きの日',k?[{del:1,fn:`delMark('${k.id}')`}]:[],'closeModal()')}</div>
   <div class="mbody">
     <div class="frow"><label>名前</label><input id="kmName" value="${esc(k?.name||'')}" placeholder="例）結婚記念日"></div>
     <div class="frow f2"><div><label>月</label><input id="kmM" type="number" inputmode="numeric" min="1" max="12" value="${k?.month||''}"></div>
       <div><label>日</label><input id="kmD" type="number" inputmode="numeric" min="1" max="31" value="${k?.day||''}"></div></div>
-    <div class="frow"><label>マーク（5カテゴリ×10種）</label>
-      <div class="icontabs" id="kmTabs"></div>
-      <div class="icongrid" id="kmGrid"></div></div>
+    <div class="frow"><label>マーク</label><div id="kmIconField"></div></div>
     <div class="frow"><label>色</label><div class="colorsel" id="kmColor">
       ${HUES12.map((_,i)=>{const c=HUE(i).v;return `<button data-c="${c}" class="${(k?.color||HUE(1).v)===c?'on':''}" style="background:${c}" title="${esc(hueLabel(i)||HUE(i).n)}" onclick="$$('#kmColor button').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`;}).join('')}</div></div>
   </div>
   <div class="mbtns">
     <button class="save" onclick="saveMark('${k?.id||''}')">保存</button></div>`);
   kmRefresh();}
-function kmRefresh(){
-  $('#kmTabs').innerHTML=ICON_CATS.map(c=>`<button class="${window._mCat===c?'on':''}" onclick="mtab('${c}')">${c}</button>`).join('');
-  $('#kmGrid').innerHTML=Object.entries(ICONS).filter(([,v])=>v.c===window._mCat)
-    .map(([key])=>`<button class="${window._mIcon===key?'on':''}" onclick="mpick('${key}')">${icSvg(key)}</button>`).join('');}
-function mtab(c){window._mCat=c;kmRefresh();}
+function kmRefresh(){const f=$('#kmIconField');if(!f)return;f.innerHTML=markFieldHtml(window._mIcon,'mpick');}
 function mpick(key){window._mIcon=key;kmRefresh();}
 async function delMark(id){if(!await uiConfirm('このマークを削除しますか？','削除'))return;
   S.marks=S.marks.filter(x=>x.id!==id);save();markList();render();}
@@ -8179,7 +8234,12 @@ function openModal(html){const m=$('#modal');m.innerHTML=html;$('#modalWrap').cl
 function closeModal(){$('#modalWrap').classList.remove('show');taskAddAfter=null;routineAddAfter=null;}
 /* confirm()/prompt()は埋め込み環境で動かないためアプリ内ダイアログを使う */
 let dlgResolve=null;
-function dlgEnd(v){$('#dlgWrap').classList.remove('show');$('#dlg').style.transform='';const r=dlgResolve;dlgResolve=null;if(r)r(v);}
+function dlgEnd(v){$('#dlgWrap').classList.remove('show');$('#dlg').style.transform='';const r=dlgResolve;dlgResolve=null;if(r)r(v);
+  if(_dpReturn){const d=_dpReturn; // 日付ポップから開いた入力・確認が終わったら、同じ日のポップへ戻る（v4.80）
+    setTimeout(()=>{if(_dpReturn!==d)return; // 別の流れに移っていたらやめる
+      const dw=$('#dlgWrap'),mw=$('#modalWrap');
+      if((dw&&dw.classList.contains('show'))||(mw&&mw.classList.contains('show')))return; // 直後に別の画面（繰り返しの範囲・確認など）が開いた＝まだ途中
+      _dpReturn=null;openDayPopup(d);},120);}}
 /* ポップの外をタップ／下へしっかり引き下げで閉じる。
    横スライド（グループタブ等）や中身のスクロールでは閉じないよう、縦優位を確かめてから動かす */
 (function bindDlgClose(){const wrap=$('#dlgWrap'),box=$('#dlg');if(!wrap||!box)return;
@@ -8375,7 +8435,7 @@ function buildCalSnap(){const t=parseDs(todayStr()),ws=S.settings.weekStart||0;
     const ev=S.events.filter(e=>eventOccursOn(e,d)&&!e.markOnly).sort((a,b)=>(a.start||'').localeCompare(b.start||''))
       .map(e=>({t:evTitle(e).slice(0,14),c:e.noFill?'':evColor(e),l:e.noFill?evLine(e):'',dn:evDone(e,d)?1:0}));
     const tk=S.tasks.filter(x=>x.status!=='done'&&x.today&&(x.today===d||(x.endDate&&x.today<d&&d<=x.endDate)))
-      .map(x=>({t:(x.title||'').slice(0,14),c:taskFill(),k:1}));
+      .map(x=>({t:(x.title||'').slice(0,14),c:taskFillOf(x),k:1}));
     const it=[...ev,...tk];const h=holidayName(c.getFullYear(),c.getMonth()+1,c.getDate());
     if(it.length||h)days[d]={i:it.slice(0,6),n:it.length,h:h?1:0};}
   return {ws,days};}
