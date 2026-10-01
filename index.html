@@ -1734,7 +1734,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.02';
+const APP_VERSION='v5.03';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -5269,19 +5269,22 @@ async function extRefresh(force){if(_extBusy)return;if(!force&&_ext.at&&Date.now
     mu?fetch(mu).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(j=>{if(!j||j.ok===false)throw new Error((j&&j.error)||'読めませんでした');out.meo=j.days||{};})
       .catch(e=>{out.meoErr=String(e.message||e).slice(0,80);out.meo=_ext.meo||null;}):Promise.resolve(),
     ig?extPost(ig,'listScheduled').then(j=>{if(!j||j.success===false)throw new Error((j&&j.error)||'読めませんでした');
-      out.ig=maxDate((j.posts||[]).filter(p=>p.status==='予約済み').map(p=>(p.date||'').slice(0,10)));}).catch(e=>{out.igErr=String(e.message||e).slice(0,80);out.ig=_ext.ig||'';}):Promise.resolve(),
+      const ds=v=>/^\d{4}-\d{2}-\d{2}/.test(v||'')?String(v).slice(0,10):'';
+      const arr=j.posts||j.list;if(!Array.isArray(arr))throw new Error('予約一覧が返ってきませんでした（前回の日付のまま）'); // 動作確認の返事だけ返ることがある＝空にしない
+      out.ig=streakEnd(arr.map(p=>ds(p.date)));/* ブログと同じ「途切れず続く最後の日」（勤怠アプリと同じ・v5.03） */}).catch(e=>{out.igErr=String(e.message||e).slice(0,80);out.ig=_ext.ig||'';}):Promise.resolve(),
     bl?extPost(bl,'list').then(j=>{if(!j||j.ok===false)throw new Error((j&&j.error)||'読めませんでした');
       const ds=v=>/^\d{4}-\d{2}-\d{2}/.test(v||'')?String(v).slice(0,10):'';
+      if(!Array.isArray(j.planned)&&!Array.isArray(j.archive))throw new Error('予約一覧が返ってきませんでした（前回の日付のまま）');
       out.blog=streakEnd([...(j.planned||[]),...(j.archive||[])].map(p=>ds(p.date)));out.blogSrc='streak';}).catch(e=>{out.blogErr=String(e.message||e).slice(0,80);out.blog=_ext.blog||'';out.blogSrc=_ext.blogSrc;}):Promise.resolve()]);
   _ext=out;try{localStorage.setItem(EXT_KEY,JSON.stringify(_ext));}catch(e){}
   _extBusy=false;if(view==='cal'||(view==='set'&&setPage==='data'))render();}
 function extBadges(dstr){let h='';
-  if(_ext.ig&&_ext.ig===dstr)h+='<span class="extb" title="草刈りインスタの予約はこの日まで">🌿</span>';
+  if(_ext.ig&&_ext.ig===dstr)h+='<span class="extb" title="草刈りインスタはこの日まで毎日つづいています">🌿</span>';
   if(_ext.blog&&_ext.blog===dstr)h+=`<span class="extb" title="ブログはこの日まで毎日つづいています">📝</span>`;
   const ms=meoState(dstr);if(ms)h+=`<span class="meob ${ms}" title="MEO投稿">${ms==='ok'?'M✓':ms==='late'||ms==='ng'?'M!':'M'}</span>`;
   return h;}
 function extDayLine(dstr){const a=[];
-  if(_ext.ig&&_ext.ig===dstr)a.push('🌿 草刈りインスタ：予約はこの日まで');
+  if(_ext.ig&&_ext.ig===dstr)a.push(_ext.ig<todayStr()?'🌿 草刈りインスタ：この日で途切れています（次の予約を入れましょう）':'🌿 草刈りインスタ：この日まで毎日つづいています');
   if(_ext.blog&&_ext.blog===dstr)a.push(_ext.blog<todayStr()?'📝 カルペブログ：この日で途切れています（次の予約を入れましょう）':'📝 カルペブログ：この日まで毎日つづいています');
   const mo=_ext.meo&&_ext.meo[dstr],ms=meoState(dstr);
   if(mo&&ms)a.push(`📍 MEO投稿 ${mo.n}件：${ms==='ok'?'✅ ぜんぶ投稿済み':ms==='late'?`<b style="color:var(--danger);">未投稿 ${mo.n-mo.ok}件</b>`:ms==='ng'?`<b style="color:var(--danger);">取消・誤投稿 ${mo.ng}件</b>`:`これから（投稿済み ${mo.ok}／${mo.n}）`}`);
@@ -5290,8 +5293,8 @@ function extSummary(){if(!_ext.ig&&!_ext.blog&&!_ext.meo)return '';
   const f=d=>d?fmtDateJa(d):'—';
   const md=d=>{if(!d)return '—';const x=parseDs(d);return `${x.getMonth()+1}/${x.getDate()}`;};
   const t=todayStr();const left=d=>d?Math.round((parseDs(d)-parseDs(t))/86400000):0;
-  const bl=_ext.blog?(_ext.blog<t?`<b class="extwarn">${md(_ext.blog)}</b>で途切れ`:`<b${left(_ext.blog)<=3?' class="extwarn"':''}>${md(_ext.blog)}</b>まで（あと${left(_ext.blog)}日）`):'—';
-  return `<div class="extsum" onclick="extTapRefresh()" title="タップで今すぐ読み直す"><span>🌿インスタ <b>${md(_ext.ig)}</b>まで予約</span><span>📝ブログ ${bl}</span><span class="extrf">${_extBusy?'…':'↻'}</span></div>`;}
+  const sk=d=>d?(d<t?`<b class="extwarn">${md(d)}</b>で途切れ`:`<b${left(d)<=3?' class="extwarn"':''}>${md(d)}</b>まで（あと${left(d)}日）`):'—'; // インスタ・ブログ共通
+  return `<div class="extsum" onclick="extTapRefresh()" title="タップで今すぐ読み直す"><span>🌿インスタ ${sk(_ext.ig)}</span><span>📝ブログ ${sk(_ext.blog)}</span><span class="extrf">${_extBusy?'…':'↻'}</span></div>`;}
 function extTapRefresh(){toast('予約日を読み直しています…');extRefresh(true).then(()=>{render();toast(_ext.blogErr||_ext.igErr?'一部読めませんでした（設定→同期・データで確認）':'最新の予約日にしました');});}
 /* ---- その日の並び順（v4.30）：日付ポップでドラッグした順を、月のセルにもそのまま使う ---- */
 function sortByDayOrder(dstr,arr,tok){const o=(S.dayOrder||{})[dstr];if(!o||!o.length)return arr;
@@ -7451,7 +7454,7 @@ function renderSettings(){
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button style="border:1px solid var(--ink);padding:8px 14px;font-size:13px;font-weight:600;" onclick="toast('読み込んでいます…');extRefresh(true)">今すぐ読み込む</button>
         <span class="mini" style="padding:0;">${_ext.at?`最後に読んだ時刻 ${fmtBakTime(_ext.at)}`:'まだ読んでいません'}</span></div>
-      <div class="mini" style="padding:6px 0 0;">🌿 予約済みのいちばん先の日：<b>${_ext.ig?fmtDateJa(_ext.ig):'—'}</b>${_ext.igErr?`<span style="color:var(--danger);">（読めませんでした：${esc(_ext.igErr)}）</span>`:''}<br>
+      <div class="mini" style="padding:6px 0 0;">🌿 毎日つづいている最後の日（今日から1日も抜けずに続く日まで）：<b>${_ext.ig?fmtDateJa(_ext.ig):'—'}</b>${_ext.igErr?`<span style="color:var(--danger);">（読めませんでした：${esc(_ext.igErr)}）</span>`:''}<br>
         📍 MEO投稿：${_ext.meo?`<b>${Object.values(_ext.meo).reduce((a,o)=>a+o.n,0)}件</b>の予定（投稿済みは緑のM✓・過ぎて未投稿は赤のM!・これからは灰のM）`:'—'}${_ext.meoErr?`<span style="color:var(--danger);">（読めませんでした：${esc(_ext.meoErr)}）</span>`:''}<br>
         📝 毎日つづいている最後の日（今日から1日も抜けずに続く日まで）：<b>${_ext.blog?fmtDateJa(_ext.blog):'—'}</b>${_ext.blogErr?`<span style="color:var(--danger);">（読めませんでした：${esc(_ext.blogErr)}）</span>`:''}<br>
         アプリを開いたとき・カレンダーを開いたとき（5分に1回まで）自動で読みます。カレンダー下の予約日の行をタップすると今すぐ読み直します。月カレンダーのその日に 🌿／📝 が付きます。URLを空にすると表示しません。</div></div>
@@ -7498,6 +7501,9 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.03（2026-10-01）インスタもブログと同じ「毎日つづいている最後の日」に</b><br>
+  ・草刈りインスタの日付も、ブログと同じく<b>今日から1日も抜けずに続いている最後の日</b>を表示します（途切れていたら赤で「◯/◯で途切れ」、あと◯日）。読み直しのタイミングもブログと同じ（5分に1回・カレンダーを開いたとき・行タップで今すぐ）<br>
+  </div>
   <div class="mini"><b>v5.02（2026-10-01）MEO投稿の投稿済み／未投稿をカレンダーに</b><br>
   ・MEO投稿のスケジュールを自動で読み、カレンダーの日付に<b>M✓（緑＝投稿済み）／M!（赤＝過ぎたのに未投稿・取消）／M（灰＝これから）</b>を付けます<br>
   ・日付ポップの上に「📍 MEO投稿 ◯件：…」を表示。読み直しはインスタ・ブログと同じ（5分に1回・カレンダー下の行タップで今すぐ）<br>
