@@ -7501,6 +7501,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v4.91（2026-10-03）スマホのClaudeから操作できるように</b><br>
+  ・スマホのClaudeアプリに話しかけるだけで、<b>今日の予定・タスクの確認、タスクや予定の追加、完了、日付の変更、取り消し</b>ができるようになりました（アプリを開いている端末にも数秒で反映されます）<br>
+  ・Claudeから入れた時刻つきのタスクも、<b>時刻のメール通知</b>とホーム画面のウィジェットにそのまま反映されます<br>
+  </div>
   <div class="mini"><b>v5.03（2026-10-01）インスタもブログと同じ「毎日つづいている最後の日」に</b><br>
   ・草刈りインスタの日付も、ブログと同じく<b>今日から1日も抜けずに続いている最後の日</b>を表示します（途切れていたら赤で「◯/◯で途切れ」、あと◯日）。読み直しのタイミングもブログと同じ（5分に1回・カレンダーを開いたとき・行タップで今すぐ）<br>
   </div>
@@ -8617,9 +8621,9 @@ function buildCalSnap(){const t=parseDs(todayStr()),ws=S.settings.weekStart||0;
   const days={};
   for(let c=new Date(start);c<=end;c.setDate(c.getDate()+1)){const d=dsOf(c);
     const ev=S.events.filter(e=>eventOccursOn(e,d)&&!e.markOnly).sort((a,b)=>(a.start||'').localeCompare(b.start||''))
-      .map(e=>({t:evTitle(e).slice(0,14),c:e.noFill?'':evColor(e),l:e.noFill?evLine(e):'',dn:evDone(e,d)?1:0}));
+      .map(e=>({t:evTitle(e).slice(0,14),c:e.noFill?'':evColor(e),l:e.noFill?evLine(e):'',dn:evDone(e,d)?1:0,i:e.id}));
     const tk=S.tasks.filter(x=>x.status!=='done'&&x.today&&(x.today===d||(x.endDate&&x.today<d&&d<=x.endDate)))
-      .map(x=>({t:(x.title||'').slice(0,14),c:taskFillOf(x),k:1}));
+      .map(x=>({t:(x.title||'').slice(0,14),c:taskFillOf(x),k:1,i:x.id}));
     const it=[...ev,...tk];const h=holidayName(c.getFullYear(),c.getMonth()+1,c.getDate());
     if(it.length||h)days[d]={i:it.slice(0,6),n:it.length,h:h?1:0};}
   return {ws,days};}
@@ -8649,7 +8653,7 @@ function buildWidgetSnap(){const out={at:Date.now(),days:{},acc:(UITHEMES[S.sett
   try{out.cal=buildCalSnap();}catch(_){}
   for(let i=0;i<14;i++){const d=shiftDs(t0,i);
     const ev=miniEventsOn(d).filter(e=>!evDone(e,d)),tk=miniTasksOn(d);
-    out.days[d]={e:ev.slice(0,12).map(e=>({t:evTitle(e),s:e.start||''})),t:tk.slice(0,15).map(x=>({t:x.title||'',s:x.start||'',o:x.today<d?1:0})),en:ev.length,tn:tk.length};}
+    out.days[d]={e:ev.slice(0,12).map(e=>({t:evTitle(e),s:e.start||'',i:e.id})),t:tk.slice(0,15).map(x=>({t:x.title||'',s:x.start||'',o:x.today<d?1:0,i:x.id})),en:ev.length,tn:tk.length};} // i＝スマホのClaudeから完了・削除したとき要約からも消すため（v4.91）
   return out;}
 
 /* ========================= 起動 ========================= */
