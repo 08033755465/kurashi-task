@@ -455,7 +455,7 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 /* 画面のじゃまをしないよう、上に細い帯で出す */
 #undobar{position:fixed;left:0;right:0;top:0;transform:translateY(-100%);background:var(--ink);color:#fff;
   padding:calc(6px + env(safe-area-inset-top)) 12px 6px;display:none;align-items:center;gap:10px;
-  z-index:70;font-size:12.5px;opacity:0;transition:opacity .22s,transform .22s;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+  z-index:450;font-size:12.5px;opacity:0;transition:opacity .22s,transform .22s;box-shadow:0 2px 10px rgba(0,0,0,.22);} /* 日付ポップ(120)・入力(400)より前＝ポップを開いたままでも押せる */
 #undobar.show{display:flex;opacity:1;transform:translateY(0);}
 #undobar>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #undobar button{color:#fff;border:1px solid rgba(255,255,255,.55);border-radius:14px !important;padding:4px 12px;font-size:12px;font-weight:700;white-space:nowrap;flex:none;}
@@ -1734,7 +1734,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.04';
+const APP_VERSION='v5.05';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -3005,7 +3005,9 @@ function flashUndo(msg){let el=$('#undobar');if(!el){el=document.createElement('
   el.innerHTML=`<span>${esc(msg)}</span><button onclick="doUndo()">↶ 元に戻す</button>`;el.classList.add('show');
   clearTimeout(_undoTimer);_undoTimer=setTimeout(()=>el.classList.remove('show'),6000);}
 function doUndo(){if(!_undo)return;try{S=JSON.parse(_undo);}catch(e){return;}_undo=null;
-  $('#undobar')?.classList.remove('show');save();render();toast('元に戻しました');}
+  $('#undobar')?.classList.remove('show');save();render();
+  const p=$('#daypop');if(p&&p.classList.contains('show'))openDayPopup(p.dataset.d); // 開いている日付ポップも戻した内容で描き直す
+  toast('元に戻しました');}
 function celebrate(){const em=['🎉','✨','🌸','⭐','💮','🎊'];
   for(let i=0;i<16;i++){const s=document.createElement('span');s.className='burst';
     s.textContent=em[i%em.length];s.style.left=(10+Math.random()*80)+'vw';s.style.top=(30+Math.random()*40)+'vh';
@@ -5633,8 +5635,19 @@ function completeTaskOn(id,d){const x=S.tasks.find(v=>v.id===id);if(!x||x.status
 let _pk={id:'',sel:'',base:'',y:0,x:0,ret:''};
 function doneDatePop(id,def,ret){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const t=todayStr();const base=x.today||x.due||'';let sel=def||base||t;if(sel>t)sel=t;
-  const d=parseDs(sel);_pk={id,sel,base,y:d.getFullYear(),x:d.getMonth(),ret:ret||''};doneDateRender();}
-function doneDateRender(){const x=S.tasks.find(v=>v.id===_pk.id);if(!x)return;
+  const d=parseDs(sel);_pk={id,sel,base,y:d.getFullYear(),x:d.getMonth(),ret:ret||'',mode:'done'};doneDateRender();}
+/* 日付を移動（v5.05）：同じカレンダーで「いつやる？」を選ぶ。日付ポップ・タスクタブは開いたまま */
+function moveDatePop(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  const t=todayStr();const base=x.today||'';const sel=base||t;const d=parseDs(sel);
+  _pk={id,sel,base,y:d.getFullYear(),x:d.getMonth(),ret:'',mode:'move'};doneDateRender();}
+function moveTaskTo(id,d){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if((d||null)===(x.today||null)){toast('いまと同じ日です');return;}
+  snapUndo();
+  if(d)moveTokTo('t_'+id,d);else{x.today=null;delete x.endDate;x.snooze=null;delete x.rel;touchPicked(x);}
+  _dpActOpen='';save();render();attachCellPress();
+  const p=$('#daypop');if(p&&p.classList.contains('show'))openDayPopup(p.dataset.d); // ポップは開いたまま描き直す
+  flashUndo(d?`「${x.title}」を ${fmtDateJa(d)} に移動しました`:`「${x.title}」を日付なしにしました`);}
+function doneDateRender(){const x=S.tasks.find(v=>v.id===_pk.id);if(!x)return;const mv=_pk.mode==='move';
   let el=$('#pickpop');if(!el){el=document.createElement('div');el.id='pickpop';document.body.appendChild(el);
     el.onclick=e=>{if(e.target===el)pickpopClose();};}
   const t=todayStr(),ws=S.settings.weekStart||0;
@@ -5644,25 +5657,27 @@ function doneDateRender(){const x=S.tasks.find(v=>v.id===_pk.id);if(!x)return;
     // その日の予定・タスクを2件まで（色つきの細いバー）＝どの日だったか思い出せるように
     const its=[...eventsOn(ds).map(e=>({t:evTitle(e),c:evColor(e)})),...dayTasksOn(ds).filter(o=>o.x.id!==_pk.id).map(o=>({t:o.x.title,c:taskFillOf(o.x)}))];
     const hol=holidayName(_pk.y,_pk.x+1,dn);
-    cells+=`<button type="button" class="pkc${ds===_pk.sel?' on':''}${ds===t?' td':''}${ds===_pk.base?' bs':''}${ds>t?' fut':''}" onclick="pkPick('${ds}')">
-      <b class="${hol||dw===0?'sun':dw===6?'sat':''}">${dn}</b>${ds===t?'<i class="pktd">今日</i>':ds===_pk.base?'<i class="pkbs">予定日</i>':''}
+    cells+=`<button type="button" class="pkc${ds===_pk.sel?' on':''}${ds===t?' td':''}${ds===_pk.base?' bs':''}${ds>t&&!mv?' fut':''}" onclick="pkPick('${ds}')">
+      <b class="${hol||dw===0?'sun':dw===6?'sat':''}">${dn}</b>${ds===t?'<i class="pktd">今日</i>':ds===_pk.base?`<i class="pkbs">${mv?'いまの日':'予定日'}</i>`:''}
       ${its.slice(0,2).map(v=>`<span class="pkb" style="background:${v.c};color:${evTextColor(v.c)};">${esc(v.t)}</span>`).join('')}${its.length>2?`<span class="pkm">+${its.length-2}</span>`:''}</button>`;}
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
   const chip=(ds,l)=>ds?`<button type="button" class="${_pk.sel===ds?'on':''}" onclick="pkPick('${ds}',1)">${l}</button>`:'';
   el.innerHTML=`<div class="pkbox">
-    <div class="iph"><b>いつ終わった？</b><button type="button" onclick="pickpopClose()">✕</button></div>
+    <div class="iph"><b>${mv?'いつやる？':'いつ終わった？'}</b><button type="button" onclick="pickpopClose()">✕</button></div>
     <div class="pkbody">
       <div class="pktitle">${tkMk(x)}${esc(x.title)}</div>
-      <div class="pkchips">${chip(t,'今日')}${chip(shiftDs(t,-1),'昨日')}${_pk.base&&_pk.base<t&&_pk.base!==shiftDs(t,-1)?chip(_pk.base,'予定日 '+fmtDateJa(_pk.base)):''}</div>
+      <div class="pkchips">${mv?`${chip(t,'今日')}${chip(shiftDs(t,1),'明日')}${chip(shiftDs(t,2),'あさって')}${chip(shiftDs(t,7),'1週間後')}<button type="button" class="${_pk.sel==='__none'?'on':''}" onclick="pkPick('__none')">日付なし</button>`
+        :`${chip(t,'今日')}${chip(shiftDs(t,-1),'昨日')}${_pk.base&&_pk.base<t&&_pk.base!==shiftDs(t,-1)?chip(_pk.base,'予定日 '+fmtDateJa(_pk.base)):''}`}</div>
       <div class="pknav"><button type="button" onclick="pkNav(-1)">‹</button><span>${_pk.y}年${_pk.x+1}月</span><button type="button" onclick="pkNav(1)">›</button></div>
       <div class="pkgrid">${wd.map((w,i)=>`<span class="pkw ${(i+ws)%7===0?'sun':(i+ws)%7===6?'sat':''}">${w}</span>`).join('')}${cells}</div>
     </div>
-    <div class="pkfoot"><button type="button" onclick="pickpopClose()">やめる</button><button type="button" class="ok" onclick="doneDateOk()">✅ ${fmtDateJa(_pk.sel)} に完了</button></div></div>`;
+    <div class="pkfoot"><button type="button" onclick="pickpopClose()">やめる</button><button type="button" class="ok" onclick="doneDateOk()">${mv?(_pk.sel==='__none'?'📋 日付なしにする':`➡ ${fmtDateJa(_pk.sel)} に移動`):`✅ ${fmtDateJa(_pk.sel)} に完了`}</button></div></div>`;
   el.classList.add('show');}
-function pkPick(ds,jump){_pk.sel=ds;if(jump){const d=parseDs(ds);_pk.y=d.getFullYear();_pk.x=d.getMonth();}doneDateRender();}
+function pkPick(ds,jump){_pk.sel=ds;if(jump&&ds!=='__none'){const d=parseDs(ds);_pk.y=d.getFullYear();_pk.x=d.getMonth();}doneDateRender();}
 function pkNav(k){_pk.x+=k;if(_pk.x<0){_pk.x=11;_pk.y--;}if(_pk.x>11){_pk.x=0;_pk.y++;}doneDateRender();}
 function pickpopClose(){$('#pickpop')?.classList.remove('show');}
-function doneDateOk(){const {id,sel}=_pk;pickpopClose();_dpActOpen='';_carryOpen='';completeTaskOn(id,sel);dlRedraw();}
+function doneDateOk(){const {id,sel,mode}=_pk;pickpopClose();if(mode==='move'){moveTaskTo(id,sel==='__none'?null:sel);return;}
+  _dpActOpen='';_carryOpen='';completeTaskOn(id,sel);dlRedraw();}
 /* 完了＝このタスクはもう出さない */
 function fullyCompleteTask(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;snapUndo();
   x.status='done';x.doneAt=todayStr();x.doneMin=curMin();
@@ -5757,6 +5772,7 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
   if(o.acts==='und'){ // 日付なし・先の日付（タスクタブ）
     btns=`<button type="button" class="pri" onclick="dlSetWhen('${x.id}','today')">☀ 今日やる</button>
       <button type="button" onclick="dlSetWhen('${x.id}','tomorrow')">➡ 明日やる</button>
+      <button type="button" onclick="moveDatePop('${x.id}')">📅 日付を決める</button>
       ${!x.today?`<button type="button" onclick="dlSetWhen('${x.id}','${x.priority===1?'normal':'priority'}')">${x.priority===1?'通常へ':'★ 優先へ'}</button>`:''}
       <span class="dpactbr"></span>
       <button type="button" onclick="_dpActOpen='';completeTaskOn('${x.id}',todayStr());dlRedraw()">✅ 完了</button>
@@ -5764,7 +5780,9 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
       <button type="button" onclick="taskModal('${x.id}')">✎ 編集</button>
       <button type="button" class="dpdanger" onclick="delTask('${x.id}')">🗑</button>`;}
   else btns=`<button type="button" class="pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ この日で完了</button>
-      <button type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 日付を選ぶ</button>
+      <button type="button" onclick="moveDatePop('${x.id}')">➡ 日付を移動</button>
+      <span class="dpactbr"></span>
+      <button type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 別の日に完了</button>
       <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
       <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}')">🗑</button>`;
   const chk=ctx==='pop'?`closeDayPopup();taskCompleteTap('${x.id}')`:`taskCompleteTap('${x.id}',this.closest('.dpev'))`;
@@ -7501,6 +7519,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.05（2026-10-03）タスクの日付をその場で移動</b><br>
+  ・タスクをタップして開くボタンに<b>「➡ 日付を移動」</b>を追加しました。今日の印とその日の予定が見えるカレンダーから、移したい日を選べます（今日・明日・あさって・1週間後・日付なし はボタン1つ）<br>
+  ・移動しても<b>日付ポップは開いたまま</b>。続けてほかのタスクも動かせます（「元に戻す」で取り消せます）<br>
+  ・日付が決まっていないタスクには「📅 日付を決める」を付けました<br>
+  </div>
   <div class="mini"><b>v5.04（2026-10-03）スマホのClaudeから操作できるように</b><br>
   ・スマホのClaudeアプリに話しかけるだけで、<b>今日の予定・タスクの確認、タスクや予定の追加、完了、日付の変更、取り消し</b>ができるようになりました（アプリを開いている端末にも数秒で反映されます）<br>
   ・Claudeから入れた時刻つきのタスクも、<b>時刻のメール通知</b>とホーム画面のウィジェットにそのまま反映されます<br>
