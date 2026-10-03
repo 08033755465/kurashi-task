@@ -26,14 +26,19 @@
 1. 変更する（下の「守ること」を厳守）
 2. `bash scripts/check.sh` → ✅ が2つ出るまで直す
 3. 版を上げる：`const APP_VERSION='v5.04';` の数字を1つ上げる（例 v5.04→v5.05。大きな機能は v5.10 など）
-4. リリース情報を書く：`` return back+`<div class="vhead"><h1>リリース情報</h1></div> `` の**直後**に、既存と同じ形の `<div class="mini"><b>v5.05（YYYY-MM-DD）見出し</b><br>・…<br></div>` を追加
+4. リリース情報を書く（日付は**日本時間の今日**＝ `TZ=Asia/Tokyo date +%F`）：`` return back+`<div class="vhead"><h1>リリース情報</h1></div> `` の**直後**に、既存と同じ形の `<div class="mini"><b>v5.05（YYYY-MM-DD）見出し</b><br>・…<br></div>` を追加
    - ユーザー向けの言葉で、**何ができるようになったか／何が直ったか**だけ書く（他アプリ名・内部の仕組み・作った経緯は書かない）
+   - 過去のリリース情報（履歴）は書き換えない
 5. もう一度 `bash scripts/check.sh`
 6. コミット（日本語。1行目＝「v5.05 何をしたか」、本文＝変更点の箇条書き）
-   - 末尾に `Co-Authored-By: Claude <noreply@anthropic.com>`（環境の指示があればそれに従う）
+   - 末尾の Co-Authored-By 行は、**実行環境（システム）の指示があればそれを優先**。なければ `Co-Authored-By: Claude <noreply@anthropic.com>`
 7. push
    - スマホのクラウドで作業していて `main` に push できない環境なら、ブランチに push してプルリクエストを作り、「マージすると本番に出ます」と伝える
-8. 報告：何が変わったか・どう確かめたか・**ユーザーが確認すること**（「アプリを開き直して〜を押してみてください」）を短く
+8. 報告（この形で短く）
+   - **結果**：何が変わったか（1〜3行）
+   - **公開状態**：「本番に出しました（1分ほどで反映）」／「プルリクエストを作りました。マージすると本番に出ます」／「まだ公開していません（理由）」のどれかを必ず書く
+   - **確かめたこと**：どう確認したか（ブラウザで見られなかったらそう書く）
+   - **お願い**：ユーザーが確認すること（例「アプリを開き直して、設定 → いちばん下を見てください。版が v5.05 になっていればOK」）
 
 ## 守ること（このアプリの約束）
 ### 公開リポジトリ（いちばん大事）
@@ -58,12 +63,15 @@
 - 削除・まとめての変更は確認を出す（`uiConfirm()`。`confirm()` は使わない）
 - 設定画面に一覧を並べない（「誕生日（3件）▸」→ 開いた先で一覧・追加・編集）
 - デザイン：システムフォント・白いカード・ソフトな影・グラデのボタン。明朝体・くすんだ色は使わない
-- 見た目や操作を変えたら、ブラウザで実際に動かして確かめる（できる環境なら `python3 -m http.server 8955` で開き、スマホ幅 375px で確認）
+- 見た目や操作を変えたら、ブラウザで実際に動かして確かめる（できる環境なら）
+  - `python3 -m http.server 8966 --bind 127.0.0.1` など**空いている番号**で開く（Macでは 8955 を別の作業が使っていることがある。開いたら画面の「現在のバージョン」が自分の版か必ず確認）
+  - スマホ幅 375px で確認。同期は設定しない（新しい空の状態で試す）。終わったら自分で立てたサーバーは止める
 
 ## よく触る関数（`grep -n "^function 名前" index.html` で探す）
 | 場所 | 関数 |
 |---|---|
-| 画面の描き直し | `render()` `switchView(v)` |
+| 画面の描き直し | `render()` `switchView(v)`（v＝`tasks` タスク／`shop` 買い物／`cal` カレンダー／`routine` ルーティン／`diary` 日記／`set` 設定） |
+| 設定画面 | `renderSettings()`（トップ＝`setPage===''`、各ページは `goSet('event'|'disp'|'time'|'data'|'personal'|'release'|'help')`） |
 | タスク | `renderTasks()` `taskRow()` `taskModal()` `tfRender()` `saveTask()` `delTask()` `toggleTaskDone()` `completeTaskOn(id,日付)` `advanceRepeatTask()` `nextTaskDate()` |
 | 予定 | `eventModal()` `emRender()` `saveEvent()` `delEvent()` `eventStartsOn()` `eventOccursOn()` |
 | カレンダー | `renderCal()`（月・週・日）`openDayPopup(日付)`（日付ポップ）`monthWeekSpans()`（連日バー） |
