@@ -49,10 +49,12 @@
 - データは `S`（`localStorage['homehub_taskcal_v1']`）。Supabase の `kurashi_state` 1行に丸ごと同期し、`mergeStates`（3方向マージ）で他端末の変更を消さない作り。`save()` / `pushState()` / `pullState()` の流れを変えない
 - 項目を足す・形を変えるときは `migrate()` で古いデータも読めるようにする（後方互換）。配列なら `ID_LISTS`、日付キーの辞書なら `MAP_KEYS` に入れる
 - **スマホのClaudeからの操作**（Supabase の `kt` スキーマの関数）が、次の項目を直接読み書きしている。名前や意味を変えない／変えるならユーザーに「スマホ操作側も直す必要がある（Macで作業）」と伝える
-  - タスク `S.tasks[]`：`id, title, status('todo'|'done'), today('YYYY-MM-DD'|null), endDate, due, start, end('HH:MM'), priority(1優先|2通常), repeat('daily'|'weekly'|'biweekly'|'monthly'), repDays, repDom, repMonthN, repNth{n,d}, until, repeatPrev, doneAt, doneMin, memo, links[{label,url}], groupId, order, pickedAt, createdAt, noRemind, hue, mark`
+  - タスク `S.tasks[]`：`id, title, status('todo'|'done'), today('YYYY-MM-DD'|null), endDate, due, start, end('HH:MM'), priority(1優先|2通常), repeat('daily'|'weekly'|'biweekly'|'monthly'), repDays, repDom, repMonthN, repNth{n,d}, until, repeatPrev, doneAt, doneMin, doneLog（繰り返しの済ませた回の日付）, memo, links[{label,url}], groupId, order, pickedAt, createdAt, noRemind, hue, mark`
   - 予定 `S.events[]`：`id, title, date, endDate, start, end, repeat, repDays, repDom, repMonthN, repNth, until, exdates[], doneDates[], memo, links, groupId, hue, mark`
   - `S.widget`（`buildWidgetSnap()` が作る要約）：`days[日付].t/e` の各行と `cal.days[日付].i` の各行に **`i`（id）を必ず持たせる**。`rm`（時刻のメール通知リスト）の鍵 `k` の形式 `t<id>@<日付>-<開始分>-<何分前>` を変えない
   - `S.settings.remindOn / remindLead / remindEv / lastTaskGroup / lastEvGroup`
+- **繰り返しタスクは「その回だけ」完了**（`completeRepeatOcc`）：`doneLog` に日付を足し、`status` は 'todo' のまま `today` を次のまだの回へ進める。取り消しは `reopenRepeatOcc(id,日付)`。その日の完了一覧は `taskDoneOn(x,日付)` で判定する（`status==='done'&&doneAt===日` だけで判定しない）。削除は `delTask(id,日付)` が「この日以降／すべて」を聞く
+- **同期の土台**（`_base`）は中身のコピーではなく項目ごとの署名（`baseSig()`）。`mergeList/mergeMap` は `{id:署名}` を受け取る。土台が無いときは両方にあるものをクラウド優先にする
 - 本番の同期先や実データでテストしない。試すときは同期を切った状態（設定の同期を空）で
 
 ### 画面・操作

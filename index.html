@@ -1748,7 +1748,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.06';
+const APP_VERSION='v5.07';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -2129,7 +2129,7 @@ function dayStart(d){return dayLog(d).startAt||dayWake(d);}
 function availOf(d){let m=hm2min(daySleep(d))-hm2min(dayStart(d));if(m<=0)m+=1440;return m;}
 /* 今日に表示するタスク: 今日指定 ＋ 毎日表示(pin)。「今日は隠す」(snooze)は除外 */
 function todayTasks(t){return S.tasks.filter(x=>{
-  if(x.status==='done'&&x.doneAt===t)return true; // 今日完了したものは（先日付・繰り越し含め）今日にグレーで残す
+  if(taskDoneOn(x,t))return true; // 今日完了したものは（先日付・繰り越し含め）今日にグレーで残す
   if(x.snooze===t)return false;
   if(x.today===t)return true;
   // 「記録」した日のぶんは今日として残り、翌日以降もタスクとして続く
@@ -2464,7 +2464,8 @@ function backupLocal(why){
     const snap={at:Date.now(),why:why||'',n:{tasks:(S.tasks||[]).length,events:(S.events||[]).length,shopping:(S.shopping||[]).length},data:j};
     if(list.length&&list[0].data===snap.data)return; // 中身が同じなら残さない
     list.unshift(snap);
-    while(list.length>3)list.pop();
+    const keep=j.length>500_000?1:3; // 本体が大きいときは1世代だけ（端末の保存容量を食いつぶさない・v5.07）
+    while(list.length>keep)list.pop();
     localStorage.setItem(BAKKEY,JSON.stringify(list));
   }catch(e){/* 容量オーバー等は無視（保険なので本体を止めない） */}}
 /* 連打などで増えた同じ予定（同じ日・名前・時刻・グループ・繰り返し）を1件にまとめる */
@@ -2487,24 +2488,33 @@ function fmtBakTime(t){const d=new Date(t);
 const BASEKEY='homehub_sync_base';
 let _base=null; // 前回同期した時点の状態（マージの土台）
 try{_base=JSON.parse(localStorage.getItem(BASEKEY)||'null');}catch(e){_base=null;}
+/* 土台＝前回同期した時点の「要約」（v5.07）。中身のコピーではなく、項目ごとの署名（ハッシュ）だけを持つ。
+   以前は本体まるごとのコピーで、データが大きい・端末の容量がいっぱいだと保存できず、古い土台が残ったり無くなったりして
+   「別の端末で保存したメモが、開いた端末の古い内容で上書きされる」原因になっていた */
+function sigOf(o){const s=JSON.stringify(o??null);let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36)+'.'+s.length.toString(36);}
+function baseSig(st){if(!st)return null;if(st.sig===1)return st;
+  const b={sig:1,updatedAt:st.updatedAt||0,L:{},M:{},settings:{},notes:sigOf(st.notes),ver:sigOf(st.ver)};
+  ID_LISTS.forEach(k=>{if(Array.isArray(st[k])){const m={};st[k].forEach(o=>{if(o&&o.id!=null)m[o.id]=sigOf(o);});b.L[k]=m;}});
+  MAP_KEYS.forEach(k=>{if(st[k]&&typeof st[k]==='object'){const m={};Object.keys(st[k]).forEach(x=>{m[x]=sigOf(st[k][x]);});b.M[k]=m;}});
+  Object.keys(st.settings||{}).forEach(x=>{b.settings[x]=sigOf(st.settings[x]);});return b;}
 function setBase(st){try{if(st===null){_base=null;localStorage.removeItem(BASEKEY);return;}
-  const j=JSON.stringify(st);_base=JSON.parse(j);
-  // 本体が大きい（1MB超）ときは端末に書かずメモリだけ＝本体の保存容量を圧迫しない（次回起動時はクラウドから取り直す）
-  if(j.length>1_000_000){localStorage.removeItem(BASEKEY);return;}
-  localStorage.setItem(BASEKEY,j);}catch(e){}}
+  _base=baseSig(JSON.parse(JSON.stringify(st)));
+  try{localStorage.setItem(BASEKEY,JSON.stringify(_base));}
+  catch(e){try{localStorage.removeItem(BASEKEY);}catch(_){} } // 書けなかったら古い土台を残さない（古い土台は上書き事故のもと）
+  }catch(e){}}
 const ID_LISTS=['tasks','routines','events','templates','taskTemplates','statGroups','birthdays','marks','habits','groups','shopping','shops','patterns','links'];
 const MAP_KEYS=['dayLog','dayColors','dayBands','dayOrder','periodNotes','lastNotify','diary'];
 const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
 /* id付きの配列：この端末での「追加・変更・削除」だけをクラウド側に反映する */
 function mergeList(base,local,remote){
-  base=base||[];local=local||[];remote=remote||[];
-  const bI=new Map(base.map(o=>[o.id,o])),lI=new Map(local.map(o=>[o.id,o])),rI=new Map(remote.map(o=>[o.id,o]));
+  base=base||{};local=local||[];remote=remote||[];
+  const bI=new Map(Object.entries(base)),lI=new Map(local.map(o=>[o.id,o])),rI=new Map(remote.map(o=>[o.id,o])); // base＝{id:署名}
   const out=[];const seen=new Set();
   remote.forEach(r=>{
     const b=bI.get(r.id),l=lI.get(r.id);
     if(b&&!l){return;}                       // この端末で消した → 消えたまま
     if(!l){out.push(r);seen.add(r.id);return;} // クラウド側で増えた
-    if(b&&!eq(b,l)){out.push(l);}            // この端末で変えた → こちらを採用
+    if(b&&b!==sigOf(l)){out.push(l);}        // この端末で変えた → こちらを採用
     else out.push(r);                        // 変えていない → クラウドを採用
     seen.add(r.id);});
   local.forEach(l=>{if(!seen.has(l.id)&&!bI.has(l.id))out.push(l);}); // この端末で増えた
@@ -2514,24 +2524,26 @@ function mergeMap(base,local,remote){
   base=base||{};local=local||{};remote=remote||{};
   const out={...remote};
   Object.keys(local).forEach(k=>{
-    if(!(k in base)||!eq(base[k],local[k]))out[k]=local[k];});   // 増やした・変えた
+    if(!(k in base)||base[k]!==sigOf(local[k]))out[k]=local[k];});   // 増やした・変えた（base＝{キー:署名}）
   Object.keys(base).forEach(k=>{if(!(k in local))delete out[k];}); // 消した
   return out;}
 function mergeStates(base,local,remote){
   // 土台が無い（この機能を入れる前・読み込み直後など）＝どちらが正しいか判断できないので
   // 「消さない」側に倒して両方を残す。取りこぼしより重複のほうが直しやすいため
+  // 土台が無いときは、両方にあるものは「クラウド（ほかの端末で保存された最新）」を優先。この端末にしか無いものは残す（v5.07）
   if(!base){const out=JSON.parse(JSON.stringify(remote));
     ID_LISTS.forEach(k=>{const r=remote[k]||[],l=local[k]||[];
       if(!Array.isArray(r)&&!Array.isArray(l))return;
-      const m=new Map(r.map(o=>[o.id,o]));l.forEach(o=>m.set(o.id,o));out[k]=[...m.values()];});
-    MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]={...(remote[k]||{}),...(local[k]||{})};});
-    out.settings={...(remote.settings||{}),...(local.settings||{})};
+      const m=new Map(l.map(o=>[o.id,o]));r.forEach(o=>m.set(o.id,o));out[k]=[...m.values()];});
+    MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]={...(local[k]||{}),...(remote[k]||{})};});
+    out.settings={...(local.settings||{}),...(remote.settings||{})};
     return out;}
+  base=baseSig(base); // 以前の形（中身まるごと）の土台も要約に直して使う
   const out=JSON.parse(JSON.stringify(remote));
-  ID_LISTS.forEach(k=>{if(Array.isArray(local[k])||Array.isArray(remote[k]))out[k]=mergeList(base[k],local[k],remote[k]);});
-  MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]=mergeMap(base[k],local[k],remote[k]);});
+  ID_LISTS.forEach(k=>{if(Array.isArray(local[k])||Array.isArray(remote[k]))out[k]=mergeList(base.L[k],local[k],remote[k]);});
+  MAP_KEYS.forEach(k=>{if(local[k]||remote[k])out[k]=mergeMap(base.M[k],local[k],remote[k]);});
   out.settings=mergeMap(base.settings,local.settings,remote.settings);
-  ['notes','ver'].forEach(k=>{if(!eq(base[k],local[k]))out[k]=local[k];});
+  ['notes','ver'].forEach(k=>{if(base[k]!==sigOf(local[k]))out[k]=local[k];});
   return out;}
 function syncReady(){return !!(SYNC.url&&SYNC.key&&SYNC.room);}
 function syncHeaders(){return {'apikey':SYNC.key,'Authorization':'Bearer '+SYNC.key,'Content-Type':'application/json'};}
@@ -4199,7 +4211,7 @@ function rvTab(v){rvSave(true);_rvTab=v;rvRender();}
 function rvRender(fresh){
   const d=_rvDay,o=diaryOf(d),t=todayStr();
   const dd=parseDs(d);const md=`${dd.getMonth()+1}/${dd.getDate()}（${WD[dd.getDay()]}）`;
-  const doneList=S.tasks.filter(x=>x.status==='done'&&x.doneAt===d);
+  const doneList=S.tasks.filter(x=>taskDoneOn(x,d));
   const leftList=S.tasks.filter(x=>x.status!=='done'&&x.today&&x.today<=d);
   const nextDay=shiftDs(d,1);
   const nextList=S.tasks.filter(x=>x.status!=='done'&&x.today===nextDay);
@@ -4242,7 +4254,7 @@ function rvRender(fresh){
   const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;}
 function rvSave(quiet){const o=diaryOf(_rvDay);
   const el=$('#rvText');if(el)o.text=el.value;
-  o.done=S.tasks.filter(x=>x.status==='done'&&x.doneAt===_rvDay).map(x=>x.id);
+  o.done=S.tasks.filter(x=>taskDoneOn(x,_rvDay)).map(x=>x.id);
   o.next=S.tasks.filter(x=>x.status!=='done'&&x.today===shiftDs(_rvDay,1)).map(x=>x.id);
   o.at=Date.now();
   if(!(o.text||'').trim()&&!o.images.length&&!o.done.length&&!o.next.length)delete S.diary[_rvDay];
@@ -4872,8 +4884,23 @@ function saveTask(id){
   let conv=false;if(_tfFromEv){S.events=S.events.filter(e=>e.id!==_tfFromEv);_tfFromEv=null;conv=true;} // 予定→タスクに切り替えた
   chainRelink(todayStr()); // 所要時間が変わったら、連結した後ろの予定も伸び縮みさせる
   save();dlgEnd();render();attachCellPress();flashUndo(conv?'予定をタスクに変えました':id?'タスクを更新しました':'タスクを追加しました');}
-async function delTask(id){if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
+async function delTask(id,d){const x0=S.tasks.find(t=>t.id===id);
+  if(x0&&x0.repeat&&x0.status!=='done'){delTaskScopePop(id,d||x0.today||todayStr());return;} // 繰り返し＝消す範囲をえらぶ（v5.07）
+  if(!await uiConfirm('このタスクを削除しますか？','削除'))return;
   snapUndo();S.tasks=S.tasks.filter(t=>t.id!==id);save();closeModal();dlgEnd();render();flashUndo('タスクを削除しました');}
+function delTaskScopePop(id,d){const x=S.tasks.find(t=>t.id===id);if(!x)return;const dt=parseDs(d);const md=`${dt.getMonth()+1}/${dt.getDate()}`;
+  $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 「${esc(x.title)}」は繰り返しのタスクです。<br>どれを削除しますか？
+    <div class="scopebtns"><button onclick="applyDelTask('${id}','${d}','future')">この日以降（${md}〜）<i>${md} から先の回をぜんぶ消します（それより前の記録は残ります）</i></button>
+      <button onclick="applyDelTask('${id}','${d}','all')">すべて<i>このタスクを丸ごと消します</i></button></div></div>
+    <div class="db"><button onclick="dlgEnd()">やめる</button></div>`;
+  $('#dlgWrap').classList.add('show');}
+function applyDelTask(id,d,scope){const x=S.tasks.find(t=>t.id===id);if(!x){dlgEnd();return;}snapUndo();let msg='タスクを削除しました';
+  if(scope==='all'){S.tasks=S.tasks.filter(t=>t.id!==id);}
+  else{const before=shiftDs(d,-1);const logs=(x.doneLog||[]).filter(v=>v<d);
+    if(x.today&&x.today<d){x.until=before;msg=`${fmtDateJa(d)} 以降の回を削除しました`;}            // それより前に、まだの回が残っている
+    else if(logs.length){x.until=before;x.status='done';x.doneAt=logs[logs.length-1];x.repeat='';msg=`${fmtDateJa(d)} 以降の回を削除しました`;} // 済ませた記録だけ残す
+    else S.tasks=S.tasks.filter(t=>t.id!==id);}                                                     // 残るものが無い＝丸ごと
+  save();dlgEnd();closeModal();render();attachCellPress();flashUndo(msg);}
 function dupTask(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   S.tasks.push({...JSON.parse(JSON.stringify(x)),id:uid(),title:x.title+'（コピー）',status:'todo',today:null,order:Date.now()});
   save();closeModal();dlgEnd();render();}
@@ -5323,7 +5350,7 @@ function datedTasksOn(d){ // やる日＝その日（過ぎた日も元の日に
 function repGhostMap(from,to){const map={};
   S.tasks.forEach(x=>{if(!x.repeat||x.status==='done'||!x.today)return;let d=x.today;
     for(let i=0;i<80;i++){const nd=nextTaskDate(d,x.repeat,x);if(!nd||nd<=d)break;d=nd;
-      if(x.until&&d>x.until)break;if(d>to)break;if(d>=from)(map[d]=map[d]||[]).push(x);}});
+      if(x.until&&d>x.until)break;if(d>to)break;if(d>=from&&!repDoneOn(x,d))(map[d]=map[d]||[]).push(x);}});
   return map;}
 /* その日に見せるタスク（時間を決めた／やる日／期限）を重複なしで */
 function dayTasksOn(d){const seen=new Set(),out=[];
@@ -5389,7 +5416,7 @@ function renderCal(){
       const mks=marksOn(m,d);
       const evsAll=eventsOn(dstr);const allHere=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
       const evs=evsAll.filter(e=>(allHere||!evDone(e,dstr)||!e.isTask)&&!evSpan(e)); // 予定は完了しても打ち消し線で残す・タスクは消える
-      const tDone=S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr&&(x.today===dstr||x.due===dstr||!x.today));
+      const tDone=S.tasks.filter(x=>(x.status==='done'&&x.doneAt===dstr&&(x.today===dstr||x.due===dstr||!x.today))||repDoneOn(x,dstr));
       const evDoneN=allHere?0:evsAll.filter(e=>e.isTask&&evDone(e,dstr)).length+tDone.length;
       const dts=dayTasksOn(dstr);
       const nightM=hm2min(S.settings.nightStart||'18:00');
@@ -5578,13 +5605,21 @@ function taskCompleteTap(id,anchor,ev){const x=S.tasks.find(v=>v.id===id);if(!x)
   const a=anchor
     ||(ev&&ev.target&&ev.target.closest?ev.target.closest('.tchkr,.titem,.dtask,.tltask,.poolitem,.otrow'):null)
     ||document.querySelector(rowSel);
-  const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
+  const rd=x.today&&x.today>todayStr()?x.today:todayStr();
+  const html=x.repeat?`<div class="miniacts"><div class="cptitle">${esc(x.title)} 🔁</div>
+    <button class="hi" onclick="cpClose();completeTaskOn('${id}','${rd}')"><span>✅</span>この回を完了（次の回へ）</button>
+    <button onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
+    <button onclick="cpClose();repeatEndAsk('${id}')"><span>⏹</span>繰り返しを終える</button>
+    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`:`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
     <button class="hi" onclick="cpClose();fullyCompleteTask('${id}')"><span>✅</span>完了</button>
     <button onclick="cpClose();completeTodayOnly('${id}')"><span>☀</span>記録</button>
     <button onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
     <button onclick="cpClose();doneDetailModal('${id}')"><span>📝</span>詳しく記録</button>
     <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_cmp',rowSel:'.tchkr[data-lp^="t_"],.titem[data-lp^="t_"],.dtask[data-lp^="t_"],.tltask,.poolitem'});}
+async function repeatEndAsk(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
+  if(!await uiConfirm(`「${x.title}」の繰り返しを終えて、完了にしますか？（この先の回は出なくなります）`,'終える'))return;
+  fullyCompleteTask(id);}
 /* 「📝 詳しく記録」＝かかった時間と完了日時を残して完了。日付はカレンダーから選ぶ */
 let _ddId=null,_ddDate='',_ddY=0,_ddX=0;
 function doneDetailModal(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
@@ -5631,7 +5666,9 @@ function ddSave(){if(saveGuard())return;const x=S.tasks.find(v=>v.id===_ddId);if
   save();closeModal();render();
   flashUndo(`記録して完了しました（${fmtDateJa(_ddDate)}${hm?' '+hm:''}${mins?'・'+fmtMin(mins):''}）`);checkCelebrate();}
 /* 記録＝今日のぶんは済み。見た目は完了だが、明日以降もタスクとして続く */
-function completeTodayOnly(id){const x=S.tasks.find(v=>v.id===id);if(!x||x.status==='done')return;snapUndo();
+function completeTodayOnly(id){const x=S.tasks.find(v=>v.id===id);if(!x||x.status==='done')return;
+  if(x.repeat){completeTaskOn(id,todayStr());return;} // 繰り返し＝その回だけ完了（v5.07）
+  snapUndo();
   const d0=x.today||todayStr();
   x.status='done';x.doneAt=todayStr();x.doneMin=curMin();
   syncSlotsDone(d0,id,true); // 置いたコマも全部おわりにする
@@ -5639,12 +5676,34 @@ function completeTodayOnly(id){const x=S.tasks.find(v=>v.id===id);if(!x||x.statu
   sinkDoItem('t_'+id);markJustDone('t_'+id);save();render();
   flashUndo('今日のぶんを記録しました（明日もつづきます）');checkCelebrate();}
 /* 日付を指定して完了（v4.90）：過ぎた日・その日のポップの日など。繰り返しはその回を済ませて次へ進める */
+/* 繰り返しタスク（v5.07）：完了は「その回」だけ。x.doneLog に済ませた日を残し、タスク自体は未完了のまま次の回へ進む
+   ＝その日以降の回は消えない。済ませた日はその日の「完了」に出る */
+function repDoneOn(x,d){return !!(x&&x.doneLog&&x.doneLog.includes(d));}
+function taskDoneOn(x,d){return (x.status==='done'&&x.doneAt===d)||repDoneOn(x,d);}
+function repNextUndone(x,from){let nd=nextTaskDate(from,x.repeat,x),g=0;
+  while(nd&&repDoneOn(x,nd)&&g++<400)nd=nextTaskDate(nd,x.repeat,x);
+  return (nd&&(!x.until||nd<=x.until))?nd:null;}
+function repShiftTo(x,nd){const sp=tSpan(x);x.today=nd;if(x.due)x.due=nd;if(sp)x.endDate=shiftDs(nd,sp);x.snooze=null;}
+function completeRepeatOcc(x,d){const t=todayStr();
+  x.doneLog=[...new Set([...(x.doneLog||[]),d])].sort().slice(-400);
+  delete x.doneAt;delete x.doneMin;delete x.dayDone;delete x.repeatPrev;x.status='todo';
+  const cur=x.today||'';
+  // 今の回を済ませた／過ぎて残っていた回を今日までに済ませた → 次のまだの回へ進む。先の回を先に済ませただけなら進めない
+  if(!cur||d===cur||(d>cur&&cur<t&&d<=t)){const nd=repNextUndone(x,d);
+    if(nd){repShiftTo(x,nd);return nd;}
+    x.status='done';x.doneAt=d;x.repeat='';return null;} // 終わりの日をすぎた＝繰り返しはここまで
+  return cur;}
+function reopenRepeatOcc(id,d){const x=S.tasks.find(v=>v.id===id);if(!x||!repDoneOn(x,d))return;snapUndo();
+  x.doneLog=x.doneLog.filter(v=>v!==d);
+  if(x.status==='done'&&x.doneAt===d){x.status='todo';delete x.doneAt;}
+  if(!x.today||d<x.today)repShiftTo(x,d); // その回がまた「今の回」になる
+  save();render();attachCellPress();dlRedraw();flashUndo(`${fmtDateJa(d)} の完了を取り消しました`);}
 function completeTaskOn(id,d){const x=S.tasks.find(v=>v.id===id);if(!x||x.status==='done')return;snapUndo();
-  const t=todayStr();x.status='done';x.doneAt=d;if(d===t)x.doneMin=curMin();else delete x.doneMin;
-  if(x.repeat){advanceRepeatTask(x);if(d<t){x.status='todo';delete x.doneAt;delete x.doneMin;}} // 過去の回を済ませた＝次の回が未完了で残る
-  else{delete x.dayDone;clearTaskAt(id,null);}
+  const t=todayStr();let msg=`${fmtDateJa(d)} に完了しました`;
+  if(x.repeat){const nx=completeRepeatOcc(x,d);if(nx&&nx!==d)msg+=`（次は ${fmtDateJa(nx)}）`;}
+  else{x.status='done';x.doneAt=d;if(d===t)x.doneMin=curMin();else delete x.doneMin;delete x.dayDone;clearTaskAt(id,null);}
   sinkDoItem('t_'+id);markJustDone('t_'+id);save();render();attachCellPress();
-  flashUndo(`${fmtDateJa(d)} に完了しました`);checkCelebrate();}
+  flashUndo(msg);checkCelebrate();}
 /* 完了日をえらぶPOP：今日・予定日・その日の予定が見える月カレンダー（#pickpop・フォームや日付ポップの上に出す） */
 let _pk={id:'',sel:'',base:'',y:0,x:0,ret:''};
 function doneDatePop(id,def,ret){const x=S.tasks.find(v=>v.id===id);if(!x)return;
@@ -5713,6 +5772,7 @@ function undoneRoutine(id,dstr){const t=dstr||todayStr();const log=dayLog(t);
   log.routines[id]={...log.routines[id],done:false};delete log.routines[id].doneMin;delete log.routines[id].sec;
   save();render();flashUndo('未完了に戻しました');}
 function toggleTaskDone(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;setAnchor('t_'+id);
+  if(x.repeat&&x.status!=='done'){const t=todayStr();completeTaskOn(id,x.today&&x.today>t?x.today:t);return;} // 繰り返し＝その回だけ（v5.07）
   if(x.status==='done'){undoTaskFields(x);}
   else{x.status='done';x.doneAt=todayStr();x.doneMin=curMin();sinkDoItem('t_'+id);markJustDone('t_'+id);
     advanceRepeatTask(x);}
@@ -5748,7 +5808,7 @@ function dayScheduleHtml(dstr){ // v5.00：日付ポップと同じ1列（予定
 function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=dstr===todayStr();
   eventsOn(dstr).forEach(e=>{if(e.start)items.push({at:hm2min(e.start),icon:'📅',text:evTitle(e),sub:evTimeText(e),c:evColor(e)});});
   (dl.logs||[]).forEach(l=>{const k=LOG_KINDS[l.kind]||LOG_KINDS.memo;items.push({at:l.at,icon:k.i,text:l.text,sub:k.n+(l.dur?'・'+fmtMin(l.dur):''),c:k.c,logId:l.id});});
-  S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr).forEach(x=>{const at=x.doneMin;items.push({at:at??100000,icon:'✅',text:x.title,sub:'完了'+(at!=null?'・'+min2hm(at):'')+'（タップで戻す）',c:'#48A2DD',tok:'t_'+x.id});});
+  S.tasks.filter(x=>taskDoneOn(x,dstr)).forEach(x=>{const at=x.status==='done'?x.doneMin:null;items.push({at:at??100000,icon:'✅',text:x.title,sub:'完了'+(at!=null?'・'+min2hm(at):'')+'（タップで戻す）',c:'#48A2DD',tok:'t_'+x.id});});
   Object.entries(dl.routines||{}).forEach(([id,st])=>{if(st&&st.done){const r=S.routines.find(rr=>rr.id===id);if(r&&r.recordDone!==false)items.push({at:st.doneMin??100000,icon:'✅',text:(r.mark?'':'')+r.title,mk:r.mark,sub:'完了'+(st.doneMin!=null?'・'+min2hm(st.doneMin):'')+'（タップで戻す）',c:'#48A2DD',tok:'r_'+id});}});
   if(!items.length)return '';
   items.sort((a,b)=>a.at-b.at);
@@ -5760,7 +5820,7 @@ function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=
 async function undoneFromRecord(tok,dstr){const type=tok[0],id=tok.slice(2);
   if(!await uiConfirm(type==='r'?'このルーティンを未完了に戻しますか？':'このタスクを未完了に戻しますか？','戻す'))return;
   if(type==='r'){undoneRoutine(id,dstr);return;}
-  const x=S.tasks.find(v=>v.id===id);if(x&&x.doneAt===dstr)undoneTask(id);}
+  const x=S.tasks.find(v=>v.id===id);if(x&&repDoneOn(x,dstr)){reopenRepeatOcc(id,dstr);return;}if(x&&x.doneAt===dstr)undoneTask(id);}
 /* 月セルをタップ→その日の予定がピヨっと表示（長押しで日ページへ／セル長押しは色分け） */
 /* ===== 1日の一覧（v5.00）：日付ポップ・日表示・タスクタブで同じ行・同じ並び（S.dayOrder）・同じ操作 =====
    ctx：'pop'＝月の日付ポップ／'day'＝日表示／'tab'＝タスクタブの今日（過ぎたタスク枠あり）／'tab2'＝タスクタブの明日
@@ -5798,7 +5858,7 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
       <span class="dpactbr"></span>
       <button type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 別の日に完了</button>
       <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
-      <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}')">🗑</button>`;
+      <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}','${dstr}')">🗑</button>`;
   const chk=ctx==='pop'?`closeDayPopup();taskCompleteTap('${x.id}')`:`taskCompleteTap('${x.id}',this.closest('.dpev'))`;
   return `<div class="dpev dptask${paint?'':' nopaint'}${op?' open':''}" data-tok="t_${x.id}" style="${st}" onpointerdown="event.stopPropagation()">
     <div class="dpevrow" onclick="dpTaskTap('t_${x.id}')">
@@ -5810,14 +5870,14 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
 function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
   return `<div class="dpev dptask evdn${paint?'':' nopaint'}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
     <div class="dpevrow" onclick="${pre}taskModal('${x.id}')">
-      <span class="dpchk round" onclick="event.stopPropagation();undoneTask('${x.id}');dlRedraw()">✓</span>
-      <span class="dpevt">${tkMk(x)}${esc(x.title)}</span><span class="dpevm">完了${ctx==='tab'||ctx==='tab2'?'':''}</span></div></div>`;}
+      <span class="dpchk round" onclick="event.stopPropagation();${repDoneOn(x,dstr)?`reopenRepeatOcc('${x.id}','${dstr}')`:`undoneTask('${x.id}');dlRedraw()`}">✓</span>
+      <span class="dpevt">${tkMk(x)}${esc(x.title)}${repDoneOn(x,dstr)?' 🔁':''}</span><span class="dpevm">完了</span></div></div>`;}
 function dlSetWhen(id,w){_dpActOpen='';moveTaskWhen(id,w);}
 function dayListHtml(dstr,ctx,o={}){const tf=o.tf||(()=>true),ef=o.ef||(()=>true);
   const evs=eventsOn(dstr).filter(ef);
   const d=parseDs(dstr);const mks=ctx==='day'?[]:marksOn(d.getMonth()+1,d.getDate());
   const und=evs.filter(e=>!evDone(e,dstr)),dn=evs.filter(e=>evDone(e,dstr));
-  const tdn=S.tasks.filter(x=>x.status==='done'&&x.doneAt===dstr&&tf(x));
+  const tdn=S.tasks.filter(x=>taskDoneOn(x,dstr)&&tf(x));
   const dts=dayTasksOn(dstr).filter(q=>tf(q.x));
   // 連日のタスク（やる日〜終わりの日）もその日の一覧に出す
   const spanT=S.tasks.filter(x=>x.status!=='done'&&tSpan(x)&&x.today<=dstr&&dstr<=x.endDate&&tf(x));
@@ -7560,6 +7620,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.07（2026-10-04）繰り返しタスクの完了・削除／メモが消える不具合の修正</b><br>
+  ・<b>繰り返しタスク</b>は、完了しても<b>その回だけ</b>が完了になり、次の回以降はそのまま残ります（済ませた回はその日の「完了」に出ます。☑で取り消しもできます）<br>
+  ・繰り返しタスクを削除するときは<b>「この日以降」か「すべて」</b>を選べます。チェックのメニューには「この回を完了／繰り返しを終える」を用意しました<br>
+  ・<b>スマホとPCで、片方で保存した月・週のメモが消えることがある不具合</b>を直しました（同期のときに、もう片方の古い内容で上書きされることがありました）<br>
+  </div>
   <div class="mini"><b>v5.06（2026-10-03）日付ポップを開いたまま前の日・次の日へ</b><br>
   ・日付ポップの見出しに<b>‹ ›</b>を付けました。押すと<b>ポップを開いたまま</b>前の日・次の日に切り替わります。ポップの中を<b>左右にスワイプ</b>しても切り替わります（PCは ← → キー）<br>
   ・今日以外の日を見ているときは「今日」ボタンで今日に戻れます。月をまたぐと、後ろのカレンダーもその月になります<br>
@@ -8581,7 +8646,7 @@ function miniTasksOn(d){return sortByDayOrder(d,S.tasks.filter(x=>x.status!=='do
 function miniEventsOn(d){return S.events.filter(e=>eventOccursOn(e,d)).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 function miniHtml(){const d=todayStr(),dt=parseDs(d),isT=MINI.kind==='task';
   const evs=miniEventsOn(d),evOpen=evs.filter(e=>!evDone(e,d)),evDn=evs.filter(e=>evDone(e,d));
-  const tks=miniTasksOn(d),tkDn=S.tasks.filter(x=>x.status==='done'&&x.doneAt===d);
+  const tks=miniTasksOn(d),tkDn=S.tasks.filter(x=>taskDoneOn(x,d));
   const chip=(v,l)=>`<button type="button" class="${MINI.day===v?'on':''}" onclick="miniDay(${v===null?'null':v})">${l}</button>`;
   const evRow=(e,dn)=>`<div class="mp-it${dn?' dn':''}"><button type="button" class="mp-ck ev" onclick="miniEvDone('${e.id}')" aria-label="${dn?'未完了に戻す':'完了'}">${dn?'✓':''}</button><span class="mp-tm">${e.start||'終日'}</span><span class="mp-tt">${esc(evTitle(e))}</span></div>`;
   const tkRow=(x,dn)=>`<div class="mp-it${dn?' dn':''}"><button type="button" class="mp-ck" onclick="miniTkDone('${x.id}')" aria-label="${dn?'未完了に戻す':'完了'}">${dn?'✓':''}</button>${x.start?`<span class="mp-tm">${x.start}</span>`:''}<span class="mp-tt">${esc(x.title||'')}${x.repeat?' <i>🔁</i>':''}${!dn&&x.today<d?` <i class="mp-old">${+x.today.slice(5,7)}/${+x.today.slice(8)}から</i>`:''}</span></div>`;
@@ -8646,7 +8711,7 @@ function miniKey(ev){if(ev.key==='Enter'&&!ev.isComposing&&ev.keyCode!==229){ev.
 function miniKind(k){MINI.kind=k;if(k==='event'&&MINI.day===null)MINI.day=0;miniRender();const i=mq('#mpTitle');i&&i.focus();}
 function miniDay(v){MINI.day=v;miniRender();}
 function miniShowDone(){MINI.showDone=!MINI.showDone;miniRender();}
-function miniTkDone(id){toggleTaskDone(id);miniPush();}
+function miniTkDone(id){const x=S.tasks.find(v=>v.id===id);const d=todayStr();if(x&&x.status!=='done'&&repDoneOn(x,d)){reopenRepeatOcc(id,d);miniPush();return;}toggleTaskDone(id);miniPush();}
 function miniEvDone(id){toggleEvDone(id,todayStr());miniPush();}
 /* スマホのミニ画面から、いつもの入力画面へ（打ちかけの名前を引き継ぐ） */
 function miniDetail(){const v=(mq('#mpTitle')?.value||'').trim();if(mq('#mpTitle'))mq('#mpTitle').value=''; // 名前は入力画面へ引き継ぐ
