@@ -153,6 +153,20 @@ label{font-size:12px;color:var(--sub);letter-spacing:.06em;display:block;margin-
 :is(#daypop,.dlpage) .dpbox{background:var(--card,#fff);width:100%;max-width:340px;max-height:76vh;overflow-y:auto;border-radius:16px !important;box-shadow:0 12px 40px rgba(0,0,0,.3);transform-origin:center;animation:evpopin .16s cubic-bezier(.34,1.4,.64,1);}
 :is(#daypop,.dlpage) .dph{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card,#fff);z-index:6;}
 :is(#daypop,.dlpage) .dph b{font-size:15px;}
+#daypop .dph{padding:8px 8px 8px 6px;}
+#daypop .dpnav{display:flex;align-items:center;gap:2px;min-width:0;}
+#daypop .dpnav b{white-space:nowrap;padding:0 2px;min-width:8.6em;text-align:center;} /* 矢印の位置を日によって動かさない（連打しやすく） */
+#daypop .dpnav b.sun{color:var(--danger);}#daypop .dpnav b.sat{color:#4A78C8;}
+#daypop .dptdy{font-style:normal;font-size:10px;font-weight:700;color:var(--accent);margin-left:4px;vertical-align:1px;}
+#daypop .dph .dparw{width:38px;height:36px;font-size:24px;line-height:1;color:var(--ink);border-radius:10px !important;display:inline-flex;align-items:center;justify-content:center;}
+#daypop .dph .dparw:active{background:var(--line2);transform:scale(.92);}
+#daypop .dphr{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+#daypop .dph .dpgotd{font-size:11.5px;padding:0 10px;height:30px;border:1px solid var(--line);border-radius:999px !important;color:var(--accent);background:var(--bg);}
+#daypop .dphr>button:last-child{width:36px;height:36px;}
+@keyframes dpslideL{from{opacity:.3;transform:translateX(36px);}to{opacity:1;transform:none;}}
+@keyframes dpslideR{from{opacity:.3;transform:translateX(-36px);}to{opacity:1;transform:none;}}
+#daypop.slide-l .dpbox{animation:dpslideL .18s ease-out;}
+#daypop.slide-r .dpbox{animation:dpslideR .18s ease-out;}
 :is(#daypop,.dlpage) .dph button{font-size:18px;color:var(--sub);}
 :is(#daypop,.dlpage) .dpbody{padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
 :is(#daypop,.dlpage) .dpev{padding:7px 10px;border-radius:8px !important;display:flex;flex-direction:column;gap:4px;}
@@ -1734,7 +1748,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.05';
+const APP_VERSION='v5.06';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -5863,8 +5877,15 @@ function openDayPopup(dstr,opt){clearPrime();
   if(opt&&opt.act)_dpActOpen=opt.act;
   let el=$('#daypop');if(!el){el=document.createElement('div');el.id='daypop';document.body.appendChild(el);}
   el.dataset.d=dstr;el.classList.toggle('redraw',_same); // 同じ日の描き直しは、ポンと出る動きをしない
+  el.classList.remove('slide-l','slide-r');if(opt&&opt.slide&&!_same){void el.offsetWidth;el.classList.add(opt.slide>0?'slide-l':'slide-r');} // 前後の日へは横にすっと
+  const dw=d.getDay(),hol=holidayName(d.getFullYear(),m,dd),isT=dstr===todayStr();
   el.innerHTML=`<div class="dpbox" onpointerdown="dpPressStart('${dstr}')" onpointerup="dpPressEnd()" onpointermove="dpPressEnd()">
-    <div class="dph"><b>${m}/${dd}（${WD[d.getDay()]}）</b><button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()">✕</button></div>
+    <div class="dph"><span class="dpnav">
+        <button class="dparw" onpointerdown="event.stopPropagation()" onclick="dpShift(-1)" aria-label="前の日">‹</button>
+        <b class="${hol||dw===0?'sun':dw===6?'sat':''}">${m}/${dd}（${WD[dw]}）${isT?'<i class="dptdy">今日</i>':''}</b>
+        <button class="dparw" onpointerdown="event.stopPropagation()" onclick="dpShift(1)" aria-label="次の日">›</button></span>
+      <span class="dphr">${isT?'':`<button class="dpgotd" onpointerdown="event.stopPropagation()" onclick="dpShiftTo(todayStr())">今日</button>`}
+        <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()" aria-label="閉じる">✕</button></span></div>
     <div class="dpacts top">
       <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
       <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
@@ -5872,13 +5893,33 @@ function openDayPopup(dstr,opt){clearPrime();
       <button class="ic" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')" aria-label="色分け">🎨</button></div>
     ${extDayLine(dstr)}
     <div class="dpbody dlwrap" data-d="${dstr}">${dayListHtml(dstr,'pop')}</div>
-    <div class="dphint">長押しでこの日のページへ</div>
+    <div class="dphint">‹ › か左右スワイプで前後の日／長押しでこの日のページへ</div>
   </div>`;
   el.classList.add('show');
   if(_keepY){const b=el.querySelector('.dpbox');if(b)b.scrollTop=_keepY;}
   if(opt&&opt.act){const r=el.querySelector(`[data-tok="${opt.act}"]`);if(r)setTimeout(()=>r.scrollIntoView({block:'center'}),30);}
-  el.onclick=e=>{if(e.target===el)closeDayPopup();};}
+  el.onclick=e=>{if(e.target===el)closeDayPopup();};
+  dpSwipeBind(el.querySelector('.dpbox'));}
 function closeDayPopup(){$('#daypop')?.classList.remove('show');}
+/* 前後の日へ（v5.06）：ポップは開いたまま。月をまたいだら裏の月カレンダーもその月へ */
+function dpShift(n){const p=$('#daypop');if(!p||!p.classList.contains('show'))return;dpShiftTo(shiftDs(p.dataset.d,n),n);}
+function dpShiftTo(ds,n){const p=$('#daypop');const cur=p?p.dataset.d:'';if(!ds||ds===cur)return;
+  const dir=n||(ds>cur?1:-1);const d=parseDs(ds);
+  if(view==='cal'&&calMode==='month'&&(d.getFullYear()!==calY||d.getMonth()!==calX)){calY=d.getFullYear();calX=d.getMonth();render();attachCellPress();}
+  openDayPopup(ds,{slide:dir});}
+/* ポップの中で左右スワイプ＝前後の日。並び替え・ボタン・入力欄から始めたときは反応しない */
+function dpSwipeBind(box){if(!box)return;let sx=0,sy=0,st=0,ok=false;
+  box.addEventListener('touchstart',e=>{if(e.touches.length!==1){ok=false;return;}
+    ok=!(e.target.closest&&e.target.closest('.dpgrip,.dpact,input,textarea,select,a[href],.dpsort.dragging'));
+    const t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
+  box.addEventListener('touchend',e=>{if(!ok)return;ok=false;const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Date.now()-st>600||Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    dpPressEnd();dpShift(dx<0?1:-1);},{passive:true});}
+/* PC：ポップ表示中は ←→ で前後の日、Esc で閉じる（入力中は無効） */
+document.addEventListener('keydown',e=>{const p=$('#daypop');if(!p||!p.classList.contains('show'))return;
+  if($('#dlgWrap')?.classList.contains('show')||$('#pickpop')?.classList.contains('show')||$('#modalWrap')?.classList.contains('show'))return;
+  const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable))return;
+  if(e.key==='ArrowLeft'){e.preventDefault();dpShift(-1);}else if(e.key==='ArrowRight'){e.preventDefault();dpShift(1);}else if(e.key==='Escape')closeDayPopup();});
 /* ---- 日付ポップの「まだ終わっていないタスク」（v4.50）：基準＝タップして開いた日（dstr）
    ⏰ 過ぎている：日付があるのに dstr より前で未完了（カレンダーのタスク・繰り返しの回・通常タスク）
    📋 日付なし：通常タスクで やる日 も 期限 も無いもの。先の日付・当日のものは出さない ---- */
@@ -7519,6 +7560,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.06（2026-10-03）日付ポップを開いたまま前の日・次の日へ</b><br>
+  ・日付ポップの見出しに<b>‹ ›</b>を付けました。押すと<b>ポップを開いたまま</b>前の日・次の日に切り替わります。ポップの中を<b>左右にスワイプ</b>しても切り替わります（PCは ← → キー）<br>
+  ・今日以外の日を見ているときは「今日」ボタンで今日に戻れます。月をまたぐと、後ろのカレンダーもその月になります<br>
+  </div>
   <div class="mini"><b>v5.05（2026-10-03）タスクの日付をその場で移動</b><br>
   ・タスクをタップして開くボタンに<b>「➡ 日付を移動」</b>を追加しました。今日の印とその日の予定が見えるカレンダーから、移したい日を選べます（今日・明日・あさって・1週間後・日付なし はボタン1つ）<br>
   ・移動しても<b>日付ポップは開いたまま</b>。続けてほかのタスクも動かせます（「元に戻す」で取り消せます）<br>
