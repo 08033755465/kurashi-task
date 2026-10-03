@@ -17,7 +17,7 @@ var NOTION_TOKEN = '';  // ← ntn_... を入れる（空だとメール通知�
 var NOTION_VERSION = '2022-06-28';
 var DB_FEEDBACK = '98fb1581-7b39-4b9f-a86b-1791c3772d17';       // 🔧 改善DB（私的ナレッジ基地）
 var TOOL_PAGE   = '3a153633-cb20-8153-a47d-c1a38a8e7c25';       // ツール台帳「くらしタスク」の行
-var FEEDBACK_MAIL = 'baritone0111@gmail.com';                    // 通知先Gmail
+var FEEDBACK_MAIL = 'ここに通知先のGmailアドレス';                    // 通知先Gmail（実物はGoogle側に設定。リポジトリには書かない）
 
 function doPost(e) {
   var body = {};
