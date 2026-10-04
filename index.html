@@ -716,6 +716,12 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #dlg .emcalh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);margin:0 0 6px;}
 .dpgrid button.rng{background:var(--ring);border-radius:0 !important;}
 /* 基準の予定（〇〇の予定の前日） */
+.calgf{padding:0 0 4px;}
+.calgf .gtabs.gfil{margin:0 0 4px;}
+.gtabs.gfil.gsub{padding-left:10px;border-left:2px solid var(--ring);margin-left:4px;}
+.gtabs.gfil .gsubl{font-size:11px;color:var(--sub);align-self:center;white-space:nowrap;padding-right:2px;}
+.gtabs.gfil .gkid{font-style:normal;font-size:9px;opacity:.6;margin-left:2px;}
+.calgfon{font-weight:700;color:var(--accent);}
 #dlg .relbtn{font-size:11px;padding:4px 9px;border:1px solid var(--accent);color:var(--accent);border-radius:999px !important;white-space:nowrap;background:var(--bg);}
 .relchip{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;padding:5px 6px 5px 10px;background:var(--ring);color:var(--accent);font-size:12px;font-weight:700;border-radius:10px !important;}
 .relchip .reld{font-weight:400;color:var(--ink);}
@@ -1787,7 +1793,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.11';
+const APP_VERSION='v5.12';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -4232,14 +4238,18 @@ function taskGroupFilterHtml(){
   const openT=S.tasks.filter(x=>x.status!=='done');
   const cnt=id=>{const ids=visibleGroups(new Set([id]));return openT.filter(x=>x.groupId&&ids.has(x.groupId)).length;};
   const noneN=openT.filter(x=>!x.groupId).length;
-  const chain=[];let cur=S.groups.find(g=>g.id===taskGroupSel);
+  return groupDrillHtml(taskGroupSel,'tglTaskGroup',cnt,noneN);}
+/* 親を選ぶと下に子の行が出る、しぼり込みの階層ボタン（v5.12：タスクタブ・カレンダー共通）
+   sel＝選んでいるグループ（''＝全体／'__none'＝グループなし）、fn＝押したときの関数名、cnt(id)＝件数（null なら出さない） */
+function groupDrillHtml(selId,fn,cnt,noneN){
+  const chain=[];let cur=S.groups.find(g=>g.id===selId);
   while(cur){chain.unshift(cur.id);cur=cur.parentId?S.groups.find(g=>g.id===cur.parentId):null;}
   const rows=[];let parentId=null,level=0;
   while(level<4){const opts=S.groups.filter(g=>(g.parentId||null)===parentId);
     if(!opts.length)break;
     const sel=chain[level]||null;
-    rows.push(`<div class="gtabs gfil">${level===0?`<button type="button" class="${taskGroupSel?'':'on'}" onclick="tglTaskGroup('')">全体</button>`:''}${opts.map(g=>{const n=cnt(g.id);
-      return `<button type="button" class="${sel===g.id?'on':''}" onclick="tglTaskGroup('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}<i class="gn">${n}</i></button>`;}).join('')}${level===0&&noneN?`<button type="button" class="${taskGroupSel==='__none'?'on':''}" onclick="tglTaskGroup('__none')">グループなし<i class="gn">${noneN}</i></button>`:''}</div>`);
+    rows.push(`<div class="gtabs gfil${level?' gsub':''}">${level===0?`<button type="button" class="${selId?'':'on'}" onclick="${fn}('')">全体</button>`:`<span class="gsubl">${esc((S.groups.find(g=>g.id===parentId)||{}).name||'')}の中：</span>`}${opts.map(g=>{const n=cnt?cnt(g.id):null;const kids=S.groups.some(c=>c.parentId===g.id);
+      return `<button type="button" class="${sel===g.id?'on':''}" onclick="${fn}('${g.id}')"><span class="gdot" style="${markCss(g.id)}"></span>${esc(g.name)}${n!=null?`<i class="gn">${n}</i>`:''}${kids?'<i class="gkid">▾</i>':''}</button>`;}).join('')}${level===0&&noneN?`<button type="button" class="${selId==='__none'?'on':''}" onclick="${fn}('__none')">グループなし${cnt?`<i class="gn">${noneN}</i>`:''}</button>`:''}</div>`);
     if(!sel)break;
     parentId=sel;level++;}
   return rows.join('');}
@@ -4248,11 +4258,13 @@ function tglTaskGroup(id){
   if(id&&id!=='__none'&&id===taskGroupSel){const g=S.groups.find(x=>x.id===id);taskGroupSel=g&&g.parentId?g.parentId:'';}
   else taskGroupSel=(id===taskGroupSel?'':id);
   taskActiveRow=null;render();}
-function taskGroupMatch(x){
-  if(!taskGroupSel)return true;
-  if(taskGroupSel==='__none')return !x.groupId;
-  const ids=visibleGroups(new Set([taskGroupSel]));
-  return !!(x.groupId&&ids&&ids.has(x.groupId));}
+function taskGroupMatch(x){return grpMatch(taskGroupSel,x.groupId);}
+function grpMatch(sel,gid){if(!sel)return true;if(sel==='__none')return !gid;
+  const ids=visibleGroups(new Set([sel]));return !!(gid&&ids&&ids.has(gid));}
+/* カレンダーのしぼり込み（v5.12：予定だけでなくタスクにも効く。階層ボタンで1つえらぶ） */
+let calGroupSel='';
+function calTf(x){return grpMatch(calGroupSel,x&&x.groupId);}
+function calGroupFilterHtml(){return groupDrillHtml(calGroupSel,'tglCalSel',null,(S.events.some(e=>!e.groupId)||S.tasks.some(x=>x.status!=='done'&&!x.groupId))?1:0);}
 let taskColorSel=new Set();
 function colorChipsHtml(){
   return `<div class="chips"><button class="chip ${!taskColorSel.size?'on':''}" onclick="tglTaskColor(-2)">全体</button>
@@ -4261,7 +4273,10 @@ function colorChipsHtml(){
     <button class="chip ${taskColorSel.has(-1)?'on':''}" onclick="tglTaskColor(-1)">色なし</button></div>`;}
 function tglTaskColor(i){if(i===-2)taskColorSel.clear();else taskColorSel.has(i)?taskColorSel.delete(i):taskColorSel.add(i);render();}
 function tglTaskSel(id){if(!id)taskSel.clear();else taskSel.has(id)?taskSel.delete(id):taskSel.add(id);render();}
-function tglCalSel(id){if(!id)calSel.clear();else calSel.has(id)?calSel.delete(id):calSel.add(id);render();attachCellPress();}
+function tglCalSel(id){ // 同じものを再タップ＝1つ上の階層へ
+  if(id&&id!=='__none'&&id===calGroupSel){const g=S.groups.find(x=>x.id===id);calGroupSel=g&&g.parentId?g.parentId:'';}
+  else calGroupSel=(id===calGroupSel?'':id);
+  render();attachCellPress();}
 function setTaskSort(s){taskSort=s;taskActiveRow=null;render();}
 let taskActiveRow=null,taskAddAfter=null;
 function setTaskActive(id){taskActiveRow=(taskActiveRow===id?null:id);render();}
@@ -5366,9 +5381,9 @@ function wkBandDel(d,bid){snapUndo();
   S.dayBands[d]=(S.dayBands[d]||[]).filter(x=>x.id!==bid);
   if(!S.dayBands[d].length)delete S.dayBands[d];
   save();cpClose();render();flashUndo('色を消しました');}
-function eventsOn(d){const ids=visibleGroups(calSel);
-  return S.events.filter(e=>eventOccursOn(e,d)&&(!ids||ids.has(e.groupId))).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
-/* タスクにグループは無いので、カレンダーのグループしぼり込みは予定だけに効く（v2.75） */
+function eventsOn(d){
+  return S.events.filter(e=>eventOccursOn(e,d)&&grpMatch(calGroupSel,e.groupId)).sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+/* カレンダーのグループしぼり込みはタスクにも効く（v5.12）。タスクの画面側は calTf で絞る（通知・ウィジェットには効かせない） */
 function dueTasksOn(d){if(!S.settings.showDue)return[];
   return S.tasks.filter(x=>x.due===d&&x.status!=='done');}
 /* 時間を決めたタスク＝「その日の何時からやる」。1タスクに何コマでもあり得る */
@@ -5553,7 +5568,7 @@ function monthWeekSpans(wdays,opts){opts=opts||{};
     const oe=shiftDs(os,sp);const a=os<wkS?wkS:os,b=oe>wkE?wkE:oe;
     segs.push({e,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn});});});
   // 連日のタスク（やる日〜終わりの日）
-  S.tasks.forEach(x=>{const sp=tSpan(x);if(!sp||x.status==='done')return;
+  S.tasks.forEach(x=>{const sp=tSpan(x);if(!sp||x.status==='done'||!calTf(x))return;
     const os=x.today,oe=x.endDate;if(oe<wkS||os>wkE)return;
     const a=os<wkS?wkS:os,b=oe>wkE?wkE:oe;
     segs.push({e:{id:x.id,title:x.title,isTask:true,hue:x.hue,mark:x.mark,start:x.start||''},task:x,os,c0:idx(a),c1:idx(b),hl:os>=wkS,hr:oe<=wkE,dn:false});});
@@ -5586,6 +5601,7 @@ function renderCal(){
     const allModeM=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
     let wk=null; // その週の「連日の予定」＝つながったバー
     const ghosts=repGhostMap(dsOf(days[0]),dsOf(days[days.length-1]));
+    Object.keys(ghosts).forEach(k=>{ghosts[k]=ghosts[k].filter(calTf);}); // しぼり込み（v5.12）
     const tkBg=evColor({isTask:true}),tkFg=evTextColor(tkBg);
     for(let i=0;i<days.length;i++){
       if(i%7===0){wk=monthWeekSpans(days.slice(i,i+7),{cap:allModeM?99:(S.settings.monthMax||4),keepDone:allModeM});cells+='<div class="mweek">';}
@@ -5598,9 +5614,9 @@ function renderCal(){
       const mks=marksOn(m,d);
       const evsAll=eventsOn(dstr);const allHere=calMonthAll||(MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark')==='all';
       const evs=evsAll.filter(e=>(allHere||!evDone(e,dstr)||!e.isTask)&&!evSpan(e)); // 予定は完了しても打ち消し線で残す・タスクは消える
-      const tDone=S.tasks.filter(x=>taskDoneOn(x,dstr)); // ほかの画面と同じ判定（やる日と違う日に終えたタスクも、その日に✓）
+      const tDone=S.tasks.filter(x=>taskDoneOn(x,dstr)&&calTf(x)); // ほかの画面と同じ判定（やる日と違う日に終えたタスクも、その日に✓）
       const evDoneN=allHere?0:evsAll.filter(e=>e.isTask&&evDone(e,dstr)).length+tDone.length;
-      const dts=dayTasksOn(dstr);
+      const dts=dayTasksOn(dstr).filter(o=>calTf(o.x));
       const nightM=hm2min(S.settings.nightStart||'18:00');
       const evItem=e=>({tok:'e_'+e.id,t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly,nf:!!e.noFill,dn:evDone(e,dstr),ni:!!(e.start&&hm2min(e.start)>=nightM)});
       const items=[...sortByDayOrder(dstr,evs.filter(e=>!e.isTask).map(evItem),it=>it.tok),
@@ -5642,9 +5658,9 @@ function renderCal(){
     const todayS=todayStr();
     const dayData=[...Array(7)].map((_,i)=>{const c=new Date(start);c.setDate(start.getDate()+i);
       const y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate(),dstr=dsOf(c);const evs=eventsOn(dstr);
-      const tt=timedTasksOn(dstr);const tids=new Set(tt.map(o=>o.x.id));
+      const tt=timedTasksOn(dstr).filter(o=>calTf(o.x));const tids=new Set(tt.map(o=>o.x.id));
       return {c,dstr,y,m,d,dow:c.getDay(),timed:evs.filter(e=>e.start&&!evSpan(e)),allday:evs.filter(e=>!e.start&&!evSpan(e)),
-        tt,dues:[...datedTasksOn(dstr),...dueTasksOn(dstr)].filter((x,i,a)=>!tids.has(x.id)&&a.findIndex(v=>v.id===x.id)===i),mks:marksOn(m,d),hol:holidayName(y,m,d)};});
+        tt,dues:[...datedTasksOn(dstr),...dueTasksOn(dstr)].filter((x,i,a)=>calTf(x)&&!tids.has(x.id)&&a.findIndex(v=>v.id===x.id)===i),mks:marksOn(m,d),hol:holidayName(y,m,d)};});
     let minMin=7*60,maxMin=21*60;
     dayData.forEach(dd=>dd.timed.forEach(e=>{const s=hm2min(e.start);const en=e.end?hm2min(e.end):s+60;minMin=Math.min(minMin,s);maxMin=Math.max(maxMin,en);}));
     dayData.forEach(dd=>dd.tt.forEach(o=>{minMin=Math.min(minMin,o.s);maxMin=Math.max(maxMin,o.e);}));
@@ -5657,6 +5673,7 @@ function renderCal(){
     const wsp=monthWeekSpans(dayData.map(dd=>dd.c),{keepDone:true,tap:true});
     const spanRow=wsp.shown?`<div class="wkrow wkspanrow"><div class="wkgut2">連日</div><div class="wkspan" style="height:calc(${wsp.shown} * var(--mbh) + 3px)">${wsp.html}</div></div>`:'';
     const wkGh=repGhostMap(dayData[0].dstr,dayData[6].dstr); // 繰り返しタスクの先の回（v5.10）
+    Object.keys(wkGh).forEach(k=>{wkGh[k]=wkGh[k].filter(calTf);});
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}')">${esc(evTitle(e))}</span>`),
@@ -5689,7 +5706,7 @@ function renderCal(){
   }else{
     const c=parseDs(calDate),y=c.getFullYear(),m=c.getMonth()+1,d=c.getDate();
     head=`${m}月`;
-    const hol=holidayName(y,m,d);const evs=eventsOn(calDate),dues=dueTasksOn(calDate),mks=marksOn(m,d);
+    const hol=holidayName(y,m,d);const evs=eventsOn(calDate),dues=dueTasksOn(calDate).filter(calTf),mks=marksOn(m,d);
     const ich=S.settings.showIchiryu&&isIchiryu(y,m,d);
     body=`<div class="dayhead"><div class="d1">${m}月${d}日（${WD[c.getDay()]}）</div>${extDayLine(calDate)}
       <div class="d2">${S.settings.showRokuyo?rokuyo(y,m,d):''}${ich?'<span style="color:#B8860B;">一粒万倍日</span>':''}${hol?`<span class="hol">${esc(hol)}</span>`:''}</div>
@@ -5699,8 +5716,8 @@ function renderCal(){
     ${periodNoteHtml(weekKeyOf(calDate),'この週のメモ')}
     ${periodNoteHtml(monthKeyOf(calDate),'この月のメモ')}`;
   }
-  return `<div class="vhead"><h1>カレンダー</h1><span class="sub">グループで表示切替${searchBtn()}</span></div>
-  ${groupChipsHtml(calSel,'tglCalSel')}
+  return `<div class="vhead"><h1>カレンダー</h1><span class="sub">${calGroupSel?`<b class="calgfon">しぼり込み中：${esc(calGroupSel==='__none'?'グループなし':((S.groups.find(g=>g.id===calGroupSel)||{}).name||''))}</b>`:'グループで表示切替'}${searchBtn()}</span></div>
+  <div class="calgf">${calGroupFilterHtml()}</div>
   <div class="calbar"><div class="mv"><button onclick="calSlideNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calSlideNav(1)">›</button></div>
     <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>${calMode==='month'?'':extSummary()}`;
 }
@@ -6072,7 +6089,8 @@ function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf
       <span class="dpchk round" onclick="event.stopPropagation();${repDoneOn(x,dstr)?`reopenRepeatOcc('${x.id}','${dstr}')`:`undoneTask('${x.id}');dlRedraw()`}">✓</span>
       <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.repeat&&repDoneOn(x,dstr)?' 🔁':''}</span><span class="dpevm">完了</span></div></div>`;}
 function dlSetWhen(id,w){_dpActOpen='';moveTaskWhen(id,w);}
-function dayListHtml(dstr,ctx,o={}){const tf=o.tf||(()=>true),ef=o.ef||(()=>true);
+function dayListHtml(dstr,ctx,o={}){const tf0=o.tf||(()=>true),ef=o.ef||(()=>true);
+  const tf=(ctx==='pop'||ctx==='day')?(x=>tf0(x)&&calTf(x)):tf0; // カレンダーのしぼり込み（v5.12）
   const evs=eventsOn(dstr).filter(ef);
   const d=parseDs(dstr);const mks=ctx==='day'?[]:marksOn(d.getMonth()+1,d.getDate());
   const und=evs.filter(e=>!evDone(e,dstr)),dn=evs.filter(e=>evDone(e,dstr));
@@ -7897,6 +7915,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.12（2026-10-04）カレンダーのグループしぼり込みがタスクにも・親→子でえらぶ形に</b><br>
+  ・<b>カレンダーのグループしぼり込みが、タスクにも効く</b>ようになりました（月・週・日付ポップ・日表示）。これまでは予定だけがしぼり込まれていました<br>
+  ・しぼり込みのボタンを、予定の入力と同じ<b>「親をえらぶと、下に子が出る」形</b>にしました（横に全部並んで分かりにくかったのを整理）。同じボタンをもう一度押すと1つ上に戻ります。しぼり込み中は見出しに「しぼり込み中：◯◯」と出ます<br>
+  </div>
   <div class="mini"><b>v5.11（2026-10-04）締切は濃いブラウン・繰り返しタスクは角丸・繰り返しの並び順を全部の日に</b><br>
   ・タスクの「期限」を<b>「締切」</b>という名前にしました。<b>締切のあるタスクは、カレンダー・日付ポップなどで濃いブラウン</b>になって目立ちます（締切の日には ⏰ つきで出ます）<br>
   ・<b>繰り返しのタスクは、カレンダー上で角の丸い形</b>になりました（ふつうのタスクや予定と見分けやすく）<br>
