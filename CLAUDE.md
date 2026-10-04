@@ -56,6 +56,8 @@
 - **繰り返しタスクは「その回だけ」完了**（`completeRepeatOcc`）：`doneLog` に日付を足し、`status` は 'todo' のまま `today` を次のまだの回へ進める。取り消しは `reopenRepeatOcc(id,日付)`。その日の完了一覧は `taskDoneOn(x,日付)` で判定する（`status==='done'&&doneAt===日` だけで判定しない）。削除は `delTask(id,日付)` が「この日以降／すべて」を聞く
 - **予定を基準にしたタスク**（`rel`）：`rel.occ`＝繰り返しの予定の「その回だけ」、`rel.rep`＝「繰り返しに合わせる」。rep のタスクは `x.relRule`（基準の予定の繰り返しの決まりの写し・`relSync()` が最新に保つ）から `nextTaskDate()` が次の回を決める（`relRepNext`）。スマホ側の `kt.next_date` も同じ写しで計算する。その回だけ動かしたときは `relHold` に日付を入れてリンクは残す
 - **完了はどの画面からも `completeTaskOn(id,日付)`**（`toggleTaskDone`／日付ポップの○／ふりかえり／ミニ画面）。月セル・日付ポップ・記録の完了表示は `taskDoneOn(x,日付)` で判定する
+- **締切**＝タスクの `due`（画面上の呼び名は「締切」。以前の「期限」）。`taskFillOf()` は締切ありなら `DUE_BROWN`（濃いブラウン）を色の設定より優先
+- **繰り返しタスクの並び**：`S.settings.repOrder`（繰り返しタスクの id の順）。`sortByDayOrder()` の最後に `repGroupSort()` が繰り返しどうしの順番だけ入れ替える。日付ポップで並べ替えると `repOrderFrom()` が覚える。カレンダー上の繰り返しタスクは角丸（class `rpt`。既存の `.rep` は別物なので使わない）
 - **同期の土台**（`_base`）は中身のコピーではなく項目ごとの署名（`baseSig()`）。`mergeList/mergeMap` は `{id:署名}` を受け取る。土台が無いときは両方にあるものをクラウド優先にする
 - 本番の同期先や実データでテストしない。試すときは同期を切った状態（設定の同期を空）で
 

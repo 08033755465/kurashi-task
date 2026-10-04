@@ -674,6 +674,12 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 .evbar.evdn{opacity:.42;text-decoration:line-through;}
 .evbar.due.ghost{opacity:.5;} /* 繰り返しの先の回＝うすい塗り */
+/* 繰り返しのタスク＝角丸（v5.11）。ふつうのタスク・予定の四角と見分けられるように */
+.evbar.due.rpt{border-radius:999px !important;padding-left:4px;padding-right:3px;}
+.wkadchip.rpt{border-radius:999px !important;padding:0 5px;}
+.wkev.wktask.rpt{border-radius:12px !important;}
+:is(#daypop,.dlpage) .dpev.dptask.rpt{border-radius:999px !important;}
+:is(#daypop,.dlpage) .dpev.dptask.rpt.open{border-radius:16px !important;}
 .dpev.dpghost:not(.open){opacity:.55;}
 .dpghnote{flex:1 1 100%;font-size:11px;opacity:.85;line-height:1.4;}
 .wkadchip.wkghost{opacity:.5;}
@@ -1781,7 +1787,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.10';
+const APP_VERSION='v5.11';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1889,7 +1895,9 @@ function hueOf(e){if(e&&e.isTask)return (e.hue!=null&&HUES12[e.hue])?e.hue:taskH
   return hashStr((e&&e.id)||'')%HUES12.length;}
 /* 本体（付箋）＝そのグループの色。トーン設定（あざやか／標準／くすみ）を反映 */
 function taskFill(){return HUE(taskHue()).v;} // タスク＝「タスクの色」の濃い方で塗る（既定＝すみ＝黒塗り・v4.71）
-function taskFillOf(x){return (x&&x.hue!=null&&HUES12[x.hue])?HUE(x.hue).v:taskFill();} // タスクごとの色（v4.80・未設定＝既定）
+const DUE_BROWN='#5A3A22'; // 締切のあるタスク＝濃いブラウン（v5.11）
+function taskFillOf(x){if(x&&x.due)return DUE_BROWN; // 締切ありは色の設定より優先（ひと目で分かるように）
+  return (x&&x.hue!=null&&HUES12[x.hue])?HUE(x.hue).v:taskFill();} // タスクごとの色（v4.80・未設定＝既定）
 function tkMk(x){return x&&x.mark&&ICONS[x.mark]?`<span class="evmk">${icSvg(x.mark)}</span>`:'';} // タスクのマーク
 function tkLabel(x){return tkMk(x)+esc(x.title||'');}
 function evColor(e){if(e&&e.isTask)return taskFillOf(e);return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
@@ -3652,7 +3660,7 @@ function otherTasksHtml(t){
       <div class="cb" onclick="event.stopPropagation();taskCompleteTap('${x.id}',null,event)"></div>
       <div class="otb" onclick="chkTaskMenu('${x.id}',event)">
         <div class="ott">${x.priority===1?'<span class="pr1">!</span>':''}${esc(x.title)}${repBadgeT(x)}</div>
-        <div class="otd${ov?' ov':''}">${ov?'⚠ 期限ぎれ ':''}${d?fmtDateJa(d):'日づけなし'}${a!=null?' '+fmtAxisHM(d,a)+(nsl>1?`+${nsl-1}`:''):''}${x.estMin?'・'+fmtMin(x.estMin):''}</div></div>
+        <div class="otd${ov?' ov':''}">${ov?'⚠ 締切すぎ ':''}${d?fmtDateJa(d):'日づけなし'}${a!=null?' '+fmtAxisHM(d,a)+(nsl>1?`+${nsl-1}`:''):''}${x.estMin?'・'+fmtMin(x.estMin):''}</div></div>
       <button class="todayBtn" onclick="event.stopPropagation();toggleToday('${x.id}')">☀ 今日</button>
       ${S.settings.timeline?`<button class="tgrip" onpointerdown="tlPlaceDown(event,'t_${x.id}')" title="押したまま時間軸へ運ぶ">${GRIPI}</button>`:''}</div>`;};
   const body=groups.filter(g=>g.list.length).map(g=>{const op=otIsOpen(g.ci);const line=g.sw;
@@ -4063,7 +4071,7 @@ function taskRow(x,o={}){
         ${x.today&&((x.today>todayStr()&&x.today!==tomorrowStr())||tSpan(x))?`<span style="color:var(--accent);font-weight:700;">${fmtDateJa(x.today)}${tSpan(x)?'〜'+fmtDateJa(x.endDate):''}</span>`:''}
         ${x.start?`<span>🕐 ${x.start}${x.end?'〜'+x.end:''}</span>`:''}
         ${x.estMin?`<span>${fmtMin(x.estMin)}</span>`:''}
-        ${x.due?`<span>期限 ${fmtDateJa(x.due)}${x.relDue?'🔗':''}</span>`:''}
+        ${x.due?`<span>締切 ${fmtDateJa(x.due)}${x.relDue?'🔗':''}</span>`:''}
         ${x.rel&&relAnchor(x.rel)?`<span class="relm">🔗 ${esc(relLabel(x.rel))}</span>`:''}
         ${x.groupId&&S.groups.some(g=>g.id===x.groupId)?`<span class="gtag"><i style="${markCss(x.groupId)}"></i>${esc(groupPath(x.groupId))}</span>`:''}
         ${x.status==='wait'&&x.waitNote?`<span style="color:var(--wait);">${esc(x.waitNote)}</span>`:''}</div>
@@ -4533,7 +4541,7 @@ function renderTasks(){ // v5.00：今日・明日は日付ポップと同じ一
   const dl=ds=>{const d=parseDs(ds);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;};
   const sec=(cls,label,n,inner,add)=>`<div class="tsec ${cls}"><div class="tsech">${label}<span class="n">${n}</span>${add||''}</div><div class="tsecb">${inner}</div></div>`;
   const add=ds=>`<button class="tsecadd" onclick="taskModalWithDue('${ds}')" aria-label="タスクを追加">＋</button>`;
-  const undRows=(arr,key)=>arr.length?`<div class="dlpage"><div class="dpsort" data-torder="${key}">${arr.map(x=>dlTaskRow(x,'','tab',{acts:'und',lab:x.due?'期限 '+fmtDateJa(x.due):''})).join('')}</div></div>`:'<div class="tsecempty">なし</div>';
+  const undRows=(arr,key)=>arr.length?`<div class="dlpage"><div class="dpsort" data-torder="${key}">${arr.map(x=>dlTaskRow(x,'','tab',{acts:'und',lab:x.due?'締切 '+fmtDateJa(x.due):''})).join('')}</div></div>`:'<div class="tsecempty">なし</div>';
   const body=sec('tday',`☀ 今日 <small>${dl(t)}</small>`,nToday,`<div class="dlpage dlwrap" data-d="${t}">${dayListHtml(t,'tab',{tf,ef})}</div>`,add(t))
     +sec('ttm',`➡ 明日 <small>${dl(tm)}</small>`,nTm,`<div class="dlpage dlwrap" data-d="${tm}">${dayListHtml(tm,'tab2',{tf,ef})}</div>`,add(tm))
     +sec('tpri','★ 優先',undP.length,undRows(undP,'p'))
@@ -4768,11 +4776,13 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
         <button type="button" class="emallday ${!_tfStart&&!_tfEndT?'on':''}" onclick="_tfStart='';_tfEndT='';tfRender()">なし</button></div>
       ${_tfStart&&S.settings.remindOn?`<div class="btnrow" style="margin-top:5px;"><button type="button" class="${_tfRemind?'on':''}" onclick="tfSyncTime();_tfRemind=!_tfRemind;tfRender()">${_tfRemind?'🔔 この時刻にメールで知らせる':'🔕 知らせない'}</button></div>`:''}</div>`}
     <div class="frow"><label>グループ（カテゴリ）</label>${tfGroupHtml()}</div>
-    ${tmpl?'':`<div class="frow"><label>期限</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()">📅 ${_tfDue?fmtDateJa(_tfDue):'なし'}</button></div>${relChipHtml('tfdue')}</div>`}
+    ${tmpl?'':`<div class="frow"><label>締切</label><div class="btnrow"><button type="button" class="${_tfDue?'on':''}" onclick="tfDueToggle()" ${_tfDue?`style="background:${DUE_BROWN};border-color:${DUE_BROWN};color:#fff;"`:''}>⏰ ${_tfDue?fmtDateJa(_tfDue)+' まで':'なし'}</button></div>
+      <div class="mini" style="padding:3px 0 0;">${_tfDue?'締切のあるタスクは、カレンダーなどで<b style="color:'+DUE_BROWN+';">濃いブラウン</b>になります':'いつまでに終わらせるか。入れると濃いブラウンで目立ちます'}</div>${relChipHtml('tfdue')}</div>`}
     <input type="hidden" id="tmPrio" value="${prio}">
     ${_tfDueOpen&&!tmpl&&_tfCalFor==='due'?`<div class="frow">${tfDueCalHtml()}</div>`:''}
     ${_relOpen==='tfdue'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
     ${tmpl?'':`<div class="frow"><label>見た目</label>
+      ${_tfDue?`<div class="mini" style="padding:0 0 4px;">いまは締切があるので<b style="color:${DUE_BROWN};">濃いブラウン</b>で表示します（締切を外すと下の色になります）</div>`:''}
       <div class="emhuenow">${_tfHue!=null?`色：<b>${esc(hueLabel(_tfHue)||HUE(_tfHue).n)}</b><button type="button" class="emback" onclick="tfPickHue(null)">↩ タスクの色に戻す</button>`:`色：<b>タスクの色（${esc(hueLabel(taskHue())||HUE(taskHue()).n)}）</b>`}</div>
       <div class="cpsw emsw"><button type="button" class="${_tfHue==null?'on':''}" style="background:${taskFill()};" onclick="tfPickHue(null)" title="タスクの色（既定）"><i class="emg" style="color:rgba(255,255,255,.85);">既</i></button>
         ${HUES12.map((_,i)=>`<button type="button" class="${_tfHue===i?'on':''}" style="background:${HUE(i).v}" onclick="tfPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}">${hueLabel(i)?`<i class="emhl" style="color:rgba(255,255,255,.85);">${esc(hueLabel(i).slice(0,3))}</i>`:''}</button>`).join('')}</div>
@@ -4929,11 +4939,11 @@ function tfDueCalHtml(){
     cells+=`<button type="button" class="${ds===selD||((f==='date'||f==='end')&&(ds===st||ds===_tfEnd))?'on':''}${inRng?' rng':''}${ds===todayStr()?' td':''}" onclick="tfPickDue('${ds}')">${dn}${eventsOn(ds).length?'<i></i>':''}</button>`;}
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
   const isDate=_tfCalFor==='date';const cur=isDate?_tfDate:_tfCalFor==='end'?_tfEnd:_tfCalFor==='until'?_tfUntil:_tfDue;
-  const head={date:'<b>やる日</b>をえらぶ',end:'<b>終わりの日</b>をえらぶ（はじまりの日を押すと1日だけに）',due:'<b>期限</b>をえらぶ',until:'<b>くり返しの最後の日</b>をえらぶ'}[_tfCalFor]||'';
+  const head={date:'<b>やる日</b>をえらぶ',end:'<b>終わりの日</b>をえらぶ（はじまりの日を押すと1日だけに）',due:'<b>締切</b>をえらぶ',until:'<b>くり返しの最後の日</b>をえらぶ'}[_tfCalFor]||'';
   return `<div class="emcalh">${head}${isDate||_tfCalFor==='due'?`<button type="button" class="relbtn" onclick="relOpen('${isDate?'tf':'tfdue'}')">${isDate?'⏪ 予定から逆算':'🔗 予定を基準にえらぶ'}</button>`:''}</div>
     <div class="dpnav"><button type="button" onclick="tfDueNav(-1)">‹</button><span>${_tfDueY}年${_tfDueX+1}月</span><button type="button" onclick="tfDueNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
-    ${cur&&_tfCalFor!=='end'?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">${isDate?'日付をやめる':_tfCalFor==='until'?'ずっとくり返す':'期限なしにする'}</button></div>`:''}`;}
+    ${cur&&_tfCalFor!=='end'?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">${isDate?'日付をやめる':_tfCalFor==='until'?'ずっとくり返す':'締切なしにする'}</button></div>`:''}`;}
 function tfDueNav(k){_tfDueX+=k;if(_tfDueX<0){_tfDueX=11;_tfDueY--;}if(_tfDueX>11){_tfDueX=0;_tfDueY++;}tfRender();}
 function tfPickDue(ds){ // 選んだら閉じる。手でえらんだら基準のリンクは外す
   tfSyncTime();
@@ -5493,9 +5503,28 @@ function extSummary(){if(!_ext.ig&&!_ext.blog&&!_ext.meo)return '';
   return `<div class="extsum" onclick="extTapRefresh()" title="タップで今すぐ読み直す"><span>🌿インスタ ${sk(_ext.ig)}</span><span>📝ブログ ${sk(_ext.blog)}</span><span class="extrf">${_extBusy?'…':'↻'}</span></div>`;}
 function extTapRefresh(){toast('予約日を読み直しています…');extRefresh(true).then(()=>{render();toast(_ext.blogErr||_ext.igErr?'一部読めませんでした（設定→同期・データで確認）':'最新の予約日にしました');});}
 /* ---- その日の並び順（v4.30）：日付ポップでドラッグした順を、月のセルにもそのまま使う ---- */
-function sortByDayOrder(dstr,arr,tok){const o=(S.dayOrder||{})[dstr];if(!o||!o.length)return arr;
-  const pos=new Map(o.map((t,i)=>[t,i]));
-  return arr.map((x,i)=>({x,i,p:pos.has(tok(x))?pos.get(tok(x)):1e6+i})).sort((a,b)=>a.p-b.p||a.i-b.i).map(v=>v.x);}
+function sortByDayOrder(dstr,arr,tok){const o=(S.dayOrder||{})[dstr];
+  let out=arr;
+  if(o&&o.length){const pos=new Map(o.map((t,i)=>[t,i]));
+    out=arr.map((x,i)=>({x,i,p:pos.has(tok(x))?pos.get(tok(x)):1e6+i})).sort((a,b)=>a.p-b.p||a.i-b.i).map(v=>v.x);}
+  return repGroupSort(out,tok);}
+/* 繰り返しタスク（今の回 t_ も先の回 g_ も）は、繰り返しどうしの順番を S.settings.repOrder にそろえる（v5.11）
+   ＝どこかの日で並べ替えると、繰り返しタスクの並びが全部の日に反映される。ほかのタスク・予定との位置はその日のまま */
+function repTokId(t){t=String(t||'');if(!(t.startsWith('t_')||t.startsWith('g_')))return null;const id=t.slice(2);const x=S.tasks.find(v=>v.id===id);return x&&x.repeat?id:null;}
+function repGroupSort(arr,tok){const ro=S.settings.repOrder;if(!ro||!ro.length)return arr;
+  const rank=new Map(ro.map((id,i)=>[id,i]));const slots=[],items=[];
+  arr.forEach((x,i)=>{const id=repTokId(tok(x));if(id){slots.push(i);items.push({x,r:rank.has(id)?rank.get(id):1e6+i});}});
+  if(items.length<2)return arr;
+  items.sort((a,b)=>a.r-b.r);const out=arr.slice();slots.forEach((p,k)=>{out[p]=items[k].x;});return out;}
+/* 並べ替えた1日の順番から、繰り返しタスクどうしの順番を覚える（その日に出ていない繰り返しタスクの位置は保つ） */
+function repOrderFrom(order){const ids=order.map(repTokId).filter(Boolean);if(ids.length<2)return false;
+  const prev=(S.settings.repOrder||[]).slice();
+  const cur=prev.filter(id=>S.tasks.some(x=>x.id===id&&x.repeat));
+  ids.forEach(id=>{if(!cur.includes(id))cur.push(id);});
+  const slots=cur.map((id,i)=>ids.includes(id)?i:-1).filter(i=>i>=0);
+  slots.forEach((p,k)=>{cur[p]=ids[k];});
+  if(cur.join(',')===prev.join(','))return false;
+  S.settings.repOrder=cur;return true;}
 /* 日付を決めたタスク（やる日＝その日）。今日より前は出さない（繰り越しはタスク一覧で見る） */
 function datedTasksOn(d){ // やる日＝その日（過ぎた日も元の日に出す。連日・時間つきは別の出し方）
   return S.tasks.filter(x=>x.status!=='done'&&x.today===d&&!tSpan(x)&&!x.start&&!taskSlots(d,x.id).length);}
@@ -5575,9 +5604,9 @@ function renderCal(){
       const nightM=hm2min(S.settings.nightStart||'18:00');
       const evItem=e=>({tok:'e_'+e.id,t:evTitle(e),lbl:evLabel(e),c:evColor(e),imp:e.important,due:0,time:e.start||'',line:evLine(e),mo:!!e.markOnly,nf:!!e.noFill,dn:evDone(e,dstr),ni:!!(e.start&&hm2min(e.start)>=nightM)});
       const items=[...sortByDayOrder(dstr,evs.filter(e=>!e.isTask).map(evItem),it=>it.tok),
-                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,t:o.x.title,c:'',due:1,tk:1,tc:taskFillOf(o.x),lbl2:(o.kind==='due'?'⏰':'')+tkLabel(o.x),time:o.time,imp:0}))],it=>it.tok),
-                   ...(allHere?tDone.map(x=>({tok:'t_'+x.id,t:x.title,due:1,tk:1,dn:1,tc:taskFillOf(x),lbl2:tkLabel(x),time:''})):[]),
-                   ...(ghosts[dstr]||[]).filter(x=>x.today!==dstr).map(x=>({tok:'g_'+x.id,t:x.title,due:1,gh:1,tc:taskFillOf(x),lbl2:tkLabel(x),time:x.start||''}))];
+                   ...sortByDayOrder(dstr,[...evs.filter(e=>e.isTask).map(evItem),...dts.map(o=>({tok:'t_'+o.x.id,rp:!!o.x.repeat,t:o.x.title,c:'',due:1,tk:1,tc:taskFillOf(o.x),lbl2:(o.kind==='due'?'⏰':'')+tkLabel(o.x),time:o.time,imp:0})),
+                     ...(ghosts[dstr]||[]).filter(x=>x.today!==dstr).map(x=>({tok:'g_'+x.id,rp:1,t:x.title,due:1,gh:1,tc:taskFillOf(x),lbl2:tkLabel(x),time:x.start||''}))],it=>it.tok),
+                   ...(allHere?tDone.map(x=>({tok:'t_'+x.id,rp:!!(x.repeat||repDoneOn(x,dstr)),t:x.title,due:1,tk:1,dn:1,tc:taskFillOf(x),lbl2:tkLabel(x),time:''})):[])];
       const evMode=MONTH_EV_MODES[S.settings.monthEvMode]?S.settings.monthEvMode:'mark';
       const allMode=calMonthAll||evMode==='all';const showTime=allMode||evMode==='time';
       const max=S.settings.monthMax||4;const maxS=Math.max(0,max-wk.shown);
@@ -5591,7 +5620,7 @@ function renderCal(){
         ${(mks.length||extBadges(dstr))?`<div class="marks">${extBadges(dstr)}${mks.map(k=>`<span style="color:${k.color};stroke:${k.color};">${icSvg(k.icon)}</span>`).join('')}</div>`:''}
         ${shown.map(it=>{const tf=(showTime&&it.time)?monthEvTime(it.time):'';
           let cls='evbar'+(it.ni?' night':'')+(it.dn?' evdn':''),st='';
-          if(it.due){cls+=' due'+(it.gh?' ghost':'');const b=it.tc||tkBg;st=`style="background:${b};color:${evTextColor(b)};"`;} // タスク＝設定の「タスクの色」／期限だけ＝点線／先の回＝うすい点線
+          if(it.due){cls+=' due'+(it.gh?' ghost':'')+(it.rp?' rpt':'');const b=it.tc||tkBg;st=`style="background:${b};color:${evTextColor(b)};"`;} // タスク＝設定の「タスクの色」／期限だけ＝点線／先の回＝うすい点線
           else if(it.mo){cls+=' mkonly';st=`style="color:${it.line};"`;}
           else if(it.nf){cls+=' plain';st=`style="color:${it.line};"`;}
           else{st=`style="background:${it.c};color:${evTextColor(it.c)};"`;}
@@ -5631,8 +5660,8 @@ function renderCal(){
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}')">${esc(evTitle(e))}</span>`),
-        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();wkTaskOpen('${x.id}','${dd.dstr}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;}),
-        ...(wkGh[dd.dstr]||[]).filter(x=>x.today!==dd.dstr).map(x=>{const b=taskFillOf(x);return `<span class="wkadchip wkghost" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}',{act:'g_${x.id}'})">🔁${esc(x.title)}</span>`;})];
+        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip${x.repeat?' rpt':''}" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();wkTaskOpen('${x.id}','${dd.dstr}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;}),
+        ...(wkGh[dd.dstr]||[]).filter(x=>x.today!==dd.dstr).map(x=>{const b=taskFillOf(x);return `<span class="wkadchip wkghost rpt" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}',{act:'g_${x.id}'})">🔁${esc(x.title)}</span>`;})];
       // 月で付けた「その日の色」を週の終日欄にも反映（編集は月カレンダーだけ）
       const dayBg=S.dayColors[dd.dstr]!==undefined?PASTELS[S.dayColors[dd.dstr]].c:'';
       return `<div class="wkad${dayBg?' hascol':''}${dd.dstr===todayS?' today':''}${dd.hol||dd.dow===0?' sun':''}${dd.dow===6?' sat':''}${ci%2?' alt':''}" ${dayBg?`style="background:${dayBg}"`:''} onclick="openDayPopup('${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
@@ -5642,7 +5671,7 @@ function renderCal(){
       const wkItems=[...dd.timed,...dd.tt.map(o=>({__t:o.x,__sid:o.sl?o.sl.id:'',start:min2hm(o.s),end:min2hm(o.e)}))];
       const blocks=weekLayout(wkItems,minMin,PXM).map(o=>{const e=o.e,mo=!!e.markOnly,nf=!!e.noFill;const w=100/o.lanes,l=o.lane*w;
         if(e.__t){const tc=taskFillOf(e.__t);
-          return `<div class="wkev wktask" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskOpen('${e.__t.id}','${dd.dstr}')"><div class="wkevt">${tkMk(e.__t)||'✔ '}${esc(e.__t.title)}</div></div>`;}
+          return `<div class="wkev wktask${e.__t.repeat?' rpt':''}" style="top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);${tc?`background:${tc};border-style:solid;color:${evTextColor(tc)};`:''}" onclick="event.stopPropagation();wkTaskOpen('${e.__t.id}','${dd.dstr}')"><div class="wkevt">${tkMk(e.__t)||'✔ '}${esc(e.__t.title)}</div></div>`;}
         const bg=evColor(e);
         let cls='wkev'+(e.important?' imp':'')+(evDone(e,dd.dstr)?' evdn':'');let st=`top:${o.top}px;height:${o.h}px;left:${l}%;width:calc(${w}% - 1px);`;
         if(mo){cls+=' mkonly';st+=`color:${evLine(e)};`;}else if(nf){cls+=' plain';st+=`color:${evLine(e)};`;}else st+=`background:${bg};color:${evTextColor(bg)};`;
@@ -6020,7 +6049,7 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
       <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
       <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}','${dstr}')">🗑</button>`;
   const chk=`taskCompleteTap('${x.id}',this.closest('.dpev'),null,'${dstr}')`; // ポップは開いたまま・その日で完了（v5.08）
-  return `<div class="dpev dptask${paint?'':' nopaint'}${op?' open':''}" data-tok="t_${x.id}" style="${st}" onpointerdown="event.stopPropagation();${ctx==='pop'?`tdPress(event,'${x.id}','${dstr}')`:''}">
+  return `<div class="dpev dptask${x.repeat?' rpt':''}${paint?'':' nopaint'}${op?' open':''}" data-tok="t_${x.id}" style="${st}" onpointerdown="event.stopPropagation();${ctx==='pop'?`tdPress(event,'${x.id}','${dstr}')`:''}">
     <div class="dpevrow" onclick="dpTaskTap('t_${x.id}')">
       ${o.nosort?'':`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`}
       <span class="dpchk round" onclick="event.stopPropagation();${chk}"></span>
@@ -6028,8 +6057,9 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
     ${op?`<div class="dpact">${btns}</div>`:''}</div>`;}
 /* 繰り返しタスクの先の回（うすく）。タップ＝この回を先に済ませる／編集 */
 function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='g_'+x.id;const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
-  return `<div class="dpev dptask dpghost${paint?'':' nopaint'}${op?' open':''}" data-tok="g_${x.id}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
+  return `<div class="dpev dptask dpghost rpt${paint?'':' nopaint'}${op?' open':''}" data-tok="g_${x.id}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
     <div class="dpevrow" onclick="dpTaskTap('g_${x.id}')">
+      ${ctx==='tab2'?'':`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`}
       <span class="dpchk round" onclick="event.stopPropagation();_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()"></span>
       <span class="dpevt">${tkMk(x)}${esc(x.title)} 🔁${x.rel?' ⏪':''}</span><span class="dpevm">${op?'▾':esc(repLabelT(x))}</span></div>
     ${op?`<div class="dpact"><button type="button" class="pri" onclick="_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()">✅ この回を完了</button>
@@ -6051,21 +6081,21 @@ function dayListHtml(dstr,ctx,o={}){const tf=o.tf||(()=>true),ef=o.ef||(()=>true
   // 連日のタスク（やる日〜終わりの日）もその日の一覧に出す
   const spanT=S.tasks.filter(x=>x.status!=='done'&&tSpan(x)&&x.today<=dstr&&dstr<=x.endDate&&tf(x));
   const isTab=String(ctx).startsWith('tab');
-  const lab=q=>q.kind==='due'?'期限':q.kind==='time'?q.time:(isTab?'':'この日のタスク');
+  const lab=q=>q.kind==='due'?'⏰ 締切':q.kind==='time'?q.time:(isTab?'':'この日のタスク');
   const spans=und.filter(e=>evSpan(e));
   const plans=sortByDayOrder(dstr,und.filter(e=>!evSpan(e)&&!e.isTask).map(e=>({tok:'e_'+e.id,h:()=>dlEvRow(e,dstr,ctx,false)})),v=>v.tok);
+  // 繰り返しタスクの「この先の回」（v5.10）：月のセルだけでなく、ポップ・日表示・タスクタブの明日にも出す（v5.11：タスクの並びの中に）
+  const ghs=ctx==='tab'?[]:((repGhostMap(dstr,dstr)[dstr])||[]).filter(x=>x.today!==dstr&&tf(x));
   const tasks=sortByDayOrder(dstr,[...und.filter(e=>!evSpan(e)&&e.isTask).map(e=>({tok:'e_'+e.id,h:()=>dlEvRow(e,dstr,ctx,false)})),
     ...dts.map(q=>({tok:'t_'+q.x.id,h:()=>dlTaskRow(q.x,dstr,ctx,{lab:lab(q)})})),
-    ...spanT.map(x=>({tok:'t_'+x.id,h:()=>dlTaskRow(x,dstr,ctx,{lab:`〜${fmtDateJa(x.endDate)}`})}))],v=>v.tok);
-  // 繰り返しタスクの「この先の回」（v5.10）：月のセルだけでなく、ポップ・日表示・タスクタブの明日にも出す
-  const ghs=ctx==='tab'?[]:((repGhostMap(dstr,dstr)[dstr])||[]).filter(x=>x.today!==dstr&&tf(x));
-  const n=plans.length+tasks.length+ghs.length;
+    ...spanT.map(x=>({tok:'t_'+x.id,h:()=>dlTaskRow(x,dstr,ctx,{lab:`〜${fmtDateJa(x.endDate)}`})})),
+    ...ghs.map(x=>({tok:'g_'+x.id,h:()=>dlGhostRow(x,dstr,ctx)}))],v=>v.tok);
+  const n=plans.length+tasks.length;
   const empty=ctx==='tab'?'今日の予定・タスクはありません':ctx==='tab2'?'予定・タスクはありません':'予定はありません';
   let h=mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')
     +spans.map(e=>dlEvRow(e,dstr,ctx,false)).join('')
     +(plans.length?`<div class="dpsort">${plans.map(v=>v.h()).join('')}</div>`:'')
     +(tasks.length?`${plans.length||spans.length?'<div class="dpsublab">タスク</div>':''}<div class="dpsort">${tasks.map(v=>v.h()).join('')}</div>`:'')
-    +(ghs.length?`<div class="dpsublab">🔁 くり返しの回（${ghs.length}）</div>${ghs.map(x=>dlGhostRow(x,dstr,ctx)).join('')}`:'')
     +(n>1&&ctx!=='tab2'?`<div class="dpsorthint">⋮⋮ を押したまま上下で並び替え（予定は予定、タスクはタスクの中で。${isTab?'月カレンダー・日付ポップと同じ順番になります':'月のセル・タスクタブも同じ順番になります'}）</div>`:'')
     +(n||mks.length||dn.length||spans.length||tdn.length?'':`<div class="dpempty">${empty}</div>`)
     +((dn.length||tdn.length)?`<div class="dpdones">✓ 完了（${dn.length+tdn.length}）　<span>☑で戻す</span></div>`+dn.map(e=>dlEvRow(e,dstr,ctx,true)).join('')+tdn.map(x=>dlDoneTaskRow(x,dstr,ctx)).join(''):'');
@@ -6084,7 +6114,7 @@ function dlCarryHtml(dstr,ctx,tf){const pre=dlPre(dstr,ctx);const d=parseDs(dstr
       <span class="dpcd${it.date?'':' none'}">${it.date?fmtDateJa(it.date):'日付なし'}</span><span class="dpct">${it.kind==='task'?tkMk(x):'<i class="evtk">✔</i>'}${esc(it.title)}${it.kind==='rep'?' 🔁':''}</span>
       ${_dpMoveMode?'':`<span class="dpcgo">${op?'▾':'›'}</span>`}</div>
     ${op?`<div class="dpcdet" onpointerdown="event.stopPropagation()">
-      <div class="dpcinfo">${it.date?`${it.kind==='task'&&x&&!x.today&&x.due?'期限':'やる日'}：${fmtDateJa(it.date)}`:'日付：なし'}${x&&x.memo?`<div class="dpcmemo">${esc(x.memo)}</div>`:''}</div>
+      <div class="dpcinfo">${it.date?`${it.kind==='task'&&x&&!x.today&&x.due?'締切':'やる日'}：${fmtDateJa(it.date)}`:'日付：なし'}${x&&x.memo?`<div class="dpcmemo">${esc(x.memo)}</div>`:''}</div>
       <div class="dpcbtns"><button class="pri" onclick="dpCarryMove('${it.tok}','${dstr}')">→ この日（${fmtDateJa(dstr)}）にやる</button>
         <button onclick="${edit}">✎ 編集</button></div>
       ${it.kind==='task'?`<div class="dpcbtns"><button onclick="_carryOpen='';completeTaskOn('${it.id}','${it.date||dstr}');dlRedraw()">✅ ${it.date?fmtDateJa(it.date):'この日'}で完了</button>
@@ -6241,7 +6271,9 @@ function dpDragStart(ev,dstr){if(ev.pointerType==='mouse'&&ev.button!==0)return;
     else{const wrap=list.closest('.dlwrap')||$('#daypop');
       const order=[...wrap.querySelectorAll('.dpsort:not([data-torder]) [data-tok]')].map(r=>r.dataset.tok);
       const prev=((S.dayOrder||{})[dstr]||[]).join(',');
-      if(order.join(',')!==prev){snapUndo();S.dayOrder=S.dayOrder||{};S.dayOrder[dstr]=order;save();render();attachCellPress();
+      if(order.join(',')!==prev){snapUndo();S.dayOrder=S.dayOrder||{};S.dayOrder[dstr]=order;
+        if(repOrderFrom(order))toast('🔁 繰り返しタスクの並びは、ほかの日にもそろえました');
+        save();render();attachCellPress();
         flashUndo('並び順を変えました');}}
     setTimeout(()=>{row.style.transition='';others0.forEach(r=>{r.style.transition='';});},220);};
   document.addEventListener('pointermove',mv,{passive:false});document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);}
@@ -7776,7 +7808,7 @@ function renderSettings(){
     <div class="setrow"><div><div class="sl">祝日を表示</div></div>${tgl('showHoliday')}</div>
     <div class="setrow"><div><div class="sl">六曜を表示</div><div class="sd">大安・仏滅など（略算のため稀に1日ずれ）</div></div>${tgl('showRokuyo')}</div>
     <div class="setrow"><div><div class="sl">一粒万倍日を表示</div><div class="sd">縁起のいい日（略算）</div></div>${tgl('showIchiryu')}</div>
-    <div class="setrow"><div><div class="sl">タスク期限をカレンダーに表示</div></div>${tgl('showDue')}</div>
+    <div class="setrow"><div><div class="sl">タスクの締切をカレンダーに表示</div></div>${tgl('showDue')}</div>
     <div class="setrow"><div><div class="sl">タイムラインに完了を薄く残す</div><div class="sd">その日にやったことの実績を時刻の位置に表示</div></div>${tgl('showDoneTL')}</div>`;
   if(P==='time')return back+`<div class="vhead"><h1>時間関連設定</h1></div>
     <div class="setrow"><div><div class="sl">活動の開始（既定）</div><div class="sd">「使える時間」を開始〜終了から自動計算</div></div>
@@ -7865,6 +7897,11 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.11（2026-10-04）締切は濃いブラウン・繰り返しタスクは角丸・繰り返しの並び順を全部の日に</b><br>
+  ・タスクの「期限」を<b>「締切」</b>という名前にしました。<b>締切のあるタスクは、カレンダー・日付ポップなどで濃いブラウン</b>になって目立ちます（締切の日には ⏰ つきで出ます）<br>
+  ・<b>繰り返しのタスクは、カレンダー上で角の丸い形</b>になりました（ふつうのタスクや予定と見分けやすく）<br>
+  ・<b>繰り返しのタスクをどこかの日で並べ替えると、その並び順がほかの日にもそろう</b>ようになりました（日付ポップの ⋮⋮ で上下に動かすだけ。先の回の「🔁 くり返しの回」も並べ替えられます）<br>
+  </div>
   <div class="mini"><b>v5.10（2026-10-04）予定逆算タスク・くり返しの回がどの画面でも見える</b><br>
   ・<b>予定から逆算してタスクを作れる</b>ようになりました。予定を開いて<b>「⏪ この予定から逆算してタスクを作る」</b>を押す（または予定をタップしたメニューから）と、その予定をえらんだ状態でタスクの入力が開きます。「前日」「3日前」などを押して保存するだけです。タスクの入力の「いつやる」にも「⏪ 予定から逆算する」を置きました<br>
   ・<b>くり返しのタスクの先の回が、日付ポップ・日表示・週表示にも出る</b>ようになりました（これまでは月のセルにうすく出るだけで、日付を開くと見えませんでした）。「🔁 くり返しの回」としてうすく出て、タップすると<b>その回を先に完了</b>できます<br>
