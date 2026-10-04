@@ -673,7 +673,10 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .evbar.mkonly .evmk{width:1.55em;height:1.55em;vertical-align:-.35em;margin-right:2px;}
 .evmore{font-size:9px;color:var(--sub);padding-left:3px;}
 .evbar.evdn{opacity:.42;text-decoration:line-through;}
-.evbar.due.ghost{opacity:.38;} /* 繰り返しの先の回＝うすい塗り */
+.evbar.due.ghost{opacity:.5;} /* 繰り返しの先の回＝うすい塗り */
+.dpev.dpghost:not(.open){opacity:.55;}
+.dpghnote{flex:1 1 100%;font-size:11px;opacity:.85;line-height:1.4;}
+.wkadchip.wkghost{opacity:.5;}
 .mbar{letter-spacing:0;}
 /* 連日の予定＝週ごとの行の上に、つながったバーを重ねる（v4.30） */
 .mweek{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);position:relative;
@@ -725,6 +728,9 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 .relpanel .reloffs button{padding:7px 2px;font-size:11.5px;border:1px solid var(--line);border-radius:999px !important;white-space:nowrap;}
 .relpanel .reloffs button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
 .relpanel .relprev{font-size:12px;color:var(--sub);margin-top:8px;}
+#dlg .evrelbtn{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:10px 12px;border:1px solid var(--accent);color:var(--accent);background:var(--ring);font-size:13.5px;font-weight:700;border-radius:12px !important;text-align:left;}
+#dlg .evrelbtn i{font-style:normal;font-size:11px;font-weight:400;color:var(--sub);}
+#dlg .evrelbtn:active{transform:scale(.98);}
 .relmany{font-size:11.5px;color:var(--accent);font-weight:700;margin-top:5px;}
 .relpanel .relitem .relnx{font-style:normal;font-size:10.5px;color:var(--sub);margin-left:6px;}
 .relpanel .relmode{display:flex;gap:6px;margin:2px 0 6px;}
@@ -1775,7 +1781,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.09';
+const APP_VERSION='v5.10';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -2425,7 +2431,7 @@ function relPanelHtml(ctx){const a=_relSel?S.events.find(v=>v.id===_relSel):null
     ${canRep?`<div class="seg relmode"><button type="button" class="${repMode?'on':''}" onclick="relModePick('${ctx}','rep')">🔁 繰り返しに合わせる<i>毎回タスクが入る</i></button><button type="button" class="${repMode?'':'on'}" onclick="relModePick('${ctx}','occ')">この予定のみ<i>1回だけ</i></button></div>`:''}
     ${repMode?'':`<div class="reloccs">${occs.map(d=>`<button type="button" class="${_relOcc===d?'on':''}" onclick="relOccPick('${ctx}','${d}')">${fmtDateJa(d)}</button>`).join('')}</div>`}`;
   return `<div class="relpanel">
-    <div class="relh">🔗 どの予定を基準にしますか？<button type="button" class="relx" onclick="relClose()">✕</button></div>
+    <div class="relh">${ctx==='tf'?'⏪ どの予定から逆算しますか？':'🔗 どの予定を基準にしますか？'}<button type="button" class="relx" onclick="relClose()">✕</button></div>
     <input id="relQ" value="${esc(_relQ)}" placeholder="予定の名前でさがす（例：運動会）" oninput="relSearch('${ctx}',this.value)">
     <div class="rellist" id="relList">${relListHtml(ctx)}</div>
     ${repUi}
@@ -2468,6 +2474,16 @@ function relApply(ctx){const a=S.events.find(v=>v.id===_relSel);if(!a)return;
   else if(ctx==='tf'){_tfRel=r;_tfWhen='dated';_tfDate=d;_tfRelExtra=_relOffs.filter(o=>o!==_relOff);}
   else{_tfRelDue=r;_tfDue=d;}
   _relOpen=null;relRender(ctx);toast(ctx==='tf'&&_tfRelExtra.length?`「${evTitle(a)}」の${relOffsText(_relOffs)}にしました`:`${relLabel(r)}（${fmtDateJa(d)}）にしました`);}
+/* 予定逆算タスク（v5.10）：予定の画面・メニューから、その予定をえらんだ状態でタスクの入力を開く */
+function evRelCount(id){return S.tasks.filter(x=>x.status!=='done'&&((x.rel&&x.rel.ev===id)||(x.relDue&&x.relDue.ev===id))).length;}
+function evRelTask(id,occ){const e=S.events.find(v=>v.id===id);if(!e)return;
+  const p=$('#daypop');const ret=_dpReturn||(p&&p.classList.contains('show')?p.dataset.d:null);
+  cpClose();closeModal();closeDayPopup();
+  taskModal(null,'',false,null,{});_dpReturn=ret; // 終わったら元の日付ポップへ
+  _relOpen='tf';_relQ='';_relSel=id;_relOff=-1;_relOffs=[-1];_relMode='rep';
+  _relOcc=e.repeat?((occ&&eventStartsOn(e,occ))?occ:(relOccs(e,todayStr(),1)[0]||'')):'';
+  tfRender();
+  setTimeout(()=>{const t=$('#tmTitle');const pn=document.querySelector('#dlg .relpanel');if(pn)pn.scrollIntoView({block:'start'});if(t)t.focus({preventScroll:true});},60);}
 function relUnlink(ctx){if(ctx==='em')_emRel=null;else if(ctx==='tf'){_tfRel=null;_tfRelExtra=[];}else _tfRelDue=null;
   relRender(ctx);toast('基準のリンクを外しました（日付はそのまま）');}
 /* ---- 連日の予定（v4.30）：e.endDate が e.date より後なら、その日数ぶん続く ---- */
@@ -4744,7 +4760,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
       ${tfDateOf()?`<div class="btnrow emdates" style="margin-top:6px;"><button type="button" class="on${_tfDueOpen&&_tfCalFor==='date'?' act':''}" onclick="tfDateToggle()">📅 ${fmtDateJa(tfDateOf())}</button>
         <span class="emtw">〜</span><button type="button" class="${_tfEnd?'on':''}${_tfDueOpen&&_tfCalFor==='end'?' act':''}" onclick="tfEndToggle()">${_tfEnd?fmtDateJa(_tfEnd):'終わりの日'}</button>
         ${_tfEnd?`<button type="button" class="emx" onclick="_tfEnd='';tfRender()" aria-label="1日だけにする">✕</button>`:''}</div>`:''}
-      ${relChipHtml('tf')}</div>`}
+      ${relChipHtml('tf')}${_tfRel||_relOpen==='tf'?'':`<button type="button" class="relbtn" style="margin-top:6px;" onclick="relOpen('tf')">⏪ 予定から逆算する（前日・3日前 など）</button>`}</div>`}
     ${_tfDueOpen&&!tmpl&&_tfCalFor!=='due'?`<div class="frow">${tfDueCalHtml()}</div>`:''}
     ${_relOpen==='tf'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
     ${tmpl||!tfDateOf()?'':`<div class="frow"><label>時間</label>
@@ -4914,7 +4930,7 @@ function tfDueCalHtml(){
   const wd=[...Array(7)].map((_,i)=>WD[(i+ws)%7]);
   const isDate=_tfCalFor==='date';const cur=isDate?_tfDate:_tfCalFor==='end'?_tfEnd:_tfCalFor==='until'?_tfUntil:_tfDue;
   const head={date:'<b>やる日</b>をえらぶ',end:'<b>終わりの日</b>をえらぶ（はじまりの日を押すと1日だけに）',due:'<b>期限</b>をえらぶ',until:'<b>くり返しの最後の日</b>をえらぶ'}[_tfCalFor]||'';
-  return `<div class="emcalh">${head}${isDate||_tfCalFor==='due'?`<button type="button" class="relbtn" onclick="relOpen('${isDate?'tf':'tfdue'}')">🔗 予定を基準にえらぶ</button>`:''}</div>
+  return `<div class="emcalh">${head}${isDate||_tfCalFor==='due'?`<button type="button" class="relbtn" onclick="relOpen('${isDate?'tf':'tfdue'}')">${isDate?'⏪ 予定から逆算':'🔗 予定を基準にえらぶ'}</button>`:''}</div>
     <div class="dpnav"><button type="button" onclick="tfDueNav(-1)">‹</button><span>${_tfDueY}年${_tfDueX+1}月</span><button type="button" onclick="tfDueNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
     ${cur&&_tfCalFor!=='end'?`<div class="btnrow" style="margin-top:6px;"><button type="button" onclick="tfDueClear()">${isDate?'日付をやめる':_tfCalFor==='until'?'ずっとくり返す':'期限なしにする'}</button></div>`:''}`;}
@@ -5611,10 +5627,12 @@ function renderCal(){
       return `<div class="wkhcell ${dd.hol||dd.dow===0?'sun':''} ${dd.dow===6?'sat':''} ${isT?'today':''} ${ci%2?'alt':''}" onclick="calGoto('${dd.dstr}')"><div class="wkdw">${WD[dd.dow]}</div><div class="wkdn">${dd.d}</div>${extBadges(dd.dstr)?`<div class="wkext">${extBadges(dd.dstr)}</div>`:''}</div>`;}).join('')}</div>`;
     const wsp=monthWeekSpans(dayData.map(dd=>dd.c),{keepDone:true,tap:true});
     const spanRow=wsp.shown?`<div class="wkrow wkspanrow"><div class="wkgut2">連日</div><div class="wkspan" style="height:calc(${wsp.shown} * var(--mbh) + 3px)">${wsp.html}</div></div>`:'';
+    const wkGh=repGhostMap(dayData[0].dstr,dayData[6].dstr); // 繰り返しタスクの先の回（v5.10）
     const alldayRow=spanRow+`<div class="wkrow wkallday"><div class="wkgut2">終日</div>${dayData.map((dd,ci)=>{
       const chips=[...dd.mks.map(k=>`<span class="wkadchip" style="color:${k.color};border:1px solid ${k.color};display:inline-flex;align-items:center;gap:1px;"><span style="width:9px;height:9px;">${icSvg(k.icon)}</span></span>`),
         ...dd.allday.slice().sort((a,b)=>(!!a.isTask)-(!!b.isTask)).map(e=>`<span class="wkadchip" style="background:${evColor(e)};color:${evTextColor(evColor(e))};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}')">${esc(evTitle(e))}</span>`),
-        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();wkTaskOpen('${x.id}','${dd.dstr}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;})];
+        ...dd.dues.map(x=>{const b=taskFillOf(x);return `<span class="wkadchip" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();wkTaskOpen('${x.id}','${dd.dstr}')">${x.today===dd.dstr?'':'⏰'}${tkMk(x)||'✔'}${esc(x.title)}</span>`;}),
+        ...(wkGh[dd.dstr]||[]).filter(x=>x.today!==dd.dstr).map(x=>{const b=taskFillOf(x);return `<span class="wkadchip wkghost" style="background:${b};color:${evTextColor(b)};" onclick="event.stopPropagation();openDayPopup('${dd.dstr}',{act:'g_${x.id}'})">🔁${esc(x.title)}</span>`;})];
       // 月で付けた「その日の色」を週の終日欄にも反映（編集は月カレンダーだけ）
       const dayBg=S.dayColors[dd.dstr]!==undefined?PASTELS[S.dayColors[dd.dstr]].c:'';
       return `<div class="wkad${dayBg?' hascol':''}${dd.dstr===todayS?' today':''}${dd.hol||dd.dow===0?' sun':''}${dd.dow===6?' sat':''}${ci%2?' alt':''}" ${dayBg?`style="background:${dayBg}"`:''} onclick="openDayPopup('${dd.dstr}')">${chips.join('')}</div>`;}).join('')}</div>`;
@@ -6008,6 +6026,15 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
       <span class="dpchk round" onclick="event.stopPropagation();${chk}"></span>
       <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.repeat?' 🔁':''}${x.rel?' 🔗':''}</span><span class="dpevm">${op?'▾':(o.lab||'')}</span></div>
     ${op?`<div class="dpact">${btns}</div>`:''}</div>`;}
+/* 繰り返しタスクの先の回（うすく）。タップ＝この回を先に済ませる／編集 */
+function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='g_'+x.id;const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
+  return `<div class="dpev dptask dpghost${paint?'':' nopaint'}${op?' open':''}" data-tok="g_${x.id}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
+    <div class="dpevrow" onclick="dpTaskTap('g_${x.id}')">
+      <span class="dpchk round" onclick="event.stopPropagation();_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()"></span>
+      <span class="dpevt">${tkMk(x)}${esc(x.title)} 🔁${x.rel?' ⏪':''}</span><span class="dpevm">${op?'▾':esc(repLabelT(x))}</span></div>
+    ${op?`<div class="dpact"><button type="button" class="pri" onclick="_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()">✅ この回を完了</button>
+      <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
+      <span class="dpactbr"></span><span class="dpghnote">いまの回は ${x.today?fmtDateJa(x.today):'—'}。この日の回は、いまの回を済ませると「この日のタスク」になります</span></div>`:''}</div>`;}
 /* その日に終わったタスク（☑で未完了に戻す） */
 function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
   return `<div class="dpev dptask evdn${paint?'':' nopaint'}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
@@ -6030,12 +6057,15 @@ function dayListHtml(dstr,ctx,o={}){const tf=o.tf||(()=>true),ef=o.ef||(()=>true
   const tasks=sortByDayOrder(dstr,[...und.filter(e=>!evSpan(e)&&e.isTask).map(e=>({tok:'e_'+e.id,h:()=>dlEvRow(e,dstr,ctx,false)})),
     ...dts.map(q=>({tok:'t_'+q.x.id,h:()=>dlTaskRow(q.x,dstr,ctx,{lab:lab(q)})})),
     ...spanT.map(x=>({tok:'t_'+x.id,h:()=>dlTaskRow(x,dstr,ctx,{lab:`〜${fmtDateJa(x.endDate)}`})}))],v=>v.tok);
-  const n=plans.length+tasks.length;
+  // 繰り返しタスクの「この先の回」（v5.10）：月のセルだけでなく、ポップ・日表示・タスクタブの明日にも出す
+  const ghs=ctx==='tab'?[]:((repGhostMap(dstr,dstr)[dstr])||[]).filter(x=>x.today!==dstr&&tf(x));
+  const n=plans.length+tasks.length+ghs.length;
   const empty=ctx==='tab'?'今日の予定・タスクはありません':ctx==='tab2'?'予定・タスクはありません':'予定はありません';
   let h=mks.map(k=>`<div class="dpmk" style="color:${k.color}"><span style="width:14px;height:14px;display:inline-block;">${icSvg(k.icon)}</span>${esc(k.name)}</div>`).join('')
     +spans.map(e=>dlEvRow(e,dstr,ctx,false)).join('')
     +(plans.length?`<div class="dpsort">${plans.map(v=>v.h()).join('')}</div>`:'')
     +(tasks.length?`${plans.length||spans.length?'<div class="dpsublab">タスク</div>':''}<div class="dpsort">${tasks.map(v=>v.h()).join('')}</div>`:'')
+    +(ghs.length?`<div class="dpsublab">🔁 くり返しの回（${ghs.length}）</div>${ghs.map(x=>dlGhostRow(x,dstr,ctx)).join('')}`:'')
     +(n>1&&ctx!=='tab2'?`<div class="dpsorthint">⋮⋮ を押したまま上下で並び替え（予定は予定、タスクはタスクの中で。${isTab?'月カレンダー・日付ポップと同じ順番になります':'月のセル・タスクタブも同じ順番になります'}）</div>`:'')
     +(n||mks.length||dn.length||spans.length||tdn.length?'':`<div class="dpempty">${empty}</div>`)
     +((dn.length||tdn.length)?`<div class="dpdones">✓ 完了（${dn.length+tdn.length}）　<span>☑で戻す</span></div>`+dn.map(e=>dlEvRow(e,dstr,ctx,true)).join('')+tdn.map(x=>dlDoneTaskRow(x,dstr,ctx)).join(''):'');
@@ -6490,6 +6520,7 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
     ${tmplEd?'':(e?'':emTabsHtml())}
     ${tmplEd?'':`<div class="frow"><div class="seg emkind"><button type="button" class="${_emIsTask?'':'on'}" onclick="emKind(false)">📅 予定</button><button type="button" class="${_emIsTask?'on':''}" onclick="emKind(true)">✔ タスク</button></div></div>`}
     <div class="frow"><label>${_emIsTask?'タスク名':'予定名'}</label><input id="emTitle" value="${esc(keep.title??src?.title??'')}" placeholder="${_emIsTask?'例）書類を出す、洗車 など':'例）通院、打合せ など'}"></div>
+    ${e&&!tmplEd&&!_emIsTask?`<div class="frow"><button type="button" class="evrelbtn" onclick="evRelTask('${e.id}','${_emOcc||''}')">⏪ この予定から逆算してタスクを作る<i>前日に準備・3日前に連絡 など${e.repeat?'（毎回にも）':''}</i></button>${evRelCount(e.id)?`<div class="mini" style="padding:3px 2px 0;">この予定から逆算したタスク：${evRelCount(e.id)}件</div>`:''}</div>`:''}
     <div class="frow"><label>リンク</label>${linksEditorHtml()}</div>
     ${tmplEd?'':`<div class="frow"><label>日付</label>
       <div class="btnrow emdates"><button type="button" class="on${_emCalOpen&&_emCalMode==='start'?' act':''}" onclick="emCalToggle('start')">📅 ${fmtDateJa(_emDate)}</button>
@@ -6853,6 +6884,7 @@ function eventTap(id,occDate,ev){const e=S.events.find(x=>x.id===id);if(!e)retur
   const html=`<div class="cpmenu"><div style="font-size:10px;color:var(--sub);padding:4px 12px 4px;">${esc(evTitle(e))}${e.repeat?' 🔁':''}　${evSpan(e)?evTimeText(e,occ):(e.start||'')+(e.end?'〜'+e.end:'')}${e.rel&&relAnchor(e.rel)?`<br>🔗 ${esc(relLabel(e.rel))}`:''}</div>
       <button class="hi" onclick="cpClose();toggleEvDone('${id}','${occ}')">${dn?'↩ 未完了に戻す':'✓ 完了にする'}</button>
       <button onclick="cpClose();eventModal('${id}',null,null,'${occ}')">✎ 編集</button>
+      <button onclick="cpClose();evRelTask('${id}','${occ}')">⏪ 逆算してタスクを作る</button>
       <button onclick="cpClose();dupEventPick('${id}')">⧉ 複製（日付を選ぶ）</button>
       <button class="del" onclick="cpClose();delEvent('${id}','${occ}')">🗑 削除</button></div>`;
   cellpopAt(anchor,html,{forId:'ev_'+id});}
@@ -7833,6 +7865,10 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.10（2026-10-04）予定逆算タスク・くり返しの回がどの画面でも見える</b><br>
+  ・<b>予定から逆算してタスクを作れる</b>ようになりました。予定を開いて<b>「⏪ この予定から逆算してタスクを作る」</b>を押す（または予定をタップしたメニューから）と、その予定をえらんだ状態でタスクの入力が開きます。「前日」「3日前」などを押して保存するだけです。タスクの入力の「いつやる」にも「⏪ 予定から逆算する」を置きました<br>
+  ・<b>くり返しのタスクの先の回が、日付ポップ・日表示・週表示にも出る</b>ようになりました（これまでは月のセルにうすく出るだけで、日付を開くと見えませんでした）。「🔁 くり返しの回」としてうすく出て、タップすると<b>その回を先に完了</b>できます<br>
+  </div>
   <div class="mini"><b>v5.09（2026-10-04）予定を基準にしたタスクを複数の日に・検索で全角半角を区別しない</b><br>
   ・<b>「🔗 予定を基準にえらぶ」で、「前日」と「当日」のように複数の日をえらべる</b>ようになりました。えらんだ日の数だけ、同じタスクが入ります（繰り返しの予定に合わせるときも、毎回それぞれの日に入ります）<br>
   ・<b>検索で、全角・半角や大文字・小文字を区別しなくなりました</b>。「ｚｏｏｍ」でも「ZOOM」でも、「ｱﾙﾌｧ」でも「アルファ」でも見つかります（アプリ全体の検索・タスクの検索・予定の基準えらび・テンプレの検索）<br>
