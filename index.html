@@ -716,6 +716,26 @@ body.tldragging{user-select:none;-webkit-user-select:none;}
 #dlg .emcalh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);margin:0 0 6px;}
 .dpgrid button.rng{background:var(--ring);border-radius:0 !important;}
 /* 基準の予定（〇〇の予定の前日） */
+/* タスクの色えらび（v5.13）：名前が読めるチップ */
+#dlg .tcsw{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+#dlg .tcsw .tcchip{min-height:34px;padding:6px 12px;border-radius:10px !important;font-size:12.5px;font-weight:700;border:1px solid rgba(0,0,0,.08);max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#dlg .tcsw .tcchip.on{box-shadow:0 0 0 2.5px var(--card,#fff),0 0 0 5px var(--accent);}
+#dlg .tcsw .tcedit{min-height:34px;padding:6px 10px;border:1px dashed var(--line);border-radius:10px !important;font-size:12px;color:var(--accent);background:var(--bg);}
+/* パレット編集POP */
+#clrpop{position:fixed;inset:0;background:rgba(21,23,26,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+#clrpop.show{display:flex;}
+#clrpop .clrbox{width:min(440px,100%);max-height:min(76vh,620px);display:flex;flex-direction:column;background:var(--card,#fff);border-radius:18px !important;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.3);}
+#clrpop .iph{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:8px;}
+#clrpop .iph button{font-size:15px;color:var(--sub);padding:4px 8px;background:none;}
+#clrpop .clrlist{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;}
+#clrpop .clrrow{display:flex;align-items:center;gap:7px;}
+#clrpop .clrrow .hcp{flex:0 0 38px;width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:9px !important;}
+#clrpop .clrname{flex:1;min-width:0;font-size:16px;padding:8px 10px;}
+#clrpop .clruse{flex:0 0 auto;font-size:10.5px;color:var(--sub);}
+#clrpop .clrdel{flex:0 0 auto;min-height:38px;padding:6px 10px;border:1px solid var(--line);border-radius:9px !important;font-size:13px;background:var(--bg);}
+#clrpop .clrdel.arm{border-color:var(--danger,#d33);color:var(--danger,#d33);font-size:11.5px;font-weight:700;}
+#clrpop .btnrow button{flex:1;padding:10px;border:1px solid var(--line);border-radius:11px !important;font-size:13.5px;}
+#clrpop .btnrow button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
 .calgf{padding:0 0 4px;}
 .calgf .gtabs.gfil{margin:0 0 4px;}
 .gtabs.gfil.gsub{padding-left:10px;border-left:2px solid var(--ring);margin-left:4px;}
@@ -1793,7 +1813,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.12';
+const APP_VERSION='v5.13';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -1902,8 +1922,16 @@ function hueOf(e){if(e&&e.isTask)return (e.hue!=null&&HUES12[e.hue])?e.hue:taskH
 /* 本体（付箋）＝そのグループの色。トーン設定（あざやか／標準／くすみ）を反映 */
 function taskFill(){return HUE(taskHue()).v;} // タスク＝「タスクの色」の濃い方で塗る（既定＝すみ＝黒塗り・v4.71）
 const DUE_BROWN='#5A3A22'; // 締切のあるタスク＝濃いブラウン（v5.11）
+/* タスクの色（v5.13）：名前つきで自由に増やせる・減らせるパレット。S.settings.taskColors=[{id,c,name}]
+   古いタスクの x.hue(0-11) も読めるようにしておく（保存し直すと tclr に替わる） */
+function taskColors(){return Array.isArray(S.settings.taskColors)?S.settings.taskColors:[];}
+function taskColorOf(x){if(!x)return null;
+  if(x.tclr){const o=taskColors().find(v=>v.id===x.tclr);if(o)return o;}
+  if(x.hue!=null&&HUES12[x.hue])return {id:'',c:HUE(x.hue).v,name:hueLabel(x.hue)||HUES12[x.hue].n};
+  return null;}
+function taskColorName(x){const o=taskColorOf(x);return o?(o.name||''):'';}
 function taskFillOf(x){if(x&&x.due)return DUE_BROWN; // 締切ありは色の設定より優先（ひと目で分かるように）
-  return (x&&x.hue!=null&&HUES12[x.hue])?HUE(x.hue).v:taskFill();} // タスクごとの色（v4.80・未設定＝既定）
+  const o=taskColorOf(x);return o?o.c:taskFill();} // タスクごとの色（未設定＝既定の「タスクの色」）
 function tkMk(x){return x&&x.mark&&ICONS[x.mark]?`<span class="evmk">${icSvg(x.mark)}</span>`:'';} // タスクのマーク
 function tkLabel(x){return tkMk(x)+esc(x.title||'');}
 function evColor(e){if(e&&e.isTask)return taskFillOf(e);return toneHex(HUE(hueOf(e)).p,S.settings.colorTone);}
@@ -2127,6 +2155,7 @@ function migrate(){const st=S.settings;
   S.groups.forEach((g,i)=>{if(g.hue==null)g.hue=i%HUES12.length;}); // 旧colorから12色パレットへ移行
   S.tasks.forEach(x=>{if(x.repeat===undefined)x.repeat='';});
   if(!Array.isArray(st.hueLabels))st.hueLabels=[]; // 色カテゴリの任意ラベル（TimeTree式）
+  if(!Array.isArray(st.taskColors))st.taskColors=HUES12.map((h,i)=>({id:'h'+i,c:((st.hueColors||[])[i]||{}).v||h.v,name:st.hueLabels[i]||h.n})); // タスクの色パレット（v5.13・最初は12色から）
   if(st.showDoneTL===undefined)st.showDoneTL=true;
   (S.patterns||[]).forEach(p=>{if(!p.auto)p.auto='none';});
   (S.events||[]).forEach(e=>{if(e.repeat===undefined)e.repeat='';if(!e.images)e.images=[];});
@@ -2555,6 +2584,30 @@ function repTag(e){return e.repeat?`<span class="rep">🔁${evRepText(e)}</span>
 /* 繰り返しタスクの印（どの画面でも同じ見た目。short=狭い所は🔁だけ） */
 function repBadgeT(x,short){if(!x||!x.repeat)return '';
   return `<span class="repb"${short?` title="${esc(repLabelT(x))}"`:''}>🔁${short?'':esc(repLabelT(x))}</span>`;}
+/* タスクの色パレットの編集（v5.13）：#clrpop＝フォーム(#dlg z400)より上の z500。
+   消すのは2回タップ（uiConfirm は #dlg を上書きしてフォームが消えるため使わない） */
+let _clrDel='';
+function taskColorPop(){_clrDel='';clrPopRender();}
+function clrPopRender(){let el=$('#clrpop');if(!el){el=document.createElement('div');el.id='clrpop';document.body.appendChild(el);
+    el.onclick=e=>{if(e.target===el)clrPopClose();};}
+  el.innerHTML=`<div class="clrbox">
+    <div class="iph"><b>タスクの色（名前つき）</b><button type="button" onclick="clrPopClose()">✕</button></div>
+    <div class="clrlist">${taskColors().map(o=>{const used=S.tasks.filter(x=>x.tclr===o.id&&x.status!=='done').length;
+      return `<div class="clrrow">
+        <input type="color" class="hcp" value="${o.c}" onchange="clrSet('${o.id}','c',this.value)">
+        <input type="text" class="clrname" value="${esc(o.name||'')}" placeholder="色の名前（例：家事／買い物）" onchange="clrSet('${o.id}','name',this.value)">
+        ${used?`<span class="clruse">${used}件</span>`:''}
+        <button type="button" class="clrdel${_clrDel===o.id?' arm':''}" onclick="clrDel('${o.id}')">${_clrDel===o.id?'ほんとに消す？':'🗑'}</button></div>`;}).join('')||'<div class="mini" style="padding:6px 2px;">色がありません。「＋ 色をふやす」で追加してください</div>'}</div>
+    <div class="btnrow" style="margin-top:8px;"><button type="button" onclick="clrAdd()">＋ 色をふやす</button><button type="button" class="on" onclick="clrPopClose()">できた</button></div>
+    <div class="mini" style="padding:6px 0 0;">名前は、タスクを入れるときの色えらびにそのまま出ます。色を消しても、その色を使っていたタスクは消えません（既定の色に戻るだけ）</div></div>`;
+  el.classList.add('show');}
+function clrPopClose(){$('#clrpop')?.classList.remove('show');
+  if($('#dlgWrap')?.classList.contains('show'))tfRender();else{if(typeof glRender==='function'&&view==='set')glRender();render();}}
+function clrSet(id,k,v){const a=taskColors().map(o=>o.id===id?{...o,[k]:k==='name'?v.trim():v}:o);S.settings.taskColors=a;save();clrPopRender();}
+function clrAdd(){const a=taskColors().slice();a.push({id:uid(),c:'#3A5FDC',name:''});S.settings.taskColors=a;save();_clrDel='';clrPopRender();
+  setTimeout(()=>{const l=document.querySelector('#clrpop .clrlist');if(l)l.scrollTop=l.scrollHeight;const ins=document.querySelectorAll('#clrpop .clrname');const last=ins[ins.length-1];if(last)last.focus();},40);}
+function clrDel(id){if(_clrDel!==id){_clrDel=id;clrPopRender();return;}
+  S.settings.taskColors=taskColors().filter(o=>o.id!==id);_clrDel='';save();clrPopRender();toast('色を消しました（使っていたタスクは既定の色に戻ります）');}
 /* 予定・タスクのフォームからその場で新規カテゴリ追加 */
 /* 予定・タスクのフォームから、その場で新規カテゴリ（親・子どちらも）を作成 */
 let _giCb=null;
@@ -4542,7 +4595,7 @@ function evTaskRow(e,occ){occ=typeof occ==='string'?occ:e.date;const t=todayStr(
     <div class="body"><div class="tt ${dn?'done':''}">${esc(evTitle(e))}${e.repeat?`<span class="repb">🔁${esc(evRepText(e))}</span>`:''}</div>
       <div class="meta"><span class="${late?'evlate':''}">📅 ${fmtDateJa(occ)}${evSpan(e)?'〜':''}${e.start?' '+e.start:''}${late?'（すぎています）':''}</span>${e.groupId&&S.groups.some(g=>g.id===e.groupId)?`<span>${esc(group(e.groupId).name)}</span>`:''}</div></div>
     <div class="right"><span class="evtag" style="background:${evColor(e)};color:${evTextColor(evColor(e))}">✔ カレンダー</span></div></div>`;}
-function renderTasks(){ // v5.00：今日・明日は日付ポップと同じ一覧（予定も・同じ並び）。タスクは塗らない
+function renderTasks(){ // v5.00：今日・明日は日付ポップと同じ一覧（予定も・同じ並び）。v5.13：タスクはカレンダーと同じ塗り
   const q=normQ(taskQuery).trim();
   const qm=o=>!q||normQ(o.title).includes(q)||normQ(o.memo).includes(q);
   const tf=x=>taskGroupMatch(x)&&qm(x);
@@ -4699,7 +4752,7 @@ function qaSave(){}
 /* タスクの追加・編集は1つのフォームに統一（中央ポップ／外タップ・下スワイプで閉じる） */
 let _tfDate='',_tfRel=null,_tfRelDue=null,_tfCalFor='due';
 let _tfEnd='',_tfStart='',_tfEndT='',_tfRepNth=null,_tfUntil='',_tfFromEv=null; // 連日・時間・第◯週・終了日・予定からの切替（v4.60）
-let _tfHue=null,_tfMark='',_tfRemind=true; // タスクごとの色（濃い色・null=既定のタスク色）とマーク（v4.80）／時刻のお知らせ（v4.90）
+let _tfHue=null,_tfMark='',_tfRemind=true,_tfClr=null; // タスクごとの色（_tfClr＝パレットのid・null=既定）とマーク（v4.80）／時刻のお知らせ（v4.90）
 /* いま選んでいる「やる日」（今日／明日／日付） */
 function tfDateOf(){return _tfWhen==='today'?todayStr():_tfWhen==='tomorrow'?tomorrowStr():(_tfWhen==='dated'?_tfDate:'');} // やる日（日付指定）／基準の予定（v4.30）
 let _tfId=null,_tfColor=null,_tfDue='',_tfToday='',_tfWhen='priority',_tfRepeat='',_tfRepDays=[],_tfRepDom=null,_tfRepMonthN=1,_tfDueY=0,_tfDueX=0,_tfDueOpen=false;
@@ -4721,6 +4774,7 @@ function taskModal(id,presetDue,presetToday,place,opts){tmplReset();opts=opts||{
   _tfId=id||null;
   _tfColor=x?(x.color??null):null; // 色＝ぱっと見の目印（v2.75）／グループ＝分類（v3.06）
   _tfHue=x?(x.hue??null):null;_tfMark=x?.mark||''; // 見た目（v4.80）
+  _tfClr=x?(x.tclr&&taskColors().some(v=>v.id===x.tclr)?x.tclr:(x.hue!=null&&taskColors().some(v=>v.id==='h'+x.hue)?'h'+x.hue:null)):null; // 色（v5.13・古い色指定も引き継ぐ）
   _tfRemind=!(x&&x.noRemind);
   _tfGroup=x?(x.groupId||''):lastTaskGroupId();
   _tfStash=null;
@@ -4798,9 +4852,10 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     ${_relOpen==='tfdue'&&!tmpl?`<div class="frow">${relPanelHtml(_relOpen)}</div>`:''}
     ${tmpl?'':`<div class="frow"><label>見た目</label>
       ${_tfDue?`<div class="mini" style="padding:0 0 4px;">いまは締切があるので<b style="color:${DUE_BROWN};">濃いブラウン</b>で表示します（締切を外すと下の色になります）</div>`:''}
-      <div class="emhuenow">${_tfHue!=null?`色：<b>${esc(hueLabel(_tfHue)||HUE(_tfHue).n)}</b><button type="button" class="emback" onclick="tfPickHue(null)">↩ タスクの色に戻す</button>`:`色：<b>タスクの色（${esc(hueLabel(taskHue())||HUE(taskHue()).n)}）</b>`}</div>
-      <div class="cpsw emsw"><button type="button" class="${_tfHue==null?'on':''}" style="background:${taskFill()};" onclick="tfPickHue(null)" title="タスクの色（既定）"><i class="emg" style="color:rgba(255,255,255,.85);">既</i></button>
-        ${HUES12.map((_,i)=>`<button type="button" class="${_tfHue===i?'on':''}" style="background:${HUE(i).v}" onclick="tfPickHue(${i})" title="${esc(hueLabel(i)||HUE(i).n)}">${hueLabel(i)?`<i class="emhl" style="color:rgba(255,255,255,.85);">${esc(hueLabel(i).slice(0,3))}</i>`:''}</button>`).join('')}</div>
+      <div class="emhuenow">${_tfClr?`色：<b>${esc((taskColors().find(v=>v.id===_tfClr)||{}).name||'名前なし')}</b><button type="button" class="emback" onclick="tfPickClr(null)">↩ タスクの色に戻す</button>`:`色：<b>タスクの色（${esc(hueLabel(taskHue())||HUE(taskHue()).n)}）</b>`}</div>
+      <div class="tcsw"><button type="button" class="tcchip${_tfClr?'':' on'}" style="background:${taskFill()};color:${evTextColor(taskFill())};" onclick="tfPickClr(null)">既定</button>
+        ${taskColors().map(o=>`<button type="button" class="tcchip${_tfClr===o.id?' on':''}" style="background:${o.c};color:${evTextColor(o.c)};" onclick="tfPickClr('${o.id}')">${esc(o.name||'　')}</button>`).join('')}
+        <button type="button" class="tcedit" onclick="taskColorPop()">✎ 色をふやす・直す</button></div>
       <label style="margin:7px 0 1px;">マーク</label>${markFieldHtml(_tfMark,'tfIconPick')}</div>`}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??src?.estMin??15)}</div>
     ${tmpl?`<div class="frow"><label>呼び出したとき</label><div class="btnrow"><button type="button" class="${_tfKeepEst?'on':''}" onclick="_tfKeepEst=!_tfKeepEst;tfRender()">かかる時間も入れる</button></div></div>`:''}
@@ -4820,6 +4875,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
   if(focus&&!_tfId&&!tmpl){const el=$('#tmTitle');if(el)el.focus();}} // ＋を押した流れのままフォーカス＝すぐ入力できる
 /* 見た目（v4.80）：色は濃い12色から。マークは共通のアイコン欄 */
 function tfPickHue(i){_tfHue=i;tfSyncTime();tfRender();}
+function tfPickClr(id){_tfClr=id;if(!id)_tfHue=null;tfSyncTime();tfRender();}
 function tfIconPick(k){_tfMark=k;tfSyncTime();tfRender();}
 /* 階層ボタンは横スクロールなので、選んでいるものが画面外にならないよう寄せる */
 function gtabsSync(root){(root||document).querySelectorAll('.gtabs').forEach(box=>{
@@ -5031,7 +5087,7 @@ function saveTask(id){
     start:today?_tfStart:'',end:today?_tfEndT:'',endDate:(today&&_tfEnd&&_tfEnd>today)?_tfEnd:undefined,
     status:$('#tmSt').value,waitNote:($('#tmWait')?.value||'').trim(),
     today,memo:$('#tmMemo').value,links:collectLinks(),images:editImages.slice(),
-    hue:(_tfHue!=null?_tfHue:undefined),mark:_tfMark||undefined,noRemind:_tfRemind?undefined:true,};
+    tclr:_tfClr||undefined,hue:(_tfClr?undefined:(_tfHue!=null?_tfHue:undefined)),mark:_tfMark||undefined,noRemind:_tfRemind?undefined:true,};
   let savedId=id;
   if(id){const old=S.tasks.find(t=>t.id===id);
     Object.assign(old,data);
@@ -6046,7 +6102,7 @@ function dlEvRow(e,dstr,ctx,done){const pre=dlPre(dstr,ctx);const mo=!!e.markOnl
     ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}
 /* タスクの行：ポップ・日表示は塗り、タスクタブは塗らない（左に色の線）。タップ＝まず下にアクション（いきなり編集しない） */
 function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='t_'+x.id;const tb=taskFillOf(x);
-  const paint=!String(ctx).startsWith('tab');
+  const paint=true; // v5.13：タスクタブもカレンダーと同じ塗り
   const st=paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`;
   let btns;
   if(o.acts==='und'){ // 日付なし・先の日付（タスクタブ）
@@ -6073,7 +6129,7 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
       <span class="dpevt">${tkMk(x)}${esc(x.title)}${x.repeat?' 🔁':''}${x.rel?' 🔗':''}</span><span class="dpevm">${op?'▾':(o.lab||'')}</span></div>
     ${op?`<div class="dpact">${btns}</div>`:''}</div>`;}
 /* 繰り返しタスクの先の回（うすく）。タップ＝この回を先に済ませる／編集 */
-function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='g_'+x.id;const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
+function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen==='g_'+x.id;const tb=taskFillOf(x);const paint=true;
   return `<div class="dpev dptask dpghost rpt${paint?'':' nopaint'}${op?' open':''}" data-tok="g_${x.id}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
     <div class="dpevrow" onclick="dpTaskTap('g_${x.id}')">
       ${ctx==='tab2'?'':`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`}
@@ -6083,7 +6139,7 @@ function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen===
       <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
       <span class="dpactbr"></span><span class="dpghnote">いまの回は ${x.today?fmtDateJa(x.today):'—'}。この日の回は、いまの回を済ませると「この日のタスク」になります</span></div>`:''}</div>`;}
 /* その日に終わったタスク（☑で未完了に戻す） */
-function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=!String(ctx).startsWith('tab');
+function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=true;
   return `<div class="dpev dptask evdn${paint?'':' nopaint'}" style="${paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`}" onpointerdown="event.stopPropagation()">
     <div class="dpevrow" onclick="${pre}taskModal('${x.id}')">
       <span class="dpchk round" onclick="event.stopPropagation();${repDoneOn(x,dstr)?`reopenRepeatOcc('${x.id}','${dstr}')`:`undoneTask('${x.id}');dlRedraw()`}">✓</span>
@@ -7915,6 +7971,12 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.13（2026-10-04）タスクの色を名前つきで自由に増減・タスクタブも塗りデザイン</b><br>
+  ・<b>タスクの色を、自由にふやしたり減らしたりできる</b>ようになりました。タスクの入力画面の「✎ 色をふやす・直す」（または 設定 → グループと色）から、<b>色と名前のセット</b>を編集できます（例：家事／買い物／健康）<br>
+  ・<b>色えらびのボタンに名前がそのまま出る</b>ので、どの色がどれか迷いません。選んでいる色の名前も上に出ます<br>
+  ・色を消しても、その色を使っていたタスクは消えません（既定の「タスクの色」に戻るだけ）。これまでに付けた色は、そのまま引き継がれます<br>
+  ・<b>タスクタブも、カレンダーと同じ「塗り」のデザイン</b>になりました（これまでは白いカードに左の色線だけでした）<br>
+  </div>
   <div class="mini"><b>v5.12（2026-10-04）カレンダーのグループしぼり込みがタスクにも・親→子でえらぶ形に</b><br>
   ・<b>カレンダーのグループしぼり込みが、タスクにも効く</b>ようになりました（月・週・日付ポップ・日表示）。これまでは予定だけがしぼり込まれていました<br>
   ・しぼり込みのボタンを、予定の入力と同じ<b>「親をえらぶと、下に子が出る」形</b>にしました（横に全部並んで分かりにくかったのを整理）。同じボタンをもう一度押すと1つ上に戻ります。しぼり込み中は見出しに「しぼり込み中：◯◯」と出ます<br>
@@ -8764,6 +8826,9 @@ function glColorHtml(){
       ${users.length?`<div class="huse2">グループ：${users.map(g=>esc(g.name)).join('・')}</div>`:''}</div>`;}).join('')}</div>
     <div style="padding:2px 0 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
     <div class="mini">左の2つ＝<b>色</b>（タップで変更）、右の欄に<b>色の名前</b>を入力できます（例：仕事／家族／通院。同じ色に複数のグループを付けてOK）。付けた名前は<b>予定の色を選ぶとき</b>にも出ます。</div>
+    <div class="sec-h">タスクの色（名前つき・自由に増減）</div>
+    <div style="padding:2px 0 6px;"><button style="border:1px solid var(--line);padding:8px 14px;font-size:13px;" onclick="taskColorPop()">✎ タスクの色をへんしゅう（いま ${taskColors().length} 色）</button></div>
+    <div class="mini">タスク専用の塗り色です。名前を付けると、タスクを入れるときの色えらびに名前で出ます。</div>
     <div class="sec-h">予定の色トーン</div>
     <div class="seg" style="margin:2px 0 0;width:100%;">
       ${Object.keys(COLOR_TONES).map(k=>`<button style="flex:1;" class="${(S.settings.colorTone||'pastel')===k?'on':''}" onclick="S.settings.colorTone='${k}';save();glRender();render();">${COLOR_TONES[k]}</button>`).join('')}</div>
