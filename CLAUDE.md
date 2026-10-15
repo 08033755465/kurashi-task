@@ -58,6 +58,8 @@
 - **完了はどの画面からも `completeTaskOn(id,日付)`**（`toggleTaskDone`／日付ポップの○／ふりかえり／ミニ画面）。月セル・日付ポップ・記録の完了表示は `taskDoneOn(x,日付)` で判定する
 - **締切**＝タスクの `due`（画面上の呼び名は「締切」。以前の「期限」）。`taskFillOf()` は締切ありなら `DUE_BROWN`（濃いブラウン）を色の設定より優先
 - **繰り返しタスクの並び**：`S.settings.repOrder`（繰り返しタスクの id の順）。`sortByDayOrder()` の最後に `repGroupSort()` が繰り返しどうしの順番だけ入れ替える。日付ポップで並べ替えると `repOrderFrom()` が覚える。カレンダー上の繰り返しタスクは角丸（class `rpt`。既存の `.rep` は別物なので使わない）
+- **今日の最優先**＝タスクの `focus`（その日付。`isFocus()` は今日だけ true）。`sortByDayOrder()` が今日はいちばん上へ。アラートは `alertInfo()`（過ぎている late／今日 tdy）・`alertBarHtml()`・`updateTaskBadge()`・`maybeDailyAlert()`（localStorage `kt_alert_day` で1日1回）
+- **予定を動かす**のは `evMoveBy(id,見ている日,行き先)`（繰り返しはその回だけ＝moveTokTo の r_）。日付えらびは `_pk.kind==='ev'` のとき予定
 - **同期の土台**（`_base`）は中身のコピーではなく項目ごとの署名（`baseSig()`）。`mergeList/mergeMap` は `{id:署名}` を受け取る。土台が無いときは両方にあるものをクラウド優先にする
 - 本番の同期先や実データでテストしない。試すときは同期を切った状態（設定の同期を空）で
 
