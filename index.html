@@ -1790,6 +1790,49 @@ input:focus,select:focus,textarea:focus{border-color:var(--t3);box-shadow:0 0 0 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
 }
+/* ホーム（v5.20） */
+.hm{padding:4px 12px 6px;display:flex;flex-direction:column;gap:10px;}
+.hmgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hmtile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:92px;padding:12px 12px 10px;border-radius:16px !important;background:var(--card,#fff);border:1px solid var(--line);box-shadow:0 2px 10px rgba(60,40,90,.06);text-align:left;cursor:pointer;color:var(--ink);}
+.hmtile:active{transform:scale(.97);background:var(--bg2);}
+.hmtile i{font-style:normal;font-size:24px;line-height:1.1;}
+.hmtile b{font-size:15px;font-weight:800;margin-top:4px;}
+.hmtile span{font-size:11px;color:var(--sub);}
+.hmcard{background:var(--card,#fff);border:1px solid var(--line);border-radius:16px !important;padding:10px 12px 12px;box-shadow:0 2px 10px rgba(60,40,90,.05);}
+.hmch{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.hmch b{font-size:14px;}
+.hmch button{min-height:36px;padding:0 6px 0 12px;font-size:12.5px;color:var(--accent);font-weight:700;}
+.hmhab{display:flex;align-items:center;gap:8px;min-height:44px;border-top:1px solid var(--line2);}
+.hmhab:first-of-type{border-top:none;}
+.hmhn{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hmhc{font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums;}
+.hmhc.on{color:var(--c-done,#2E9E6B);font-weight:700;}
+.hmhab button{min-height:38px;min-width:72px;border-radius:10px !important;font-size:13px;}
+.hmsmall{min-height:36px;padding:0 12px;border-radius:10px !important;font-size:12.5px;margin-left:6px;}
+.hmshop{display:flex;gap:6px;}
+.hmshop input{flex:1;min-width:0;font-size:16px;padding:10px 12px;border-radius:10px !important;}
+.hmshop button{min-width:72px;border-radius:10px !important;font-size:14px;}
+.hmshopl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.hmshopl span{font-size:12px;padding:4px 10px;border-radius:999px !important;background:var(--bg2);color:var(--ink);}
+.hmshopl span.more{color:var(--sub);}
+.hmlisth{margin-top:6px;}
+.hmlinks{display:flex;justify-content:flex-end;gap:8px;padding:0 12px 4px;}
+.hmlinks button{min-height:36px;padding:0 10px;font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:999px !important;background:var(--card,#fff);}
+/* ===== ボタンの色は役割ごとに1色（v5.20）=====
+   完了＝緑の塗り／日付を選んで完了＝緑の枠／保存・追加＝テーマ色の塗り／移動・日付＝テーマ色の枠
+   編集・複製・やめる＝グレーの枠／削除＝赤。どの画面でも「同じ役割＝同じ色」（後から書いたこちらを優先） */
+:root{--c-done:#2E9E6B;--c-done-bg:#E7F5EE;}
+button.b-done{background:var(--c-done)!important;color:#fff!important;border:1px solid var(--c-done)!important;font-weight:700!important;}
+button.b-done2{background:var(--card,#fff)!important;color:var(--c-done)!important;border:1.5px solid var(--c-done)!important;font-weight:700!important;}
+button.b-add,#dlg .db button.ok,.mbtns .save{background:var(--accent)!important;color:#fff!important;border:1px solid var(--accent)!important;font-weight:700!important;}
+button.b-move{background:var(--card,#fff)!important;color:var(--accent)!important;border:1.5px solid var(--accent)!important;font-weight:700!important;}
+button.b-edit,button.b-dup{background:var(--card,#fff)!important;color:var(--ink)!important;border:1px solid var(--line)!important;font-weight:600!important;}
+button.b-cancel{background:var(--card,#fff)!important;color:var(--sub)!important;border:1px solid var(--line)!important;font-weight:600!important;}
+button.b-del{background:var(--card,#fff)!important;color:var(--danger)!important;border:1px solid color-mix(in srgb,var(--danger) 55%,transparent)!important;}
+button.b-done:active,button.b-done2:active,button.b-add:active,button.b-move:active,button.b-edit:active,button.b-dup:active,button.b-cancel:active,button.b-del:active{transform:scale(.96);filter:brightness(.95);}
+/* 完了したチェックの丸・四角も緑 */
+.ditem.done .chk,.ritem.done .chk,.titem.done .chk,.dtask.done .cb,.mp-it.dn .mp-ck{background:var(--c-done)!important;border-color:var(--c-done)!important;color:#fff;}
+:is(#daypop,.dlpage) .dpev.evdn .dpchk{background:var(--c-done);border-color:var(--c-done)!important;color:#fff!important;opacity:1;}
 </style>
 </head>
 <body>
@@ -1799,7 +1842,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--t3);box-shadow:0 0 0 
 </div>
 
 <nav id="nav">
-  <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M4 12l4 4 12-12"/><path d="M4 20h16"/></svg>タスク</button>
+  <button data-v="tasks" onclick="switchView('tasks')"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>ホーム</button>
   <button data-v="shop" onclick="switchView('shop')"><svg viewBox="0 0 24 24"><path d="M3 5h2l2.2 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>買い物</button>
   <button data-v="cal" onclick="switchView('cal')" onpointerdown="calTabDown(event)" onpointerup="calTabUp()" onpointercancel="calTabUp()" onpointermove="calTabMove(event)" oncontextmenu="event.preventDefault()"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="routine" onclick="switchView('routine')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>ルーティン</button>
@@ -1846,7 +1889,7 @@ const MONTH_FONTS={xs:{n:'特小',px:7.5},s:{n:'小',px:8.5},m:{n:'中',px:9.5},
 /* 月カレンダーの予定の見せ方 */
 const MONTH_EV_MODES={mark:'予定名・マークのみ',time:'時間も常に表示',all:'ALL（全部ひらく）'};
 const LSKEY='homehub_taskcal_v1';
-const APP_VERSION='v5.14';
+const APP_VERSION='v5.20';
 /* ===== アプリのテーマカラー（v3.00・販売を見据えて設定で切替できる） ===== */
 const UITHEMES={
   peach:   {n:'ピーチ',   t1:'#FBD0C8',t2:'#FFD1FF',t3:'#C2BBFF',acc:'#A86BC9',bgt:'#FDF6F5'},
@@ -2515,7 +2558,7 @@ function relPanelHtml(ctx){const a=_relSel?S.events.find(v=>v.id===_relSel):null
     <div class="reloffs">${REL_OFFS.map(o=>`<button type="button" class="${(ctx==='tf'?_relOffs.includes(o):_relOff===o)?'on':''}" onclick="relOffPick('${ctx}',${o})">${relOffLabel(o)}</button>`).join('')}</div>
     ${ctx==='tf'?'<div class="mini" style="padding:4px 0 0;">いくつでもえらべます（例：前日と当日）。えらんだ日の数だけタスクが入ります</div>':''}
     <div class="relprev">${prev}</div>
-    <div class="btnrow" style="margin-top:8px;"><button type="button" onclick="relClose()">やめる</button><button type="button" class="on" ${ok?'':'disabled'} onclick="relApply('${ctx}')">これにする</button></div></div>`;}
+    <div class="btnrow" style="margin-top:8px;"><button class="b-cancel" type="button" onclick="relClose()">やめる</button><button type="button" class="on" ${ok?'':'disabled'} onclick="relApply('${ctx}')">これにする</button></div></div>`;}
 function relRender(ctx){if(ctx==='em'){emSyncTime();emRender();}else tfRender();}
 function relOpen(ctx){const r=relOf(ctx);_relOpen=ctx;_relQ='';_relSel=r?r.ev:null;_relOff=r?(+r.off||0):-1;
   _relOffs=[...new Set([_relOff,...(ctx==='tf'&&r?_tfRelExtra:[])])];
@@ -2652,7 +2695,7 @@ function groupInlinePop(selId,after){
     <select id="giParent" style="width:100%;"><option value="">なし（いちばん上の階層）</option>
       ${S.groups.map(g=>`<option value="${g.id}">${esc(groupPath(g.id))} の下に</option>`).join('')}</select>
     <div class="mini" style="padding:6px 0 0;">親を選ぶと子カテゴリになります（例：仕事 ▸ クライアントA）。色は空いている色を自動で使います。</div></div>
-    <div class="db"><button onclick="giCancel()">やめる</button><button class="ok" onclick="giCreate('${selId||''}')">作成</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="giCancel()">やめる</button><button class="ok" onclick="giCreate('${selId||''}')">作成</button></div>`;
   $('#dlgWrap').classList.add('show');
   const el=$('#giName');if(el)el.focus();}
 function giCreate(selId){const nm=($('#giName')?.value||'').trim();
@@ -3383,7 +3426,7 @@ function goalModal(id,mn){const t=todayStr();const g=id?goalsOf(t).find(x=>x.id=
     <input id="glTitle" value="${esc(g?g.title:'')}" placeholder="例）家を出る／保育園に着く">
     <div class="minchips" style="margin-top:6px;">${['家を出る','保育園に送る','仕事開始','夕食','お風呂','寝かしつけ'].map(n=>`<button type="button" onclick="$('#glTitle').value='${n}'">${n}</button>`).join('')}</div>
     <label style="font-size:12px;color:var(--sub);display:block;margin:10px 0 2px;">その時刻</label>${timeInput('glAt',min2hm(at))}</div>
-    <div class="db">${g?`<button onclick="delGoal('${g.id}')" style="color:var(--danger);">削除</button>`:''}<button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveGoal(${g?`'${g.id}'`:'null'})">保存</button></div>`;
+    <div class="db">${g?`<button onclick="delGoal('${g.id}')" style="color:var(--danger);">削除</button>`:''}<button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveGoal(${g?`'${g.id}'`:'null'})">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#glTitle')?.focus(),80);}
 function saveGoal(id){const t=todayStr();const title=$('#glTitle').value.trim()||'ここまで';
   const hm=$('#glAt')?.value;const at=hm?hm2min(hm):curMin();snapUndo();
@@ -3433,8 +3476,8 @@ function goalTap(id,ev){const t=todayStr();const g=goalsOf(t).find(x=>x.id===id)
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.tlgoal,.poolall'):document.querySelector('.tlgoal');
   const html=`<div class="cpmenu"><div style="font-size:10px;color:var(--sub);padding:4px 12px 4px;">⚑ ${esc(g.title)}（${min2hm(g.at)}）／${s.left>0?(s.slack>=0?'余裕'+fmtMin(s.slack):'不足'+fmtMin(-s.slack)):'時間切れ'}</div>
     <button class="hi" onclick="cpClose();backfillToGoal('${g.id}')">⏱ 逆算して並べる</button>
-    <button onclick="cpClose();goalModal('${g.id}')">✎ 名前・時刻を変える</button>
-    <button class="del" onclick="cpClose();delGoal('${g.id}')">🗑 削除</button></div>`;
+    <button class="b-edit" onclick="cpClose();goalModal('${g.id}')">✎ 名前・時刻を変える</button>
+    <button class="b-del del" onclick="cpClose();delGoal('${g.id}')">🗑 削除</button></div>`;
   cellpopAt(anchor,html,{forId:'goal_'+id});}
 function chainPos(t,tk){for(const c of chainsOf(t)){const i=c.indexOf(tk);if(i>=0)return i;}return -1;}
 const min2hm=mn=>{let x=((mn%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(Math.round(x%60));};
@@ -3563,7 +3606,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
     ${!placing?(goalsOf(t).length?`<button class="poolall" onclick="goalTap('${nextGoal(t).id}',event)">⚑ ${esc(nextGoal(t).title)}から逆算</button>`
       :`<button class="poolall" onclick="goalModal(null)">⚑ 目標時刻をおく</button>`):''}
   </div>`;
-  const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button onclick="cancelPlace()">やめる</button></div>`:'';
+  const hint=placing?`<div class="tlplacehint">🕐 左のタイムラインで置きたい時間をタップ（${placeToks.length}件・5分刻み） <button class="b-cancel" onclick="cancelPlace()">やめる</button></div>`:'';
   const actionBar='';/* 下部バーは廃止。タイムラインのタスクはタップ→近接ポップ（tlTaskTap） */
   const evPop=tlEvSel?(()=>{const e=S.events.find(x=>x.id===tlEvSel);if(!e)return '';
     const top=y(A(hm2min(e.start)));const bg=evColor(e),tc=evTextColor(bg);
@@ -3575,7 +3618,7 @@ function todayTimelineHtml(t){const log=dayLog(t);const w=hm2min(dayWake(t)),end
         ${e.memo?`<div class="evpopmemo">${linkify(e.memo)}</div>`:''}
         ${e.links&&e.links.length?linkChips(e.links):''}
         ${rowImgs(e.images)}
-        <div class="evpopacts"><button onclick="eventModal('${e.id}',null,null,'${t}');tlEvSel=null;">✎ 編集</button><button onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button onclick="delEvent('${e.id}','${t}');tlEvSel=null;">🗑</button></div>
+        <div class="evpopacts"><button class="b-edit" onclick="eventModal('${e.id}',null,null,'${t}');tlEvSel=null;">✎ 編集</button><button class="b-dup" onclick="dupEventPick('${e.id}');tlEvSel=null;">⧉ 複製</button><button class="b-del" onclick="delEvent('${e.id}','${t}');tlEvSel=null;">🗑</button></div>
       </div></div>`;})():'';
   const tasksAside=todayTaskChecklist(t,true);/* 「ほかのタスク」は下に全幅で出す（otherTasksHtml） */
   return `${hint}<div class="tlwrap">
@@ -3667,18 +3710,18 @@ function chkTaskMenu(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const done=x.status==='done';
   const html=`<div class="miniacts">
     ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
-      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
+      :`<button class="b-done hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
     <button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`}
-    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button class="b-edit" onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="chkTaskMenuFull('${id}')"><span>…</span>その他</button></div>`;
   cellpopAt(row,html,{forId:id,rowSel:'.tchkr[data-lp^="t_"],.otrow[data-lp^="t_"]'});}
 /* 「…その他」＝明日へ・隠す・削除・戻る。ミニポップ版（画面下フルシート廃止） */
 function chkTaskMenuFull(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const row=document.querySelector(`.tchkr[data-lp="t_${id}"],.otrow[data-lp="t_${id}"]`);
   const html=`<div class="miniacts">
-    ${x.status==='done'?'':`<button onclick="cpClose();sendTaskTomorrow('${id}')"><span>➡</span>明日へ</button>
+    ${x.status==='done'?'':`<button class="b-move" onclick="cpClose();sendTaskTomorrow('${id}')"><span>➡</span>明日へ</button>
     <button onclick="cpClose();archiveToday('${id}')"><span>🗂</span>隠す</button>`}
-    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button class="b-del" onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
     <button onclick="chkTaskMenu('${id}')"><span>‹</span>戻る</button></div>`;
   cellpopAt(row,html,{forId:id+'_full',rowSel:'.tchkr[data-lp^="t_"],.otrow[data-lp^="t_"]'});}
 /* 日カレンダーのタスク＝他の画面と同じ近接メニュー（編集モーダル直行をやめる） */
@@ -3688,11 +3731,11 @@ function dayTaskTap(id,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const done=x.status==='done';
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
     ${done?`<button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>`
-      :`<button class="hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
+      :`<button class="b-done hi" onclick="taskCompleteTap('${id}')"><span>✓</span>完了</button>
     <button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`}
-    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
-    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-edit" onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button class="b-del" onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(row,html,{forId:id+'_day',rowSel:'.dtask[data-lp^="t_"]'});}
 /* 起床より前の時刻＝その日の深夜あつかい。0:15 は「24:15」と表す（朝と混ざらないように） */
 function fmtAxisHM(d,s){const w=hm2min(dayWake(d));
@@ -3794,10 +3837,10 @@ function slotTap(id,sid,ev){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   const left=all.filter(o=>!o.done).length;
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}・${min2hm(sl.s)}〜（${all.length}コマ中 のこり${left}）</div>
     ${sl.done?`<button class="hi" onclick="cpClose();slotDone('${id}','${sid}',0)"><span>↩</span>このコマを未完了に戻す</button>`
-      :`<button class="hi" onclick="cpClose();slotDone('${id}','${sid}',1)"><span>✓</span>このコマを終わり</button>`}
+      :`<button class="b-done hi" onclick="cpClose();slotDone('${id}','${sid}',1)"><span>✓</span>このコマを終わり</button>`}
     <button onclick="cpClose();unpinItem('t_${id}','${sid}')"><span>🕐</span>このコマの時間をはずす</button>
-    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>タスクを編集</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-edit" onclick="cpClose();taskModal('${id}')"><span>✎</span>タスクを編集</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(el,html,{forId:'slot_'+sid});}
 function slotDone(id,sid,on){const t=todayStr();snapUndo();
   const r=slotSetDone(t,id,sid,!!on);
@@ -3914,8 +3957,8 @@ function blockTap(ev,id){ev.stopPropagation();
   const html=`<div class="miniacts"><div class="cptitle">${min2hm(b.s)}〜${min2hm(b.e)}（${fmtMin(cap)}）</div>
     <div class="blkgauge"><i style="width:${Math.min(100,cap?asg/cap*100:0)}%;background:${asg>cap?'var(--danger)':'var(--accent)'}"></i></div>
     <div class="cpnote">入れたぶん ${fmtMin(asg)} / のこり ${asg>cap?'−':''}${fmtMin(Math.abs(cap-asg))}</div>
-    <button onclick="cpClose();blockDel('${id}')"><span>🗑</span>削除</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-del" onclick="cpClose();blockDel('${id}')"><span>🗑</span>削除</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(ev.target.closest('.tlblock'),html,{forId:id+'_blk'});}
 function blockDel(id){const t=todayStr();snapUndo();
   dayLog(t).blocks=(dayLog(t).blocks||[]).filter(x=>x.id!==id);
@@ -3964,8 +4007,8 @@ function tlDoneTap(tk,ev){const type=tk[0],id=tk.slice(2);
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.tltask'):null;
   const html=`<div class="miniacts">
     <button class="hi" onclick="cpClose();tlClearSel();tlUndone('${tk}')"><span>↩</span>未完了に戻す</button>
-    ${type==='t'?`<button onclick="cpClose();tlClearSel();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>`:''}
-    <button onclick="cpClose();tlClearSel()"><span>‹</span>やめる</button></div>`;
+    ${type==='t'?`<button class="b-del" onclick="cpClose();tlClearSel();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>`:''}
+    <button class="b-cancel" onclick="cpClose();tlClearSel()"><span>‹</span>やめる</button></div>`;
   cellpopAt(anchor,html,{forId:tk+'_done',rowSel:'.tltask'});}
 /* 配置済みタスク／未配置プールをタップ→行の近くにミニポップ。単体で既存 tlDo系を流用 */
 function tlTaskTap(tk,ev,sid){const t=todayStr();const at=(dayLog(t).at)||{};const placed=at[tk]!=null;
@@ -3976,12 +4019,12 @@ function tlTaskTap(tk,ev,sid){const t=todayStr();const at=(dayLog(t).at)||{};con
   const html=`<div class="miniacts">
     ${sls.length>1?`<div class="cptitle">${min2hm(taskSlots(t,id).find(o=>o.id===sid)?.s??0)}のコマ（ぜんぶで${sls.length}コマ）</div>`:''}
     ${sid&&sls.length?`<button class="hi" onclick="cpClose();slotDone('${id}','${sid}',1)"><span>✓</span>${sls.length>1?'このコマを終わり':'完了'}</button>`
-      :`<button class="hi" onclick="tlOne('${tk}','complete')"><span>✓</span>完了</button>`}
+      :`<button class="b-done hi" onclick="tlOne('${tk}','complete')"><span>✓</span>完了</button>`}
     ${placed?`<button onclick="cpClose();unpinItem('${tk}'${sid?`,'${sid}'`:''})"><span>↩</span>${sls.length>1?'このコマをはずす':'未配置に'}</button>`
              :`<button class="hi" onclick="tlOne('${tk}','place')"><span>🕐</span>時間を決めて</button>`}
     ${type==='t'?`<button onclick="cpClose();ttStart('${id}')"><span>▶</span>開始（時間をはかる）</button>`:''}
     ${type==='t'&&placed?`<button onclick="cpClose();slotAdd('${id}')"><span>＋</span>もう1コマ足す</button>`:''}
-    <button onclick="tlOne('${tk}','edit')"><span>✎</span>編集</button>
+    <button class="b-edit" onclick="tlOne('${tk}','edit')"><span>✎</span>編集</button>
     <button onclick="tlTaskTapMore('${tk}',event)"><span>…</span>その他</button></div>`;
   cellpopAt(anchor,html,{forId:tk,rowSel:'.tltask,.poolitem'});}
 /* 同じタスクをもう1コマ足す（既定は最後のコマの直後） */
@@ -3994,9 +4037,9 @@ function slotAdd(id){const t=todayStr();const x=S.tasks.find(v=>v.id===id);if(!x
 function tlTaskTapMore(tk,ev){const type=tk[0],id=tk.slice(2);
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('#cellpop'):null;
   const html=`<div class="miniacts">
-    <button onclick="tlOne('${tk}','tomorrow')"><span>➡</span>明日へ</button>
+    <button class="b-move" onclick="tlOne('${tk}','tomorrow')"><span>➡</span>明日へ</button>
     <button onclick="tlOne('${tk}','removeToday')"><span>🗂</span>今日から外す</button>
-    ${type==='t'?`<button onclick="tlOne('${tk}','delete')" style="color:var(--danger);"><span>🗑</span>削除</button>`:''}
+    ${type==='t'?`<button class="b-del" onclick="tlOne('${tk}','delete')" style="color:var(--danger);"><span>🗑</span>削除</button>`:''}
     <button onclick="tlTaskTap('${tk}',event)"><span>‹</span>戻る</button></div>`;
   cellpopAt(anchor||$('#cellpop'),html,{forId:tk+'_more',rowSel:'.tltask,.poolitem'});}
 /* 単体アクション：既存 tlDo系（tlSelベース）を tlSel=[tk] で一時的に呼ぶ */
@@ -4031,7 +4074,7 @@ function openTimeDone(tk){const t=todayStr();const it=doItems(t).find(x=>x.type+
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;"><b>${esc(it.obj.title)}</b> を完了にする
     <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 2px;">開始した時刻</label>${timeInput('tdStart',min2hm(start))}
     <label style="font-size:12px;color:var(--sub);display:block;margin:6px 0 2px;">かかった時間</label>${minPicker('tdMin',est)}</div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTimeDone('${tk}')">完了にする</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="b-done ok" onclick="saveTimeDone('${tk}')">完了にする</button></div>`;
   $('#dlgWrap').classList.add('show');}
 /* タスクの実測は「⏱稼働」ログ（いつ・どれだけ）に一本化して記録する（時間の記録ページの集計元） */
 function pushWorkLog(d,taskId,title,startMin,min){if(!min||min<=0)return;
@@ -4119,7 +4162,7 @@ function renderCompose(){
   <div class="mbody"><div class="mini">${_composeAll?'すべて表示中。':`今日（<b>${wd}曜</b>）にやるぶんだけ。`}不要なものはチェックを外して、<b>今日に入れる</b>か、そのまま<b>時間を決めて置く</b>を選びます。</div>
   ${rs.map(r=>`<label class="listrow" style="cursor:pointer;gap:10px;"><input type="checkbox" style="width:auto;" ${_composeSel.has(r.id)?'checked':''} onchange="tglCompose('${r.id}',this.checked)">
     <span class="lt">${r.mark?`<span class="evmk">${icSvg(r.mark)}</span> `:''}${esc(r.title)}${r.optional?' <span class="rtag opt">時</span>':''}</span><span class="ls">目安${fmtMin(r.estMin)}</span>
-    <button class="chip" style="flex:0 0 auto;" onclick="event.preventDefault();composeEditRoutine('${r.id}')">✎</button></label>`).join('')}
+    <button class="b-edit chip" style="flex:0 0 auto;" onclick="event.preventDefault();composeEditRoutine('${r.id}')">✎</button></label>`).join('')}
   ${rs.length?'':`<div class="mini">このフォルダに今日（${wd}曜）のルーティンはありません。</div>`}${swBtn}
   </div>
   <div class="mbtns"><button onclick="composeAddOnly()">今日に入れる</button><button class="save" onclick="composeFlow()">時間を決めて置く</button></div>`);}
@@ -4173,7 +4216,7 @@ function taskRow(x,o={}){
       ${x.status!=='done'?`<button class="badge ${x.status}" onclick="event.stopPropagation();cycleStatus('${x.id}')">${STATUS[x.status]}</button>`:''}
       ${o.drag?'<span class="tdhandle" title="長押しして動かす">⋮⋮</span>':''}
     </div>${arrows}</div>${active?`<div class="ractions">
-    <button onclick="event.stopPropagation();openTaskEdit('${x.id}')">✎ 編集</button>
+    <button class="b-edit" onclick="event.stopPropagation();openTaskEdit('${x.id}')">✎ 編集</button>
     ${WHENS.filter(([w])=>w!==taskWhen(x)).map(([w,l])=>`<button onclick="event.stopPropagation();moveTaskWhen('${x.id}','${w}')">${l}へ</button>`).join('')}
     <button onclick="event.stopPropagation();addTaskAfter('${x.id}')">＋ この下に追加</button></div>`:''}`;}
 function cycleStatus(id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -4468,8 +4511,8 @@ function rvRender(fresh){
         :'<div class="mini" style="padding:2px 0;">まだありません</div>'}</div>
     <div class="frow"><label>まだ残っていること（${leftList.length}）</label>
       ${leftList.length?leftList.map(x=>`<div class="rvrow"><span class="rvt">${esc(x.title)}</span>
-        <button type="button" onclick="rvDone('${x.id}')">✓ 終えた</button>
-        <button type="button" onclick="rvTo('${x.id}','tomorrow')">➡ 明日</button>
+        <button class="b-done" type="button" onclick="rvDone('${x.id}')">✓ 終えた</button>
+        <button class="b-move" type="button" onclick="rvTo('${x.id}','tomorrow')">➡ 明日</button>
         <button type="button" onclick="rvTo('${x.id}','priority')">★ 優先</button></div>`).join('')
         :'<div class="mini" style="padding:2px 0;">ぜんぶ終わりました🎉</div>'}</div>`
   :_rvTab==='next'?`
@@ -4492,7 +4535,7 @@ function rvRender(fresh){
       <button type="button" class="${_rvTab==='next'?'on':''}" onclick="rvTab('next')">明日</button>
       <button type="button" class="${_rvTab==='diary'?'on':''}" onclick="rvTab('diary')">日記</button></div>
     ${body}</div>
-    <div class="db"><button onclick="rvClose()">とじる</button><button class="ok" onclick="rvSaveClose()">保存</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="rvClose()">とじる</button><button class="ok" onclick="rvSaveClose()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');
   const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;}
 function rvSave(quiet){const o=diaryOf(_rvDay);
@@ -4567,7 +4610,7 @@ function renderDiary(){
   diaryInit();
   if(diaryDay)return diaryDayPage(diaryDay);
   const head=`<div class="vhead"><h1>日記</h1><span class="sub">${diaryCount()}日ぶん${searchBtn()}</span></div>
-    <div class="calbar"><div class="mv"><button onclick="diaryNav(-1)">‹</button><button onclick="diaryToday()">今月</button><button onclick="diaryNav(1)">›</button></div>
+    <div class="calbar"><div class="mv b-move"><button onclick="diaryNav(-1)">‹</button><button onclick="diaryToday()">今月</button><button onclick="diaryNav(1)">›</button></div>
       <div class="ym">${diaryY}年${diaryX+1}月</div></div>
     <div style="padding:0 16px 8px;"><div class="seg" style="width:100%;">
       <button style="flex:1;" class="${diaryMode==='cal'?'on':''}" onclick="diarySetMode('cal')">カレンダー</button>
@@ -4605,7 +4648,7 @@ function diaryDayPage(d){
   const done=(o.done||[]).map(nm).filter(Boolean);
   const next=(o.next||[]).map(nm).filter(Boolean);
   return `<div class="vhead"><h1><button class="backbtn" onclick="diaryDay='';render()">‹</button>${title}</h1></div>
-    <div style="padding:0 16px 8px;"><button class="rvbtn" onclick="reviewOpen('${d}')">✎ この日を書く・直す</button></div>
+    <div style="padding:0 16px 8px;"><button class="b-edit rvbtn" onclick="reviewOpen('${d}')">✎ この日を書く・直す</button></div>
     ${(o.images||[]).length?`<div class="dallg">${o.images.map(im=>`<img src="${diaryImgSrc(im)}" loading="lazy" onclick="openLightbox(this.src)">`).join('')}</div>`:''}
     ${(o.text||'').trim()?`<div class="dtextbox">${linkify(o.text)}</div>`:'<div class="mini" style="padding:8px 16px;">まだ書かれていません</div>'}
     ${done.length?`<div class="sec-h">終えたこと（${done.length}）</div><div class="dlist">${done.map(t=>`<div>✓ ${t}</div>`).join('')}</div>`:''}
@@ -4651,22 +4694,53 @@ function renderTasks(){ // v5.00：今日・明日は日付ポップと同じ一
   const closed=S.tasks.filter(x=>x.status==='done'&&tf(x)&&x.doneAt!==t).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
   const total=open.reduce((s,x)=>s+(+x.estMin||0),0);
   return `
-  <div class="vhead"><h1>タスク</h1><span class="sub">${open.length}件${total?' ・ 合計'+fmtMin(total):''}${pipBtn()}${searchBtn()}</span></div>
+  <div class="vhead"><h1>ホーム</h1><span class="sub">${homeDateLabel()}${pipBtn()}${searchBtn()}</span></div>
   ${alertBarHtml('tasks')}
+  ${homeHtml()}
+  <div class="sec-h hmlisth">✔ タスク（${open.length}件${total?'・合計'+fmtMin(total):''}）</div>
   <div class="tasksearch"><input id="taskSearch" value="${esc(taskQuery)}" placeholder="🔍 タスクを検索（名前・メモ）" oninput="onTaskSearch(this.value)">${taskQuery?`<button onclick="onTaskSearch('')">✕</button>`:''}</div>
   <div class="tgfil">${taskGroupFilterHtml()}</div>
   ${rvHintHtml()}
-  <div style="display:flex;justify-content:flex-end;align-items:center;padding:0 16px 2px;gap:10px;">
-    <button class="act" onclick="reviewOpen()">🌙 ふりかえる</button>
-    <button class="act" onclick="switchView('tstats')">⏱ 記録</button>
-    <button class="act" style="color:var(--accent);font-size:13px;white-space:nowrap;" onclick="taskModal(null)">＋ タスクを追加</button>
-  </div>
+  <div class="hmlinks"><button onclick="reviewOpen()">🌙 今日をふりかえる</button><button onclick="switchView('tstats')">⏱ 時間の記録</button></div>
   ${body}
   <div class="mini" style="padding:8px 16px 0;">行をタップすると<b>できること</b>が開きます。<b>⋮⋮</b> を押したまま上下で並び替え（今日・明日の並びは<b>月カレンダーと同じ</b>順番です）。</div>
-  ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act" onclick="clearDone()">完了を一括削除</button></div>
+  ${closed.length?`<div class="sec-h">完了済み（${closed.length}）<button class="act b-del" onclick="clearDone()">完了を一括削除</button></div>
     <div class="dlpage">${closed.slice(0,30).map(x=>dlDoneTaskRow(x,x.doneAt||t,'tab')).join('')}</div>`:''}
   <div style="height:60px;"></div>`;
 }
+/* ===== ホーム（v5.20）：いまからやりたいことを選ぶ。習慣の＋1回・買い物の追加はその場で ===== */
+function homeDateLabel(){const d=parseDs(todayStr());return `${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`;}
+function homeHtml(){
+  const hs=(S.habits||[]),shop=shopOpen();
+  const hrow=h=>{const n=habitStats(h).today;
+    return `<div class="hmhab"><span class="hmhn">${esc(h.title)}</span><span class="hmhc${n?' on':''}">今日 ${n}回</span>
+      <button type="button" class="b-add" onclick="homeHabit('${h.id}')">＋1回</button></div>`;};
+  return `<div class="hm">
+    <div class="hmgrid">
+      <button type="button" class="hmtile" onclick="taskModal(null,'',true)"><i>✔</i><b>タスクを入れる</b><span>今日やること</span></button>
+      <button type="button" class="hmtile" onclick="eventModal(null,todayStr())"><i>📅</i><b>予定を入れる</b><span>日時を決めて</span></button>
+      <label class="hmtile"><i>📷</i><b>写真から日記</b><span>何枚でも選べます</span><input type="file" accept="image/*" multiple hidden onchange="homePhotoDiary(this)"></label>
+      <button type="button" class="hmtile" onclick="homeDiary()"><i>✍</i><b>日記を書く</b><span>${(S.diary||{})[todayStr()]?'今日の続きから':'今日のこと'}</span></button>
+    </div>
+    <div class="hmcard">
+      <div class="hmch"><b>🔥 習慣</b><button type="button" onclick="switchView('habit')">ひらく ›</button></div>
+      ${hs.length?hs.slice(0,6).map(hrow).join('')+(hs.length>6?`<div class="mini" style="padding:4px 2px 0;">ほか${hs.length-6}件は「ひらく」から</div>`:'')
+        :`<div class="mini" style="padding:4px 2px;">まだありません。<button type="button" class="b-add hmsmall" onclick="habitModal(null)">＋ 習慣をつくる</button></div>`}
+    </div>
+    <div class="hmcard">
+      <div class="hmch"><b>🛒 買い物</b><button type="button" onclick="switchView('shop')">リスト ${shop.length?`（${shop.length}）`:''}›</button></div>
+      <div class="hmshop"><input id="hmShop" placeholder="買うものを入れてEnter" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing)homeShopAdd()"><button type="button" class="b-add" onclick="homeShopAdd()">追加</button></div>
+      ${shop.length?`<div class="hmshopl">${shop.slice(0,8).map(x=>`<span>${esc(x.name)}</span>`).join('')}${shop.length>8?`<span class="more">ほか${shop.length-8}</span>`:''}</div>`:''}
+    </div>
+  </div>`;}
+function homeHabit(id){habitLog(id,0);try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}}
+function homeShopAdd(){const el=$('#hmShop');const v=(el?.value||'').trim();if(!v){el&&el.focus();return;}
+  S.shopping.push({id:uid(),name:v,shopId:'',qty:1,plan:null,paid:null,memo:'',boughtAt:null,createdAt:todayStr()});
+  save();render();toast(`「${v}」を買い物リストに入れました`);const e2=$('#hmShop');if(e2)e2.focus();}
+/* 日記：今日のふりかえりの「日記」から始める。写真から始めるときは、選んだ写真を入れてから文章へ */
+function homeDiary(){_rvDay=todayStr();_rvTab='diary';rvRender(true);setTimeout(()=>{const t=$('#rvText');if(t)t.focus();},60);}
+async function homePhotoDiary(inp){if(!inp.files||!inp.files.length)return;homeDiary();
+  await dImgAdd(todayStr(),inp);rvRender();const t=$('#rvText');if(t)t.focus();} // 枚数の表示も更新
 /* 4つの箱の操作 */
 let taskAnchorId=null;
 /* ===== タスクタブ「手動」並び替え（選んだ順に番号／「決定」で先頭の番号の下にまとめる／▲▼で微調整） ===== */
@@ -4889,7 +4963,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
       <div class="emhuenow">${_tfClr?`色：<b>${esc((taskColors().find(v=>v.id===_tfClr)||{}).name||'名前なし')}</b><button type="button" class="emback" onclick="tfPickClr(null)">↩ タスクの色に戻す</button>`:`色：<b>タスクの色（${esc(hueLabel(taskHue())||HUE(taskHue()).n)}）</b>`}</div>
       <div class="tcsw"><button type="button" class="tcchip${_tfClr?'':' on'}" style="background:${taskFill()};color:${evTextColor(taskFill())};" onclick="tfPickClr(null)">既定</button>
         ${taskColors().map(o=>`<button type="button" class="tcchip${_tfClr===o.id?' on':''}" style="background:${o.c};color:${evTextColor(o.c)};" onclick="tfPickClr('${o.id}')">${esc(o.name||'　')}</button>`).join('')}
-        <button type="button" class="tcedit" onclick="taskColorPop()">✎ 色をふやす・直す</button></div>
+        <button type="button" class="b-edit tcedit" onclick="taskColorPop()">✎ 色をふやす・直す</button></div>
       <label style="margin:7px 0 1px;">マーク</label>${markFieldHtml(_tfMark,'tfIconPick')}</div>`}
     <div class="frow"><label>かかる時間（分）</label>${minPicker('tmEst',keep.est??src?.estMin??15)}</div>
     ${tmpl?`<div class="frow"><label>呼び出したとき</label><div class="btnrow"><button type="button" class="${_tfKeepEst?'on':''}" onclick="_tfKeepEst=!_tfKeepEst;tfRender()">かかる時間も入れる</button></div></div>`:''}
@@ -4902,7 +4976,7 @@ function tfRender(focus){const x=_tfId?S.tasks.find(t=>t.id===_tfId):null;
     ${tmpl?'':`<div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>`}
   </div>
   ${tmpl?`<div class="db"><button onclick="_tfTmplEdit=null;_tfTab='tmpl';tfRender()">‹ テンプレ一覧</button><button class="ok" onclick="saveTaskTmpl()">テンプレを保存</button></div>`
-    :`<div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`}`;
+    :`<div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveTask('${_tfId||''}')">保存</button></div>`}`;
   $('#dlgWrap').classList.add('show');
   const box=document.querySelector('#dlg .tform');if(box)box.scrollTop=prevScroll;
   gtabsSync($('#dlg'));
@@ -4977,7 +5051,7 @@ function tmplRows(ctx){const q=normQ(_tmplQ).trim();
       ${sw}<span class="tmt">${esc(t.title||'（名前なし）')}</span>
       ${_tmplEditMode?`<span class="tmacts" onclick="event.stopPropagation()">
           <button type="button" onclick="${fn.move}('${t.id}',-1)" aria-label="上へ">▲</button><button type="button" onclick="${fn.move}('${t.id}',1)" aria-label="下へ">▼</button>
-          <button type="button" onclick="${fn.edit}('${t.id}')" aria-label="編集">✎</button><button type="button" class="del" onclick="${fn.del}('${t.id}')" aria-label="削除">🗑</button></span>`
+          <button class="b-edit" type="button" onclick="${fn.edit}('${t.id}')" aria-label="編集">✎</button><button type="button" class="b-del del" onclick="${fn.del}('${t.id}')" aria-label="削除">🗑</button></span>`
         :`<span class="tmm">${meta}</span><span class="tmgo">›</span>`}</div>`;}).join('');}
 function tmplListFrame(ctx){const n=(ctx==='em'?S.templates:S.taskTemplates).length;
   const neu=ctx==='em'?'emTmplEditOpen':'tfTmplEditOpen',from=ctx==='em'?'emTmplFromForm':'tfTmplFromForm';
@@ -4988,7 +5062,7 @@ function tmplListFrame(ctx){const n=(ctx==='em'?S.templates:S.taskTemplates).len
     <div class="tmlist" id="tmList">${tmplRows(ctx)}</div>
     <div class="tmhint">${_tmplEditMode?'行をタップで中身を編集。▲▼で並べ替え、🗑で削除':(ctx==='em'?'タップ → カレンダーで日付をえらんで追加（複数日OK）':'タップ → 入力欄にまるごと入ります')}</div>`
     :`<div class="tmempty big">まだテンプレがありません。<br>よく入れる${ctx==='em'?'予定':'タスク'}を登録しておくと、1タップで入れられます。</div>`}
-    <div class="tmfoot"><button type="button" onclick="${neu}('')">＋ 新しく作る</button><button type="button" onclick="${from}()">⭐ いまの入力内容を登録</button></div>
+    <div class="tmfoot"><button class="b-add" type="button" onclick="${neu}('')">＋ 新しく作る</button><button type="button" onclick="${from}()">⭐ いまの入力内容を登録</button></div>
   </div>`;}
 function tfTmplListHtml(){return tmplListFrame('tf');}
 function tfTmplEditOpen(id){const t=id?S.taskTemplates.find(v=>v.id===id):null;
@@ -5160,7 +5234,7 @@ function delTaskScopePop(id,d){const x=S.tasks.find(t=>t.id===id);if(!x)return;c
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;">🔁 「${esc(x.title)}」は繰り返しのタスクです。<br>どれを削除しますか？
     <div class="scopebtns"><button onclick="applyDelTask('${id}','${d}','future')">この日以降（${md}〜）<i>${md} から先の回をぜんぶ消します（それより前の記録は残ります）</i></button>
       <button onclick="applyDelTask('${id}','${d}','all')">すべて<i>このタスクを丸ごと消します</i></button></div></div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyDelTask(id,d,scope){const x=S.tasks.find(t=>t.id===id);if(!x){dlgEnd();return;}snapUndo();let msg='タスクを削除しました';
   if(scope==='all'){S.tasks=S.tasks.filter(t=>t.id!==id);}
@@ -5374,17 +5448,17 @@ function wkRangePop(col,d,s,e){
     <button class="hi" onclick="cpClose();wkAddEvent('${d}',${s},${e})"><span>📅</span>予定を入れる</button>
     <button class="hi" onclick="wkTaskPick('${d}',${s},${e})"><span>✔</span>タスクを入れる</button>
     <button onclick="wkColorPop('${d}',${s},${e})"><span>🎨</span>色をつける</button>
-    <button onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
+    <button class="b-cancel" onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
   cellpopAt(sel,html,{forId:'wkrange'});}
 function wkAddEvent(d,s,e){wkClearSel();eventModal(null,d,min2hm(s),null,min2hm(e));}
 /* 「タスクを入れる」＝あるタスクから選ぶ（いちばん上は新しく作る） */
 function wkTaskPick(d,s,e){const sel=document.querySelector('.wksel');
   const cand=S.tasks.filter(x=>x.status!=='done').slice().sort(chkTaskSort);
   const html=`<div class="cpmenu"><div class="cptitle">${fmtDateJa(d)} ${min2hm(s)}〜${min2hm(e)} にやる</div>
-    <button class="hi" onclick="cpClose();wkNewTask('${d}',${s},${e})"><span>＋</span>新しく作る</button>
+    <button class="b-add hi" onclick="cpClose();wkNewTask('${d}',${s},${e})"><span>＋</span>新しく作る</button>
     ${cand.length?`<div class="cptpick">${cand.map(x=>`<button onclick="wkPutTask('${d}',${s},${e},'${x.id}')"><span class="cptdot" style="background:${taskLineC(x)||'var(--line)'}"></span><i>${esc(x.title)}</i>${x.estMin?`<u>${fmtMin(x.estMin)}</u>`:''}</button>`).join('')}</div>`
       :`<div class="poolempty">まだタスクがありません</div>`}
-    <button onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
+    <button class="b-cancel" onclick="cpClose();wkClearSel()"><span>‹</span>やめる</button></div>`;
   cellpopAt(sel,html,{wide:true,forId:'wktaskpick'});}
 function wkNewTask(d,s,e){wkClearSel();taskModal(null,'',false,null,{date:d,start:min2hm(s),end:min2hm(e)});}
 function wkPutTask(d,s,e,id){const x=S.tasks.find(t=>t.id===id);if(!x)return;
@@ -5432,11 +5506,11 @@ function wkTaskTap(id,d,sid,ev){const x=S.tasks.find(t=>t.id===id);if(!x)return;
   const el=(ev&&ev.target&&ev.target.closest('.wktask'))||null;
   const sls=taskSlots(d,id);const sl=sls.find(o=>o.id===sid)||sls[0];
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}・${min2hm(sl?sl.s:0)}〜${sls.length>1?`（${sls.length}コマ中）`:''}</div>
-    ${sls.length>1?`<button class="hi" onclick="cpClose();wkSlotDone('${id}','${sid}','${d}')"><span>✓</span>このコマを終わり</button>`
-      :`<button class="hi" onclick="cpClose();taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
-    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    ${sls.length>1?`<button class="b-done hi" onclick="cpClose();wkSlotDone('${id}','${sid}','${d}')"><span>✓</span>このコマを終わり</button>`
+      :`<button class="b-done hi" onclick="cpClose();taskCompleteTap('${id}')"><span>✓</span>完了</button>`}
+    <button class="b-edit" onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
     <button onclick="cpClose();wkUnplaceTask('${id}','${d}','${sid}')"><span>🕐</span>${sls.length>1?'このコマの時間を消す':'時間を消す'}</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(el,html,{forId:id+'_wk'+sid});}
 function wkSlotDone(id,sid,d){snapUndo();
   const r=slotSetDone(d,id,sid,true);
@@ -5449,7 +5523,7 @@ function wkUnplaceTask(id,d,sid){snapUndo();
 function wkColorPop(d,s,e){
   const sel=document.querySelector('.wksel');
   const html=`<div class="cpsw">${PASTELS.map((p,i)=>`<button style="background:${p.s}" onclick="wkSetBand('${d}',${s},${e},${i})"></button>`).join('')}
-    <button class="clear" onclick="cpClose();wkClearSel()">やめる</button></div>`;
+    <button class="b-cancel clear" onclick="cpClose();wkClearSel()">やめる</button></div>`;
   cellpopAt(sel,html,{wide:true,forId:'wkcolor'});}
 function wkSetBand(d,s,e,c){snapUndo();
   if(!S.dayBands)S.dayBands={};
@@ -5505,7 +5579,7 @@ function periodNoteHtml(key,label){
     return `<div class="pnline">${esc(ln)}</div>`;}).join('')
     :`<div class="mini" style="padding:2px 0 0;" onclick="pnEdit('${key}','${label}')">まだメモはありません（タップで書く）</div>`;
   const toMonthBtn=(key.slice(0,2)==='w:'&&txt.trim())?`<button class="act" style="color:var(--ink3,#888);margin-right:8px;" onclick="pnToMonth('${key}')">📅 月メモへ</button>`:'';
-  return `<div class="pnote"><div class="pnh"><b>📝 ${label}</b><span style="display:flex;align-items:center;">${toMonthBtn}<button class="act" style="color:var(--accent);" onclick="pnEdit('${key}','${label}')">✎ 編集</button></span></div>${body}</div>`;}
+  return `<div class="pnote"><div class="pnh"><b>📝 ${label}</b><span style="display:flex;align-items:center;">${toMonthBtn}<button class="b-edit act" style="color:var(--accent);" onclick="pnEdit('${key}','${label}')">✎ 編集</button></span></div>${body}</div>`;}
 /* 週メモの行を選んで、月メモへ 複製／移動 */
 function pnToMonth(weekKey){const txt=(S.periodNotes||{})[weekKey]||'';const lines=txt.split('\n');
   const idxs=lines.map((ln,i)=>({ln,i})).filter(o=>o.ln.trim()); // 空行は対象外
@@ -5518,7 +5592,7 @@ function pnToMonth(weekKey){const txt=(S.periodNotes||{})[weekKey]||'';const lin
     <div class="mini" style="margin:2px 0 8px;">入れたい行を選んでください（既定は全部）</div>
     <div style="max-height:44vh;overflow:auto;">${rows}</div>
     <label class="pnpick" style="border-top:1px solid var(--line2);margin-top:6px;padding-top:8px;"><input type="checkbox" id="pnpickAll" checked><span>すべて選択</span></label></div>
-    <div class="db" style="flex-wrap:wrap;gap:6px;"><button onclick="dlgEnd()">やめる</button>
+    <div class="db" style="flex-wrap:wrap;gap:6px;"><button class="b-cancel" onclick="dlgEnd()">やめる</button>
       <button onclick="pnDoToMonth('${weekKey}','copy')">📋 複製で入れる</button>
       <button class="ok" onclick="pnDoToMonth('${weekKey}','move')">➡ 移動で入れる</button></div>`;
   $('#dlgWrap').classList.add('show');
@@ -5544,7 +5618,7 @@ function pnEdit(key,label){
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button type="button" class="inlineadd" onclick="pnInsert('[] ')">＋□ チェック行</button>
       <button type="button" class="inlineadd" onclick="pnInsert('・ ')">＋・ 箇条書き行</button></div></div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="pnSave('${key}')">保存</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="pnSave('${key}')">保存</button></div>`;
   $('#dlgWrap').classList.add('show');const el=$('#pnText');if(el)el.focus();}
 function pnInsert(prefix){const el=$('#pnText');if(!el)return;const v=el.value;
   const pos=el.selectionStart??v.length;
@@ -5851,7 +5925,7 @@ function renderCal(){
   return `<div class="vhead"><h1>カレンダー</h1><span class="sub">${calGroupSel?`<b class="calgfon">しぼり込み中：${esc(calGroupSel==='__none'?'グループなし':((S.groups.find(g=>g.id===calGroupSel)||{}).name||''))}</b>`:'グループで表示切替'}${searchBtn()}</span></div>
   ${alertBarHtml('cal')}
   <div class="calgf">${calGroupFilterHtml()}</div>
-  <div class="calbar"><div class="mv"><button onclick="calSlideNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calSlideNav(1)">›</button></div>
+  <div class="calbar"><div class="mv b-move"><button onclick="calSlideNav(-1)">‹</button><button onclick="calToday()">今日</button><button onclick="calSlideNav(1)">›</button></div>
     <div class="ym">${head}</div>${modeBtns}</div><div id="calpage">${body}</div>${calMode==='month'?'':extSummary()}`;
 }
 function calToday(){const n=new Date();calY=n.getFullYear();calX=n.getMonth();calDate=todayStr();render();toTop();}
@@ -5944,15 +6018,15 @@ function taskCompleteTap(id,anchor,ev,dstr){const x=S.tasks.find(v=>v.id===id);i
   const t0=todayStr();
   const rd=dstr&&(x.repeat||dstr<=t0)?dstr:(x.repeat&&x.today&&x.today>t0?x.today:t0); // 見ている日の回を完了（先の日の普通のタスクは今日で）
   const html=x.repeat?`<div class="miniacts"><div class="cptitle">${esc(x.title)} 🔁</div>
-    <button class="hi" onclick="cpClose();completeTaskOn('${id}','${rd}')"><span>✅</span>この回を完了（次の回へ）</button>
-    <button onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
+    <button class="b-done hi" onclick="cpClose();completeTaskOn('${id}','${rd}')"><span>✅</span>この回を完了（次の回へ）</button>
+    <button class="b-done2" onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
     <button onclick="cpClose();repeatEndAsk('${id}')"><span>⏹</span>繰り返しを終える</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`:`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
-    <button class="hi" onclick="cpClose();${dstr?`completeTaskOn('${id}','${rd}')`:`fullyCompleteTask('${id}')`}"><span>✅</span>完了</button>
-    <button onclick="cpClose();completeTodayOnly('${id}')"><span>☀</span>記録</button>
-    <button onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
-    <button onclick="cpClose();dpAwayFor('${id}');doneDetailModal('${id}')"><span>📝</span>詳しく記録</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`:`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
+    <button class="b-done hi" onclick="cpClose();${dstr?`completeTaskOn('${id}','${rd}')`:`fullyCompleteTask('${id}')`}"><span>✅</span>完了</button>
+    <button class="b-done2" onclick="cpClose();completeTodayOnly('${id}')"><span>☀</span>記録</button>
+    <button class="b-done2" onclick="cpClose();doneDatePop('${id}')"><span>📅</span>日付を選んで完了</button>
+    <button class="b-done2" onclick="cpClose();dpAwayFor('${id}');doneDetailModal('${id}')"><span>📝</span>詳しく記録</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_cmp',rowSel:'.tchkr[data-lp^="t_"],.titem[data-lp^="t_"],.dtask[data-lp^="t_"],.tltask,.poolitem'});}
 async function repeatEndAsk(id){const x=S.tasks.find(v=>v.id===id);if(!x)return;
   if(!await uiConfirm(`「${x.title}」の繰り返しを終えて、完了にしますか？（この先の回は出なくなります）`,'終える'))return;
@@ -5975,7 +6049,7 @@ function ddRender(){const x=S.tasks.find(v=>v.id===_ddId);if(!x)return;
           <button data-v="rec" onclick="pickBtn('ddKindRow','ddKind','rec')">☀ 記録（明日もつづく）</button></div>
         <input type="hidden" id="ddKind" value="full"></div>
     </div>
-    <div class="mbtns"><button onclick="closeModal()">やめる</button><button class="save" onclick="ddSave()">記録する</button></div>`);}
+    <div class="mbtns"><button class="b-cancel" onclick="closeModal()">やめる</button><button class="save" onclick="ddSave()">記録する</button></div>`);}
 function ddCalHtml(){const ws=S.settings.weekStart||0;
   const start=(new Date(_ddY,_ddX,1).getDay()-ws+7)%7,dim=new Date(_ddY,_ddX+1,0).getDate();
   let cells='';for(let i=0;i<start;i++)cells+='<span></span>';
@@ -6093,7 +6167,7 @@ function doneDateRender(){const isEv=_pk.kind==='ev';const x=isEv?S.events.find(
       <div class="pknav"><button type="button" onclick="pkNav(-1)">‹</button><span>${_pk.y}年${_pk.x+1}月</span><button type="button" onclick="pkNav(1)">›</button></div>
       <div class="pkgrid">${wd.map((w,i)=>`<span class="pkw ${(i+ws)%7===0?'sun':(i+ws)%7===6?'sat':''}">${w}</span>`).join('')}${cells}</div>
     </div>
-    <div class="pkfoot"><button type="button" onclick="pickpopClose()">やめる</button><button type="button" class="ok" onclick="doneDateOk()">${mv?(_pk.sel==='__none'?'📋 日付なしにする':`➡ ${fmtDateJa(_pk.sel)} に移動`):`✅ ${fmtDateJa(_pk.sel)} に完了`}</button></div></div>`;
+    <div class="pkfoot"><button class="b-cancel" type="button" onclick="pickpopClose()">やめる</button><button type="button" class="ok" onclick="doneDateOk()">${mv?(_pk.sel==='__none'?'📋 日付なしにする':`➡ ${fmtDateJa(_pk.sel)} に移動`):`✅ ${fmtDateJa(_pk.sel)} に完了`}</button></div></div>`;
   el.classList.add('show');}
 function pkPick(ds,jump){_pk.sel=ds;if(jump&&ds!=='__none'){const d=parseDs(ds);_pk.y=d.getFullYear();_pk.x=d.getMonth();}doneDateRender();}
 function pkNav(k){_pk.x+=k;if(_pk.x<0){_pk.x=11;_pk.y--;}if(_pk.x>11){_pk.x=0;_pk.y++;}doneDateRender();}
@@ -6138,9 +6212,9 @@ function taskUndoneTap(id,anchor,ev){const x=S.tasks.find(v=>v.id===id);if(!x)re
     ||document.querySelector(rowSel);
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.title)}</div>
     <button class="hi" onclick="cpClose();undoneTask('${id}')"><span>↩</span>未完了に戻す</button>
-    <button onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
-    <button onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-edit" onclick="cpClose();taskModal('${id}')"><span>✎</span>編集</button>
+    <button class="b-del" onclick="cpClose();delTask('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_undo',rowSel:'.tchkr[data-lp^="t_"],.titem[data-lp^="t_"],.dtask[data-lp^="t_"],.ditem[data-lp^="t_"]'});}
 function routineUndoneTap(id,anchor,ev){const r=S.routines.find(v=>v.id===id);if(!r)return;
   if(_cpForId===id+'_rundo'){cpClose();return;}
@@ -6149,12 +6223,12 @@ function routineUndoneTap(id,anchor,ev){const r=S.routines.find(v=>v.id===id);if
     ||document.querySelector('[data-lp="r_'+id+'"]');
   const html=`<div class="miniacts"><div class="cptitle">${esc(r.title)}</div>
     <button class="hi" onclick="cpClose();undoneRoutine('${id}')"><span>↩</span>未完了に戻す</button>
-    <button onclick="cpClose();routineModal('${id}')"><span>✎</span>編集</button>
-    <button onclick="cpClose();delRoutine('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-edit" onclick="cpClose();routineModal('${id}')"><span>✎</span>編集</button>
+    <button class="b-del" onclick="cpClose();delRoutine('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_rundo',rowSel:'.ritem[data-lp^="r_"],.ditem[data-lp^="r_"]'});}
 function dayScheduleHtml(dstr){ // v5.00：日付ポップと同じ1列（予定→タスク→完了→過ぎている・日付なし）
-  return `<div class="dlacts"><button onclick="eventModal(null,'${dstr}')">＋ 予定</button><button onclick="taskModalWithDue('${dstr}')">＋ タスク</button></div>
+  return `<div class="dlacts"><button class="b-add" onclick="eventModal(null,'${dstr}')">＋ 予定</button><button class="b-add" onclick="taskModalWithDue('${dstr}')">＋ タスク</button></div>
   <div class="dlpage dlwrap" data-d="${dstr}">${dayListHtml(dstr,'day')}</div>${dayRecordHtml(dstr)}`;}
 /* その日の記録・流れ（予定・記録・完了タスク/ルーティンを時系列で） */
 function dayRecordHtml(dstr){const dl=dayLog(dstr);const items=[];const canEdit=dstr===todayStr();
@@ -6189,12 +6263,12 @@ function dlEvRow(e,dstr,ctx,done){const pre=dlPre(dstr,ctx);const mo=!!e.markOnl
       ${sortable?`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`:''}
       <span class="dpchk" onclick="event.stopPropagation();toggleEvDone('${e.id}','${dstr}')">${done?'✓':''}</span>
       <span class="dpevt">${evLabel(e)}</span><span class="dpevm">${op?'▾':(evSpan(e)?evDayTag(e,dstr):evTimeText(e))}</span>
-      <button class="dpdel" onclick="event.stopPropagation();${pre}delEvent('${e.id}','${dstr}')">🗑</button></div>
-    ${op?`<div class="dpact" onpointerdown="event.stopPropagation()"><button type="button" class="pri" onclick="${pre}eventModal('${e.id}',null,null,'${dstr}')">✎ 編集・くわしく</button>
-      <button type="button" class="mv" onclick="evMoveBy('${e.id}','${dstr}',${dstr<t0?`'${t0}'`:`'${shiftDs(dstr<=t0?t0:dstr,1)}'`})">${dstr<t0?'☀ 今日へ':dstr===t0?'➡ 明日へ':'➡ 次の日へ'}</button>
-      <button type="button" class="mv" onclick="evMovePop('${e.id}','${dstr}')">📅 日付を変える</button>
+      <button class="b-del dpdel" onclick="event.stopPropagation();${pre}delEvent('${e.id}','${dstr}')">🗑</button></div>
+    ${op?`<div class="dpact" onpointerdown="event.stopPropagation()"><button type="button" class="b-edit pri" onclick="${pre}eventModal('${e.id}',null,null,'${dstr}')">✎ 編集・くわしく</button>
+      <button type="button" class="mv b-move" onclick="evMoveBy('${e.id}','${dstr}',${dstr<t0?`'${t0}'`:`'${shiftDs(dstr<=t0?t0:dstr,1)}'`})">${dstr<t0?'☀ 今日へ':dstr===t0?'➡ 明日へ':'➡ 次の日へ'}</button>
+      <button type="button" class="b-move mv" onclick="evMovePop('${e.id}','${dstr}')">📅 日付を変える</button>
       <span class="dpactbr"></span>
-      <button type="button" onclick="_dpActOpen='';toggleEvDone('${e.id}','${dstr}')">✓ 完了にする</button>
+      <button class="b-done" type="button" onclick="_dpActOpen='';toggleEvDone('${e.id}','${dstr}')">✓ 完了にする</button>
       <button type="button" onclick="${pre}evRelTask('${e.id}','${dstr}')">⏪ 逆算タスク</button>
       ${e.repeat?'<span class="dpghnote">🔁 繰り返しの予定は、この回だけ動きます</span>':''}</div>`:''}
     ${e.memo?`<div class="dpevmemo" style="color:${tc};">${linkify(e.memo)}</div>`:''}${e.links&&e.links.length?linkChips(e.links):''}${rowImgs(e.images)}</div>`;}
@@ -6204,26 +6278,26 @@ function dlTaskRow(x,dstr,ctx,o={}){const pre=dlPre(dstr,ctx);const op=_dpActOpe
   const st=paint?`background:${tb};color:${evTextColor(tb)};`:`--tkc:${tb};`;
   let btns;
   if(o.acts==='und'){ // 日付なし・先の日付（タスクタブ）
-    btns=`<button type="button" class="pri" onclick="dlSetWhen('${x.id}','today')">☀ 今日やる</button>
-      <button type="button" onclick="dlSetWhen('${x.id}','tomorrow')">➡ 明日やる</button>
-      <button type="button" onclick="moveDatePop('${x.id}')">📅 日付を決める</button>
+    btns=`<button type="button" class="b-move pri" onclick="dlSetWhen('${x.id}','today')">☀ 今日やる</button>
+      <button class="b-move" type="button" onclick="dlSetWhen('${x.id}','tomorrow')">➡ 明日やる</button>
+      <button class="b-move" type="button" onclick="moveDatePop('${x.id}')">📅 日付を決める</button>
       ${!x.today?`<button type="button" onclick="dlSetWhen('${x.id}','${x.priority===1?'normal':'priority'}')">${x.priority===1?'通常へ':'★ 優先へ'}</button>`:''}
       <span class="dpactbr"></span>
       ${focusBtn(x)}
-      <button type="button" onclick="_dpActOpen='';completeTaskOn('${x.id}',null);dlRedraw()">✅ 完了</button>
-      <button type="button" onclick="doneDatePop('${x.id}','')">📅 日付を選んで完了</button>
-      <button type="button" onclick="taskModal('${x.id}')">✎ 編集</button>
-      <button type="button" class="dpdanger" onclick="delTask('${x.id}')">🗑</button>`;}
+      <button class="b-done" type="button" onclick="_dpActOpen='';completeTaskOn('${x.id}',null);dlRedraw()">✅ 完了</button>
+      <button class="b-done2" type="button" onclick="doneDatePop('${x.id}','')">📅 日付を選んで完了</button>
+      <button class="b-edit" type="button" onclick="taskModal('${x.id}')">✎ 編集</button>
+      <button type="button" class="b-del dpdanger" onclick="delTask('${x.id}')">🗑</button>`;}
   else{const t0=todayStr(); // v5.14：明日へ・日付を変えるを1タップで（過ぎた日のタスクは「今日へ」も）
-    btns=`<button type="button" class="pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ この日で完了</button>
-      ${dstr<t0?`<button type="button" class="mv" onclick="moveTaskTo('${x.id}','${t0}')">☀ 今日へ</button>`:''}
-      <button type="button" class="mv" onclick="moveTaskTo('${x.id}','${dstr<=t0?shiftDs(t0,1):shiftDs(dstr,1)}')">➡ ${dstr<=t0?'明日へ':'次の日へ'}</button>
-      <button type="button" class="mv" onclick="moveDatePop('${x.id}')">📅 日付を変える</button>
+    btns=`<button type="button" class="b-done pri" onclick="dpTaskDone('${x.id}','${dstr}')">✅ この日で完了</button>
+      ${dstr<t0?`<button type="button" class="b-move mv" onclick="moveTaskTo('${x.id}','${t0}')">☀ 今日へ</button>`:''}
+      <button type="button" class="mv b-move" onclick="moveTaskTo('${x.id}','${dstr<=t0?shiftDs(t0,1):shiftDs(dstr,1)}')">➡ ${dstr<=t0?'明日へ':'次の日へ'}</button>
+      <button type="button" class="b-move mv" onclick="moveDatePop('${x.id}')">📅 日付を変える</button>
       <span class="dpactbr"></span>
       ${focusBtn(x)}
-      <button type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 別の日に完了</button>
-      <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
-      <button type="button" class="dpdanger" onclick="${pre}delTask('${x.id}','${dstr}')">🗑</button>`;}
+      <button class="b-done2" type="button" onclick="doneDatePop('${x.id}','${dstr}')">📅 別の日に完了</button>
+      <button class="b-edit" type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
+      <button type="button" class="b-del dpdanger" onclick="${pre}delTask('${x.id}','${dstr}')">🗑</button>`;}
   const chk=`taskCompleteTap('${x.id}',this.closest('.dpev'),null,'${dstr}')`; // ポップは開いたまま・その日で完了（v5.08）
   const fz=isFocus(x)&&(!dstr||dstr===todayStr());
   return `<div class="dpev dptask${x.repeat?' rpt':''}${fz?' focus':''}${paint?'':' nopaint'}${op?' open':''}" data-tok="t_${x.id}" style="${st}" onpointerdown="event.stopPropagation();${ctx==='pop'?`tdPress(event,'${x.id}','${dstr}')`:''}">
@@ -6239,8 +6313,8 @@ function dlGhostRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const op=_dpActOpen===
       ${ctx==='tab2'?'':`<span class="dpgrip" onpointerdown="dpDragStart(event,'${dstr}')" onclick="event.stopPropagation()" aria-label="ドラッグで並び替え">⋮⋮</span>`}
       <span class="dpchk round" onclick="event.stopPropagation();_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()"></span>
       <span class="dpevt">${tkMk(x)}${esc(x.title)} 🔁${x.rel?' ⏪':''}</span><span class="dpevm">${op?'▾':esc(repLabelT(x))}</span></div>
-    ${op?`<div class="dpact"><button type="button" class="pri" onclick="_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()">✅ この回を完了</button>
-      <button type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
+    ${op?`<div class="dpact"><button type="button" class="b-done pri" onclick="_dpActOpen='';completeTaskOn('${x.id}','${dstr}');dlRedraw()">✅ この回を完了</button>
+      <button class="b-edit" type="button" onclick="${pre}taskModal('${x.id}')">✎ 編集</button>
       <span class="dpactbr"></span><span class="dpghnote">いまの回は ${x.today?fmtDateJa(x.today):'—'}。この日の回は、いまの回を済ませると「この日のタスク」になります</span></div>`:''}</div>`;}
 /* その日に終わったタスク（☑で未完了に戻す） */
 function dlDoneTaskRow(x,dstr,ctx){const pre=dlPre(dstr,ctx);const tb=taskFillOf(x);const paint=true;
@@ -6293,12 +6367,12 @@ function dlCarryHtml(dstr,ctx,tf){const pre=dlPre(dstr,ctx);const d=parseDs(dstr
       ${_dpMoveMode?'':`<span class="dpcgo">${op?'▾':'›'}</span>`}</div>
     ${op?`<div class="dpcdet" onpointerdown="event.stopPropagation()">
       <div class="dpcinfo">${it.date?`${it.kind==='task'&&x&&!x.today&&x.due?'締切':'やる日'}：${fmtDateJa(it.date)}`:'日付：なし'}${x&&x.memo?`<div class="dpcmemo">${esc(x.memo)}</div>`:''}</div>
-      <div class="dpcbtns"><button class="pri" onclick="dpCarryMove('${it.tok}','${dstr}')">→ この日（${fmtDateJa(dstr)}）にやる</button>
+      <div class="dpcbtns"><button class="b-move pri" onclick="dpCarryMove('${it.tok}','${dstr}')">→ この日（${fmtDateJa(dstr)}）にやる</button>
         ${it.kind==='task'?`<button onclick="_carryOpen='';moveTaskTo('${it.id}','${shiftDs(dstr<todayStr()?todayStr():dstr,1)}')">➡ ${dstr<=todayStr()?'明日へ':'次の日へ'}</button>
-        <button onclick="moveDatePop('${it.id}')">📅 日付を変える</button>`:''}
-        <button onclick="${edit}">✎ 編集</button></div>
-      ${it.kind==='task'?`<div class="dpcbtns"><button onclick="_carryOpen='';completeTaskOn('${it.id}','${it.date||dstr}');dlRedraw()">✅ ${it.date?fmtDateJa(it.date):'この日'}で完了</button>
-        <button onclick="doneDatePop('${it.id}','${it.date||dstr}')">📅 日付を選んで完了</button></div>`:''}</div>`:''}`;};
+        <button class="b-move" onclick="moveDatePop('${it.id}')">📅 日付を変える</button>`:''}
+        <button class="b-edit" onclick="${edit}">✎ 編集</button></div>
+      ${it.kind==='task'?`<div class="dpcbtns"><button class="b-done" onclick="_carryOpen='';completeTaskOn('${it.id}','${it.date||dstr}');dlRedraw()">✅ ${it.date?fmtDateJa(it.date):'この日'}で完了</button>
+        <button class="b-done2" onclick="doneDatePop('${it.id}','${it.date||dstr}')">📅 日付を選んで完了</button></div>`:''}</div>`:''}`;};
   const cgroup=(key,title,list)=>{if(!list.length)return '';const open=key==='late'||_carryMore[key]||list.length<=5;const shown=open?list:list.slice(0,5);
     return `<div class="dpcsub">${title}（${list.length}）</div>${shown.map(crow).join('')}
       ${open?'':`<button class="dpcmore" onpointerdown="event.stopPropagation()" onclick="_carryMore.${key}=true;dlRedraw()">ほか${list.length-5}件を見る</button>`}`;};
@@ -6329,8 +6403,8 @@ function openDayPopup(dstr,opt){clearPrime();
       <span class="dphr">${isT?'':`<button class="dpgotd" onpointerdown="event.stopPropagation()" onclick="dpShiftTo(todayStr())">今日</button>`}
         <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup()" aria-label="閉じる">✕</button></span></div>
     <div class="dpacts top">
-      <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
-      <button class="pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
+      <button class="b-add pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();eventModal(null,'${dstr}')">＋ 予定</button>
+      <button class="b-add pri" onpointerdown="event.stopPropagation()" onclick="_dpReturn='${dstr}';closeDayPopup();taskModalWithDue('${dstr}')">＋ タスク</button>
       <button onpointerdown="event.stopPropagation()" onclick="closeDayPopup();calGoto('${dstr}')">📅 日を開く</button>
       <button class="ic" onpointerdown="event.stopPropagation()" onclick="closeDayPopup();enterCellSel('${dstr}')" aria-label="色分け">🎨</button></div>
     ${extDayLine(dstr)}
@@ -6414,7 +6488,7 @@ function dpMovePickDate(){if(!_moveSel||!_moveSel.size)return;closeDayPopup();_d
   const bar=$('#multibar');bar._move=true;
   bar.innerHTML=`<div class="mbcount">✔ ${_moveSel.size}件のタスクをうごかします</div>
     <div class="mbsw"><span style="font-size:13px;font-weight:700;">カレンダーの<b style="color:var(--accent);">動かしたい日</b>をタップしてください</span>
-      <button class="mbdone" onclick="cancelMoveSel()">やめる</button></div>`;
+      <button class="b-cancel mbdone" onclick="cancelMoveSel()">やめる</button></div>`;
   bar.classList.add('show');}
 function moveTasksTo(dstr){if(!_moveSel||!_moveSel.size)return;
   snapUndo();let n=0;
@@ -6614,14 +6688,14 @@ function todayItemMenu(tok,ev){const type=tok.slice(0,1),id=tok.slice(2);
   const pinned=dayLog(todayStr()).at&&dayLog(todayStr()).at[tok]!=null;
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('[data-do],[data-lp]'):document.querySelector(`[data-do="${tok}"]`);
   const html=`<div class="cpmenu">
-    <button class="hi" onclick="cpClose();swipeComplete('${tok}')">${done?'↩ 未完了に戻す':'✓ 完了にする'}</button>
+    <button class="hi ${done?'b-edit':'b-done'}" onclick="cpClose();swipeComplete('${tok}')">${done?'↩ 未完了に戻す':'✓ 完了にする'}</button>
     ${pinned?`<button onclick="cpClose();unpinItem('${tok}')">⟲ 未配置に戻す</button>`:''}
     <button onclick="cpClose();startPlace('${tok}')">🕐 ${pinned?'時間を変える':'時間を指定して配置'}</button>
-    <button onclick="cpClose();${type==='r'?`routineModal('${id}')`:`taskModal('${id}')`}">✎ 編集</button>
+    <button class="b-edit" onclick="cpClose();${type==='r'?`routineModal('${id}')`:`taskModal('${id}')`}">✎ 編集</button>
     ${type==='t'?`<button onclick="cpClose();logWork('${tok}')">⏱ 稼働を記録</button>
     <button onclick="cpClose();endTaskToday('${tok}')">📦 今日はここまで→明日へ</button>`:''}
     <button onclick="cpClose();enterTodayReorder()">↕ 並び替え</button>
-    <button onclick="cpClose();actTomorrow('${tok}')">➡ 明日へ送る</button>
+    <button class="b-move" onclick="cpClose();actTomorrow('${tok}')">➡ 明日へ送る</button>
     <button onclick="cpClose();actHideToday('${tok}')">🗂 今日は隠す</button></div>`;
   cellpopAt(anchor,html,{forId:tok+'_menu'});}
 function applyHideToday(tok){const type=tok.slice(0,1),id=tok.slice(2);const t=todayStr();
@@ -6669,7 +6743,7 @@ function openMultiColorSheet(){const bar=$('#multibar');
   bar.innerHTML=`<div class="mbcount">${cellSel.size}日を選択中（セルをタップで追加／解除）</div>
     <div class="mbsw">${PASTELS.map((p,i)=>`<button style="background:${p.s}" onclick="setMultiColor(${i})"></button>`).join('')}
       <button class="clear" onclick="setMultiColor(null)">なし</button>
-      <button class="mbdone" onclick="exitCellSel()">✓ 完了</button></div>`;
+      <button class="b-done mbdone" onclick="exitCellSel()">✓ 完了</button></div>`;
   bar.classList.add('show');}
 function setMultiColor(i){if(!cellSel.size){toast('日付をタップして選んでください');return;}
   cellSel.forEach(d=>{if(i===null)delete S.dayColors[d];else S.dayColors[d]=i;});
@@ -6755,7 +6829,7 @@ function emRender(fresh){const e=_emId?S.events.find(v=>v.id===_emId):null;
     ${tmplEd?'':`<div class="frow"><label>画像メモ</label>${imagesEditorHtml()}</div>`}
   </div>
   ${tmplEd?`<div class="db"><button onclick="_emTmplEdit=null;_emTab='tmpl';emRender()">‹ テンプレ一覧</button><button class="ok" onclick="saveEvTmpl()">テンプレを保存</button></div>`
-    :`<div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveEvent('${_emId||''}')">保存</button></div>`}`;
+    :`<div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveEvent('${_emId||''}')">保存</button></div>`}`;
   $('#dlgWrap').classList.add('show');
   const box=document.querySelector('#dlg .tform');
   // フォーカスが画面を引っぱらないように（先に当ててから位置を戻す）
@@ -6908,7 +6982,7 @@ function euRender(){const ws=S.settings.weekStart||0,Y=window._euY,X=window._euX
   $('#dlg').innerHTML=`<div class="dm tform"><div class="tfh"><b>いつまで繰り返す？</b><button type="button" onclick="emStashBack()">✕</button></div>
     <div class="frow"><div class="dpnav"><button type="button" onclick="euNav(-1)">‹</button><span>${Y}年${X+1}月</span><button type="button" onclick="euNav(1)">›</button></div>
       <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div></div></div>
-    <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="emStashBack()">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function euNav(k){window._euX+=k;if(window._euX<0){window._euX=11;window._euY--;}if(window._euX>11){window._euX=0;window._euY++;}euRender();}
 function euPick(ds){_emUntil=ds;emStashBack();}
@@ -6941,7 +7015,7 @@ function emTmplPickHtml(){const t=S.templates.find(x=>x.id===_emTmplPick);if(!t)
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
     <div class="btnrow" style="margin-top:8px;">
       <button type="button" class="${n?'on':''}" onclick="emTmplAddDirect()">✓ 選んだ${n}日に追加</button>
-      ${n===1?`<button type="button" onclick="emTmplAdjust()">✎ 調整してから追加</button>`:''}</div>
+      ${n===1?`<button class="b-edit" type="button" onclick="emTmplAdjust()">✎ 調整してから追加</button>`:''}</div>
     <div class="btnrow" style="margin-top:6px;"><button type="button" onclick="_emTmplPick=null;_emTmplDates=new Set();emRender()">‹ テンプレ一覧へ</button></div></div>`;}
 function emTmplTgl(ds){_emTmplDates.has(ds)?_emTmplDates.delete(ds):_emTmplDates.add(ds);emRender();}
 function emTmplCalNav(k){_emCalX+=k;if(_emCalX<0){_emCalX=11;_emCalY--;}if(_emCalX>11){_emCalX=0;_emCalY++;}emRender();}
@@ -7035,7 +7109,7 @@ function recurScopePop(){const occ=_pendingEvt.occ;const d=parseDs(occ);const md
     <div class="scopebtns"><button onclick="applyRecur('one')">この予定のみ（${md}）<i>この日だけ内容が変わります</i></button>
       <button onclick="applyRecur('future')">この予定以降（${md}〜）<i>この日から先がぜんぶ変わります（前はそのまま）</i></button>
       <button onclick="applyRecur('all')">すべての予定<i>過去もふくめて全部変わります</i></button></div></div>
-    <div class="db"><button onclick="emStashBack()">やめる</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="emStashBack()">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyRecur(scope){const p=_pendingEvt;if(!p)return;const orig=S.events.find(e=>e.id===p.id);if(!orig){dlgEnd();return;}
   snapUndo();
@@ -7079,7 +7153,7 @@ function delRecurPop(id,occ){const d=parseDs(occ);const md=`${d.getMonth()+1}/${
     <div class="scopebtns"><button onclick="applyDelRecur('${id}','${occ}','one')">この予定のみ（${md}）<i>この日の1回だけ消します</i></button>
       <button onclick="applyDelRecur('${id}','${occ}','future')">この予定以降（${md}〜）<i>この日から先をぜんぶ消します（前は残る）</i></button>
       <button onclick="applyDelRecur('${id}','${occ}','all')" style="color:var(--danger);">すべての予定を削除<i>過去もふくめて全部消します</i></button></div></div>
-    <div class="db"><button onclick="${_emStash?'emStashBack()':'dlgEnd()'}">やめる</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="${_emStash?'emStashBack()':'dlgEnd()'}">やめる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function applyDelRecur(id,occ,scope){const e=S.events.find(v=>v.id===id);if(!e){dlgEnd();return;}snapUndo();
   if(scope==='all')S.events=S.events.filter(x=>x.id!==id);
@@ -7094,13 +7168,13 @@ function eventTap(id,occDate,ev){const e=S.events.find(x=>x.id===id);if(!e)retur
   const anchor=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.cev,.wkev,.wkadchip,.dcev'):null;
   const dn=evDone(e,occ);
   const html=`<div class="cpmenu"><div style="font-size:10px;color:var(--sub);padding:4px 12px 4px;">${esc(evTitle(e))}${e.repeat?' 🔁':''}　${evSpan(e)?evTimeText(e,occ):(e.start||'')+(e.end?'〜'+e.end:'')}${e.rel&&relAnchor(e.rel)?`<br>🔗 ${esc(relLabel(e.rel))}`:''}</div>
-      <button class="hi" onclick="cpClose();toggleEvDone('${id}','${occ}')">${dn?'↩ 未完了に戻す':'✓ 完了にする'}</button>
-      <button onclick="cpClose();eventModal('${id}',null,null,'${occ}')">✎ 編集</button>
-      <button onclick="cpClose();evMoveBy('${id}','${occ}','${occ<todayStr()?todayStr():shiftDs(occ<=todayStr()?todayStr():occ,1)}')">${occ<todayStr()?'☀ 今日へ':occ===todayStr()?'➡ 明日へ':'➡ 次の日へ'}</button>
-      <button onclick="cpClose();evMovePop('${id}','${occ}')">📅 日付を変える</button>
+      <button class="hi ${dn?'b-edit':'b-done'}" onclick="cpClose();toggleEvDone('${id}','${occ}')">${dn?'↩ 未完了に戻す':'✓ 完了にする'}</button>
+      <button class="b-edit" onclick="cpClose();eventModal('${id}',null,null,'${occ}')">✎ 編集</button>
+      <button class="b-move" onclick="cpClose();evMoveBy('${id}','${occ}','${occ<todayStr()?todayStr():shiftDs(occ<=todayStr()?todayStr():occ,1)}')">${occ<todayStr()?'☀ 今日へ':occ===todayStr()?'➡ 明日へ':'➡ 次の日へ'}</button>
+      <button class="b-move" onclick="cpClose();evMovePop('${id}','${occ}')">📅 日付を変える</button>
       <button onclick="cpClose();evRelTask('${id}','${occ}')">⏪ 逆算してタスクを作る</button>
-      <button onclick="cpClose();dupEventPick('${id}')">⧉ 複製（日付を選ぶ）</button>
-      <button class="del" onclick="cpClose();delEvent('${id}','${occ}')">🗑 削除</button></div>`;
+      <button class="b-dup" onclick="cpClose();dupEventPick('${id}')">⧉ 複製（日付を選ぶ）</button>
+      <button class="b-del del" onclick="cpClose();delEvent('${id}','${occ}')">🗑 削除</button></div>`;
   cellpopAt(anchor,html,{forId:'ev_'+id});}
 /* 複製＝複製先の日付を複数選べる。1日ならそのまま編集、複数ならまとめて複製 */
 let _dupSel=new Set(),_dupId=null;
@@ -7115,7 +7189,7 @@ function dupPickRender(){const e=S.events.find(v=>v.id===_dupId);const ws=S.sett
     <div class="mbody"><div class="dpnav"><button onclick="dupNav(-1)">‹</button><span>${_dpY}年${_dpX+1}月</span><button onclick="dupNav(1)">›</button></div>
     <div class="dpgrid">${wd.map(w=>`<span class="dpw">${w}</span>`).join('')}${cells}</div>
     <div class="mini">複製先の日付をタップ（<b>複数OK</b>）。<span class="dporg">◎</span>＝いまの予定の日、<b>点</b>＝予定のある日。1日だけ選ぶとそのまま内容も直せます。${e.repeat?'<br>※複製したものは<b>繰り返しなしの1回きり</b>の予定になります':''}</div></div>
-    <div class="mbtns"><button onclick="closeModal()">やめる</button><button class="save" onclick="dupDo()">${_dupSel.size?_dupSel.size+'日に複製':'複製する'}</button></div>`);}
+    <div class="mbtns"><button class="b-cancel" onclick="closeModal()">やめる</button><button class="save" onclick="dupDo()">${_dupSel.size?_dupSel.size+'日に複製':'複製する'}</button></div>`);}
 function dupDo(){if(!_dupSel.size){toast('複製先の日付を選んでください');return;}const e=S.events.find(v=>v.id===_dupId);if(!e){closeModal();return;}
   snapUndo();const dates=[..._dupSel].sort();let firstId=null;
   dates.forEach(date=>{const copy={...JSON.parse(JSON.stringify(e)),id:uid(),...evShiftTo(e,date),repeat:'',exdates:[],until:undefined,doneDates:[],rel:undefined};S.events.push(copy);if(!firstId)firstId=copy.id;});
@@ -7225,7 +7299,7 @@ function renderRoutines(){
   return head+`<div class="mini">フォルダ名をタップで開閉。▲▼で並べ替え、名前は「✎」。ルーティンをタップで詳細編集。</div>
     ${folders.length?folders.map((f,fi)=>{const rs=S.routines.filter(r=>(r.folder||'マイルーティン')===f).sort((a,b)=>a.order-b.order);const tot=rs.reduce((s,r)=>s+(+r.estMin||0),0);const open=!rClosed.has(f);
       return `<div class="rfold"><div class="rfoldh"><b onclick="rToggleFolder('${escq(f)}')" style="cursor:pointer;">${open?'📂':'📁'} ${esc(f)}</b><span class="rfmeta" onclick="rToggleFolder('${escq(f)}')" style="cursor:pointer;">${rs.length}件・計${fmtMin(tot)}</span>
-        <span class="rfacts"><button onclick="moveFolder(${fi},-1)">▲</button><button onclick="moveFolder(${fi},1)">▼</button><button onclick="renameFolder(${fi})">✎名</button></span></div>
+        <span class="rfacts"><button onclick="moveFolder(${fi},-1)">▲</button><button onclick="moveFolder(${fi},1)">▼</button><button class="b-edit" onclick="renameFolder(${fi})">✎名</button></span></div>
         ${open?rs.map(rMgmtRow).join('')+`<button class="rfadd" onclick="addRoutineToFolder(${fi})">＋ このフォルダにルーティンを追加</button>`:''}</div>`;}).join('')
       :'<div class="mini">「＋追加」でルーティンを作成してください。</div>'}`;
 }
@@ -7366,10 +7440,10 @@ function habitDayPop(id,d,ev){const h=S.habits.find(x=>x.id===id);if(!h)return;
   const n=(h.logs||[]).filter(l=>l.d===d).length;
   const el=(ev&&ev.target)?ev.target:null;
   const html=`<div class="miniacts"><div class="cptitle">${fmtDateJa(d)}${d===todayStr()?'（今日）':''}・${n}回</div>
-    <button class="hi" onclick="habitSetDay('${id}','${d}',${n+1})"><span>＋</span>1回ふやす</button>
+    <button class="b-add hi" onclick="habitSetDay('${id}','${d}',${n+1})"><span>＋</span>1回ふやす</button>
     ${n?`<button onclick="habitSetDay('${id}','${d}',${n-1})"><span>−</span>1回へらす</button>
-    <button onclick="habitSetDay('${id}','${d}',0)" style="color:var(--danger);"><span>🗑</span>この日の記録を消す</button>`:''}
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-del" onclick="habitSetDay('${id}','${d}',0)" style="color:var(--danger);"><span>🗑</span>この日の記録を消す</button>`:''}
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(el,html,{forId:'hd_'+d});}
 function habitSetDay(id,d,n,quiet){const h=S.habits.find(x=>x.id===id);if(!h)return;
   snapUndo();
@@ -7402,7 +7476,7 @@ function habitWeekListHtml(h){
         <span class="hwb">
           <button type="button" ${n?'':'disabled'} onclick="habitSetDay('${h.id}','${d}',${Math.max(0,n-1)},1)">−</button>
           <button type="button" ${fut?'disabled':''} onclick="habitSetDay('${h.id}','${d}',${n+1},1)">＋</button>
-          <button type="button" class="del" ${n?'':'disabled'} onclick="habitSetDay('${h.id}','${d}',0,1)">🗑</button></span></div>`;}).join('')}</div>`;}
+          <button type="button" class="b-del del" ${n?'':'disabled'} onclick="habitSetDay('${h.id}','${d}',0,1)">🗑</button></span></div>`;}).join('')}</div>`;}
 /* 週の回数（weekStart起点）。off=0が今週、1が先週 */
 function habitWeekCount(h,off){const t=todayStr();const ws=S.settings.weekStart||0;
   const dow=(parseDs(t).getDay()-ws+7)%7;
@@ -7439,7 +7513,7 @@ function habitCard(h){const s=habitStats(h);const st=habitStreak(h);
       ${habitHeatHtml(h,12)}</div>
     ${linkChips(h.links)}
     <div class="hc-btns">
-      <button class="hc-plus" onclick="habitLog('${h.id}',0)">＋ 1回</button>
+      <button class="b-add hc-plus" onclick="habitLog('${h.id}',0)">＋ 1回</button>
       <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div></div>`;}
 function habitLog(id,sec){const h=S.habits.find(x=>x.id===id);if(!h)return;
   h.logs.push({d:todayStr(),sec:sec||0});save();render();
@@ -7447,7 +7521,7 @@ function habitLog(id,sec){const h=S.habits.find(x=>x.id===id);if(!h)return;
 let habitTId=null,habitTStart=0,habitTInt=null;
 function habitTimer(id){habitTId=id;habitTStart=Date.now();
   $('#dlg').innerHTML=`<div class="dm" style="text-align:center;">${esc(S.habits.find(h=>h.id===id).title)}<div class="htwatch" id="htwatch">00:00</div></div>
-    <div class="db"><button onclick="habitTimerCancel()">やめる</button><button class="ok" onclick="habitTimerStop()">停止して記録</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="habitTimerCancel()">やめる</button><button class="ok" onclick="habitTimerStop()">停止して記録</button></div>`;
   $('#dlgWrap').classList.add('show');
   clearInterval(habitTInt);habitTInt=setInterval(()=>{const el=$('#htwatch');if(el)el.textContent=fmtWatch(Date.now()-habitTStart);},250);}
 function habitTimerStop(){const sec=Math.round((Date.now()-habitTStart)/1000);clearInterval(habitTInt);dlgEnd();habitLog(habitTId,sec);}
@@ -7477,11 +7551,11 @@ function habitDetail(id,resetWeek){const h=S.habits.find(x=>x.id===id);if(!h)ret
     <div class="wdbars">${byWd.map((c,i)=>`<div class="wdbar"><small>${c}</small><div class="wdb" style="height:${Math.round(c/maxWd*56)+2}px"></div><span style="color:${i===0?'var(--sun)':i===6?'var(--sat)':''}">${WD[i]}</span></div>`).join('')}</div>
     ${h.links&&h.links.length?`<div style="margin-top:8px;">${linkChips(h.links)}</div>`:''}
     <div class="hc-btns" style="padding:12px 0 0;">
-      <button class="hc-plus" onclick="habitLog('${h.id}',0);habitDetail('${h.id}')">＋ 1回</button>
+      <button class="b-add hc-plus" onclick="habitLog('${h.id}',0);habitDetail('${h.id}')">＋ 1回</button>
       <button class="hc-timer" onclick="habitTimer('${h.id}')">⏱ 測って記録</button></div>
     ${h.logs.length?`<button class="addlink" style="margin-top:8px;" onclick="habitUndo('${h.id}')">直近の記録を取り消す</button>`:''}
   </div>
-  <div class="mbtns"><button onclick="habitModal('${h.id}')">✎ 編集</button></div>`);
+  <div class="mbtns"><button class="b-edit" onclick="habitModal('${h.id}')">✎ 編集</button></div>`);
   if(keepScroll)$('#modal').scrollTop=keepScroll;}
 function habitUndo(id){const h=S.habits.find(x=>x.id===id);if(!h||!h.logs.length)return;h.logs.pop();save();habitDetail(id);}
 function habitModal(id){const h=id?S.habits.find(x=>x.id===id):null;
@@ -7551,7 +7625,7 @@ function flowShow(keep){
     <div class="fmain">
       ${flowListOpen?flowListHtml():`
       <div class="slot">${label}</div>
-      <div class="rname" id="frname">${esc(r.title)}<button class="fedit" onclick="flowEdit()">✎</button></div>
+      <div class="rname" id="frname">${esc(r.title)}<button class="b-edit fedit" onclick="flowEdit()">✎</button></div>
       <div class="rmeta" id="frmeta">${meta}</div>
       ${isR&&r.memo?`<div class="fmemo">${linkify(r.memo)}</div>`:''}
       ${r.images&&r.images.length?`<div class="rowimgs" style="justify-content:center;">${r.images.map(u=>`<a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="width:56px;height:56px;"></a>`).join('')}</div>`:''}
@@ -7593,7 +7667,7 @@ function flowEdit(){const it=flowList[flowIdx];const r=it.obj;editLinks=(r.links
     <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">名前</label><input id="feName" value="${esc(r.title)}">
     <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">目安（分）</label><input id="feEst" type="number" inputmode="numeric" min="0" value="${r.estMin}">
     <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">リンク（フロー中にここから開けます）</label>${linksEditorHtml()}</div>
-    <div class="db"><button onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">閉じる</button><button class="ok" onclick="applyFlowEdit()">保存</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#feName')?.focus(),80);}
 function applyFlowEdit(){const r=flowList[flowIdx].obj;r.title=$('#feName').value.trim()||r.title;r.estMin=+$('#feEst').value||0;r.links=collectLinks();save();dlgEnd();flowShow(true);}
 /* ===== タスクタイマー：▶開始→上部バーで経過→タップで中断・終了。同時に測れるのは1つ ===== */
@@ -7636,10 +7710,10 @@ function ttStop(ev){if(!TT)return;
   const x=S.tasks.find(v=>v.id===TT.id);
   const min=Math.max(1,Math.round(ttElapsed()/60000));
   const html=`<div class="cpmenu"><div class="cptitle">${esc(x?x.title:'')}・ここまで ${fmtMin(min)}</div>
-    <button class="hi" onclick="cpClose();ttFinish(1)"><span>✓</span>記録して完了にする</button>
+    <button class="b-done hi" onclick="cpClose();ttFinish(1)"><span>✓</span>記録して完了にする</button>
     <button onclick="cpClose();ttFinish(0)"><span>📝</span>記録だけ（タスクはつづく）</button>
     <button onclick="cpClose();ttResume()"><span>▶</span>再開する</button>
-    <button onclick="cpClose();ttDiscard()" style="color:var(--danger);"><span>🗑</span>記録せずやめる</button></div>`;
+    <button class="b-del" onclick="cpClose();ttDiscard()" style="color:var(--danger);"><span>🗑</span>記録せずやめる</button></div>`;
   cellpopAt($('#ttbar'),html,{forId:'ttstop'});}
 function ttResume(){if(!TT)return;TT.since=Date.now();ttPersist();ttBar();}
 function ttFinish(complete){const info=ttRecord();if(!info)return;
@@ -7672,7 +7746,7 @@ function renderTStats(){const ym=tsMonthOf();const rows=tsAgg(ym);
   <div class="dpnav" style="padding:0 16px;"><button onclick="tsNav(-1)">‹</button><span>${y}年${m}月</span><button onclick="tsNav(1)">›</button></div>
   <div style="display:flex;justify-content:flex-end;padding:4px 16px;">
     ${_tsMerge?`<button class="act" onclick="tsMergeDo()" style="color:var(--accent);font-weight:700;">選んだ${_tsMs.size}件を統合する</button>
-      <button class="act" onclick="_tsMerge=false;_tsMs=new Set();render()" style="margin-left:10px;">やめる</button>`
+      <button class="b-cancel act" onclick="_tsMerge=false;_tsMs=new Set();render()" style="margin-left:10px;">やめる</button>`
       :`<button class="act" onclick="_tsMerge=true;_tsMs=new Set();_tsSel=null;render()">🔗 統合</button>`}</div>
   ${_tsMerge?`<div class="mini" style="padding:0 16px 6px;">同じ内容のタスク（別名で作ってしまったもの等）を選んで<b>1つにまとめて集計</b>できます。あとで解除もできます。</div>`:''}
   ${rows.length?rows.map(r=>{
@@ -7720,7 +7794,7 @@ function flowManualDone(){const it=flowList[flowIdx];const r=it.obj;
   $('#dlg').innerHTML=`<div class="dm" style="text-align:left;max-height:78vh;overflow:auto;"><b>${esc(r.title)}</b> を手動で完了
     <label style="font-size:12px;color:var(--sub);display:block;margin:8px 0 2px;">開始した時刻</label>${timeInput('fmStart',min2hm(start))}
     <label style="font-size:12px;color:var(--sub);display:block;margin:6px 0 2px;">かかった時間</label>${minPicker('fmMin',mins)}</div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveManualDone()">完了にする</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="b-done ok" onclick="saveManualDone()">完了にする</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function saveManualDone(){const min=Math.max(0,parseInt($('#fmMin').value,10)||0);const hm=$('#fmStart')?.value;
   const start=hm?hm2min(hm):curMin();const dmin=((start+min)%1440+1440)%1440;dlgEnd();completeCurrentFlow(min*60,dmin);}
@@ -7744,7 +7818,7 @@ function flowLog(){
     <input id="flFree" placeholder="例）電話対応">
     <label style="font-size:12px;color:var(--sub);display:block;margin-top:8px;">かかった時間（時:分・4桁テンキー）</label>
     ${timeField('flTime','')}</div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveFlowLog()">記録する</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="saveFlowLog()">記録する</button></div>`;
   $('#dlgWrap').classList.add('show');setTimeout(()=>$('#flFree')?.focus(),80);}
 function saveFlowLog(){
   const rid=$('#flName').value;const free=$('#flFree').value.trim();
@@ -7822,7 +7896,7 @@ function shopBuyTap(id,ev){const x=S.shopping.find(v=>v.id===id);if(!x)return;
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.name)} を買った？</div>
     <button class="hi" onclick="cpClose();shopBought('${id}',0)"><span>✓</span>買った${x.plan?'（'+yen(x.plan)+'）':''}</button>
     <button onclick="cpClose();shopBoughtPop('${id}')"><span>💴</span>金額を入れて</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_buy',rowSel:'.shitem'});}
 function shopBought(id,paid){const x=S.shopping.find(v=>v.id===id);if(!x)return;snapUndo();
   x.boughtAt=todayStr();x.paid=(paid||x.plan||null);save();render();
@@ -7832,7 +7906,7 @@ function shopBoughtPop(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
     <div class="frow"><label>${esc(x.name)}${(+x.qty||1)>1?` ×${+x.qty}`:''}</label>
       <input id="shPaid" type="text" inputmode="numeric" pattern="[0-9]*" value="${x.plan||''}" placeholder="金額（円）" style="font-size:20px;font-weight:700;text-align:center;padding:12px;" onfocus="this.select()"></div>
     <div class="frow"><label>お店</label>${shopPickHtml('shPaidShop',x.shopId)}</div></div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopBoughtSave('${id}')">買った</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopBoughtSave('${id}')">買った</button></div>`;
   $('#dlgWrap').classList.add('show');const el=$('#shPaid');if(el)el.focus();}
 function shopBoughtSave(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
   const p=+($('#shPaid')?.value||0);snapUndo();
@@ -7844,10 +7918,10 @@ function shopItemTap(id,ev){const x=S.shopping.find(v=>v.id===id);if(!x)return;
   const a=(ev&&ev.target&&ev.target.closest)?ev.target.closest('.shitem'):null;
   const html=`<div class="miniacts"><div class="cptitle">${esc(x.name)}</div>
     ${x.boughtAt?`<button class="hi" onclick="cpClose();shopUnbuy('${id}')"><span>↩</span>買う前に戻す</button>`:''}
-    <button onclick="cpClose();shopEdit('${id}')"><span>✎</span>編集</button>
-    ${!x.boughtAt?`<button onclick="cpClose();shopAgainFromHistory('${id}')"><span>⧉</span>複製</button>`:`<button onclick="cpClose();shopAgain('${id}')"><span>🛒</span>また買う</button>`}
-    <button onclick="cpClose();shopDel('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
-    <button onclick="cpClose()"><span>‹</span>やめる</button></div>`;
+    <button class="b-edit" onclick="cpClose();shopEdit('${id}')"><span>✎</span>編集</button>
+    ${!x.boughtAt?`<button class="b-dup" onclick="cpClose();shopAgainFromHistory('${id}')"><span>⧉</span>複製</button>`:`<button onclick="cpClose();shopAgain('${id}')"><span>🛒</span>また買う</button>`}
+    <button class="b-del" onclick="cpClose();shopDel('${id}')" style="color:var(--danger);"><span>🗑</span>削除</button>
+    <button class="b-cancel" onclick="cpClose()"><span>‹</span>やめる</button></div>`;
   cellpopAt(a,html,{forId:id+'_it',rowSel:'.shitem'});}
 function shopUnbuy(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;snapUndo();
   x.boughtAt=null;save();render();flashUndo('買う前に戻しました');}
@@ -7874,7 +7948,7 @@ function shopEdit(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
     ${x.boughtAt?`<div class="frow"><label>実際に払った金額（円）</label><input id="shPaidE" type="text" inputmode="numeric" value="${x.paid||''}"></div>`:''}
     <div class="frow"><label>メモ</label><textarea id="shMemo" rows="2">${esc(x.memo||'')}</textarea></div>
     </div>
-    <div class="db"><button onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopSave('${id}')">保存</button></div>`;
+    <div class="db"><button class="b-cancel" onclick="dlgEnd()">やめる</button><button class="ok" onclick="shopSave('${id}')">保存</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function shopSave(id){const x=S.shopping.find(v=>v.id===id);if(!x)return;
   const nm=($('#shName')?.value||'').trim();if(!nm){uiAlert('なにを買うか入力してください');return;}
@@ -7892,7 +7966,7 @@ function shopEditShops(){
       <button type="button" class="del" style="border:1px solid var(--danger);color:var(--danger);padding:8px 12px;" onclick="shopDelShop('${sh.id}')">削除</button></div>`).join('')}
     <div class="frow" style="display:flex;gap:8px;"><input id="shNewShop" placeholder="お店・ジャンルを追加" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.isComposing)shopAddShop()">
       <button type="button" class="inlineadd" onclick="shopAddShop()">追加</button></div></div>
-    <div class="db"><button class="ok" onclick="dlgEnd();render()">とじる</button></div>`;
+    <div class="db"><button class="b-cancel ok" onclick="dlgEnd();render()">とじる</button></div>`;
   $('#dlgWrap').classList.add('show');}
 function shopAddShop(){const el=$('#shNewShop');const v=(el?.value||'').trim();if(!v)return;
   S.shops.push({id:uid(),name:v});save();shopEditShops();}
@@ -8079,6 +8153,12 @@ function renderSettings(){
       <span style="color:var(--sub);">※旧GAS方式を使う場合のみ入力（通常は空でOK）：</span><br>
       <input style="width:100%;padding:5px 8px;font-size:16px;margin-top:4px;" placeholder="（任意）GAS URL https://script.google.com/…/exec" value="${esc(s.feedbackUrl)}" onchange="S.settings.feedbackUrl=this.value.trim();save();render();"></div></div>`;
   return back+`<div class="vhead"><h1>リリース情報</h1></div>
+  <div class="mini"><b>v5.20（2026-10-29）ホーム画面・ボタンの色をそろえました</b><br>
+  ・「タスク」タブが<b>ホーム</b>になりました。上の大きなボタンから<b>タスクを入れる／予定を入れる／写真から日記／日記を書く</b>をすぐ選べます<br>
+  ・<b>写真から日記</b>：写真を何枚でもまとめて選ぶと、そのまま今日の日記が開き、続けて文章を書けます<br>
+  ・ホームで<b>習慣の「＋1回」</b>と<b>買い物リストへの追加</b>がその場でできます。今日のタスクの一覧はその下にあります<br>
+  ・<b>ボタンの色を役割ごとにそろえました</b>：完了＝緑、保存・追加＝テーマの色、日付・移動＝テーマの色のふち、編集・複製・やめる＝グレーのふち、削除＝赤。完了したチェックも緑になります<br>
+  </div>
   <div class="mini"><b>v5.14（2026-10-16）明日へ・日付の変更を1タップで／今日のタスクのお知らせ／🔥今日の最優先</b><br>
   ・<b>タスクも予定も、行をタップすると「➡ 明日へ」「📅 日付を変える」</b>がすぐ押せるようになりました（過ぎているものは「☀ 今日へ」も）。予定もタップで編集・明日へ・日付を変える・完了が選べます。繰り返しの予定は<b>その回だけ</b>動きます<br>
   ・<b>今日やるタスクと、過ぎているタスクをお知らせ</b>：その日はじめて開いたときに一覧でお知らせ（1日1回）／タスク・カレンダーの上に「⚠ 過ぎている◯件・☀ 今日のタスク◯件」の帯／下の「タスク」ボタンに件数（ホーム画面のアイコンにも出る端末があります）<br>
@@ -8940,7 +9020,7 @@ function glColorHtml(){
     <div style="padding:2px 0 6px;"><button style="border:1px solid var(--line);padding:7px 14px;font-size:12.5px;" onclick="resetHueColors()">↺ すべての色を初期値に戻す</button></div>
     <div class="mini">左の2つ＝<b>色</b>（タップで変更）、右の欄に<b>色の名前</b>を入力できます（例：仕事／家族／通院。同じ色に複数のグループを付けてOK）。付けた名前は<b>予定の色を選ぶとき</b>にも出ます。</div>
     <div class="sec-h">タスクの色（名前つき・自由に増減）</div>
-    <div style="padding:2px 0 6px;"><button style="border:1px solid var(--line);padding:8px 14px;font-size:13px;" onclick="taskColorPop()">✎ タスクの色をへんしゅう（いま ${taskColors().length} 色）</button></div>
+    <div style="padding:2px 0 6px;"><button class="b-edit" style="border:1px solid var(--line);padding:8px 14px;font-size:13px;" onclick="taskColorPop()">✎ タスクの色をへんしゅう（いま ${taskColors().length} 色）</button></div>
     <div class="mini">タスク専用の塗り色です。名前を付けると、タスクを入れるときの色えらびに名前で出ます。</div>
     <div class="sec-h">予定の色トーン</div>
     <div class="seg" style="margin:2px 0 0;width:100%;">
@@ -9083,12 +9163,12 @@ function uiAlert(msg){_saving=false; /* 入力エラーで止まった時は連�
   $('#dlgWrap').classList.add('show');});}
 function uiConfirm(msg,okLabel){return new Promise(res=>{dlgResolve=res;
   $('#dlg').innerHTML=`<div class="dm">${esc(msg)}</div><div class="db">
-    <button onclick="dlgEnd(false)">やめる</button>
+    <button class="b-cancel" onclick="dlgEnd(false)">やめる</button>
     <button class="${okLabel==='削除'?'dngr':'ok'}" onclick="dlgEnd(true)">${esc(okLabel||'OK')}</button></div>`;
   $('#dlgWrap').classList.add('show');});}
 function uiPrompt(msg,def,type){return new Promise(res=>{dlgResolve=res;
   $('#dlg').innerHTML=`<div class="dm">${esc(msg)}<input id="dlgInput" type="${type||'text'}" value="${esc(def??'')}"></div>
-    <div class="db"><button onclick="dlgEnd(null)">やめる</button>
+    <div class="db"><button class="b-cancel" onclick="dlgEnd(null)">やめる</button>
     <button class="ok" onclick="dlgEnd($('#dlgInput').value)">OK</button></div>`;
   $('#dlgWrap').classList.add('show');
   setTimeout(()=>$('#dlgInput')?.focus(),80);});}
@@ -9159,7 +9239,7 @@ function miniHtml(){const d=todayStr(),dt=parseDs(d),isT=MINI.kind==='task';
   <div class="mp-sec">✔ 今日やるタスク <span>${tks.length}</span></div>
   ${tks.length?tks.map(x=>tkRow(x,false)).join(''):'<div class="mp-none">今日やるタスクはありません</div>'}
   ${nDone?`<button type="button" class="mp-dtog" onclick="miniShowDone()">✓ 終わったもの ${nDone}件 ${MINI.showDone?'▾':'▸'}</button>${MINI.showDone?evDn.map(e=>evRow(e,true)).join('')+tkDn.map(x=>tkRow(x,true)).join(''):''}`:''}
-  ${MINI.mode?`<div class="mp-foot"><button type="button" onclick="miniDetail()">✎ 詳しく入力</button><button type="button" onclick="miniExit()">アプリ全体を見る ›</button></div>`:''}
+  ${MINI.mode?`<div class="mp-foot"><button class="b-edit" type="button" onclick="miniDetail()">✎ 詳しく入力</button><button type="button" onclick="miniExit()">アプリ全体を見る ›</button></div>`:''}
   </div>`;}
 /* 時刻（予定のとき）：テンキー＋▲▼（分は15分きざみ）。見た目は timeInput と同じ */
 function miniTimeHtml(){const p=(MINI.time||'').split(':');
@@ -9276,7 +9356,7 @@ function remindHelp(){openModal(`<div class="mh"><b>メールで知らせる設�
       <li>上の関数えらびで <b>setup</b> を選んで「実行」→ 許可する</li>
       <li>「通知テスト」のメールが届けば完了です</li></ol>
     <p class="mini" style="padding:0;">・タスクごとに、入力画面の時間の横の「🔔」でお知らせしない設定にもできます<br>・スマホのGmailアプリの通知をオンにしておくと、スマホにも通知が出ます<br>・アプリを開いている間は、「通知を使う」がオンなら画面の通知も出ます</p>
-  </div><div class="mbtns"><button class="save" onclick="closeModal()">閉じる</button></div>`);}
+  </div><div class="mbtns"><button class="b-cancel save" onclick="closeModal()">閉じる</button></div>`);}
 function buildWidgetSnap(){const out={at:Date.now(),days:{},acc:(UITHEMES[S.settings.uiTheme]||UITHEMES.peach).acc};const t0=todayStr();
   try{out.rm=remindList();}catch(_){}
   try{out.cal=buildCalSnap();}catch(_){}
